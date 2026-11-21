@@ -7,6 +7,7 @@ import { numeroPedido } from "@/lib/pedidos/calculos";
 import { textoTasa } from "@/lib/tasas";
 import { formatoCantidad, formatoFecha, formatoFechaHora, formatoUsd } from "../formato";
 import { BotonAnular } from "./boton-anular";
+import { NumerosFiscales } from "./numeros-fiscales";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -43,11 +44,14 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
           <div><dt className="text-gris-500">Almacén</dt><dd>{f.almacen.nombre}</dd></div>
           <div><dt className="text-gris-500">Vence</dt><dd>{formatoFecha(f.fechaVencimiento)}{f.diasCredito > 0 ? ` (${f.diasCredito} días)` : " (contado)"}</dd></div>
           <div><dt className="text-gris-500">Tasa USD</dt><dd>{textoTasa(Number(f.tasaUsd))}</dd></div>
+          <div><dt className="text-gris-500">Nº de factura fiscal</dt><dd>{f.numeroFiscal ?? "—"}</dd></div>
+          <div><dt className="text-gris-500">Nº de control</dt><dd>{f.numeroControl ?? "—"}</dd></div>
           <div><dt className="text-gris-500">Pedido</dt><dd>{f.pedido ? <Link href={`/pedidos/${f.pedido.id}`} className="text-marca-texto hover:underline">{numeroPedido(f.pedido.numero)}</Link> : "—"}</dd></div>
           <div><dt className="text-gris-500">Emitida por</dt><dd>{f.creadoPorNombre ?? "—"} · {formatoFechaHora(f.creadoEn)}</dd></div>
           <div className="sm:col-span-2"><dt className="text-gris-500">Observaciones</dt><dd>{f.observaciones ?? "—"}</dd></div>
           {f.estado === "ANULADA" ? <div className="sm:col-span-2 xl:col-span-4"><dt className="text-gris-500">Anulada</dt><dd>{f.anuladaPorNombre ?? "—"} · {formatoFechaHora(f.anuladaEn)} · {f.motivoAnulacion}</dd></div> : null}
         </dl>
+        {f.estado === "EMITIDA" && tienePermiso(ctx, "facturacion", "editar") ? <div className="mt-4"><NumerosFiscales id={id} fiscal={f.numeroFiscal} control={f.numeroControl} /></div> : null}
       </Tarjeta>
 
       <Tarjeta>

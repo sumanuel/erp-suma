@@ -126,3 +126,30 @@ export async function anularFactura(db: Db, actor: Actor, id: string, motivo: st
     return { ok: true };
   });
 }
+
+/** Registra el número de factura fiscal y/o el número de control (los da la máquina fiscal o la imprenta). Cada uno se registra una sola vez y no se cambia: quedan en el libro de ventas. */
+export async function registrarNumerosFiscales(db: Db, actor: Actor, id: string, d: { numeroFiscal: string | null; numeroControl: string | null }): Promise<ResultadoFactura> {
+  return ejecutar(async () => {
+    const valido = (s: string | null) => s === null || /^[A-Za-z0-9][A-Za-z0-9\-/.]{0,29}$/.test(s);
+    if (!valido(d.numeroFiscal) || !valido(d.numeroControl)) throw new FacturaError("Los números admiten letras, dígitos, guion, punto y barra (máximo 30 caracteres).");
+    if (!d.numeroFiscal && !d.numeroControl) throw new FacturaError("Indica el número de factura o el de control.");
+    const numero = await db.$transaction(async (tx) => {
+      const f = await tx.factura.findUnique({ where: { id }, select: { numero: true, estado: true, numeroFiscal: true, numeroControl: true } });
+      if (!f) throw new FacturaError("La factura ya no existe.");
+      if (f.estado !== "EMITIDA") throw new FacturaError("La factura está anulada.");
+      if ((d.numeroFiscal && f.numeroFiscal) || (d.numeroControl && f.numeroControl)) throw new FacturaError("Ese número ya estaba registrado y no se puede cambiar.");
+      for (const [campo, valor] of [["numeroFiscal", d.numeroFiscal], ["numeroControl", d.numeroControl]] as const) {
+        if (valor && (await tx.factura.findFirst({ where: { [campo]: valor, id: { not: id } }, select: { numero: true } }))) throw new FacturaError(`El número ${valor} ya está en otra factura.`);
+      }
+      // Condicionado a que sigan vacíos: dos personas no pueden pisarse.
+      const u = await tx.factura.updateMany({
+        where: { id, estado: "EMITIDA", ...(d.numeroFiscal ? { numeroFiscal: null } : {}), ...(d.numeroControl ? { numeroControl: null } : {}) },
+        data: { ...(d.numeroFiscal ? { numeroFiscal: d.numeroFiscal } : {}), ...(d.numeroControl ? { numeroControl: d.numeroControl } : {}) },
+      });
+      if (u.count === 0) throw new FacturaError("La factura cambió mientras la veías. Recarga la página.");
+      return f.numero;
+    });
+    await registrarCambio(db, actor, { modulo: "facturacion", entidad: "factura", entidadId: id, descripcion: numeroFactura(numero), accion: "editar", despues: { numeroFiscal: d.numeroFiscal, numeroControl: d.numeroControl } });
+    return { ok: true };
+  });
+}

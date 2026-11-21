@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
-import { anularFactura, emitirFactura, emitirFacturaDePedido } from "@/lib/facturacion/servicio";
+import { anularFactura, emitirFactura, emitirFacturaDePedido, registrarNumerosFiscales } from "@/lib/facturacion/servicio";
 import { buscarProductosVenta, type ProductoVenta } from "@/lib/pedidos/servicio";
 
 export type EstadoFacturaForm = { error?: string };
@@ -55,4 +55,17 @@ export async function anularFacturaVenta(id: string, motivo: string): Promise<st
   revalidatePath("/pedidos");
   revalidatePath("/existencias");
   return r.ok ? null : r.error;
+}
+
+const Numeros = z.object({ numeroFiscal: z.string().trim().max(40).transform((v) => v || null), numeroControl: z.string().trim().max(40).transform((v) => v || null) });
+
+/** Registra el número de factura fiscal y el de control de una factura emitida (una sola vez). */
+export async function registrarNumerosFiscalesFactura(id: string, datos: unknown): Promise<string | null> {
+  const ctx = await requerirPermisoAccion("facturacion", "editar");
+  const r = Numeros.safeParse(datos);
+  if (!r.success) return "Datos inválidos";
+  const res = await registrarNumerosFiscales(ctx.db, ctx.usuario, id, r.data);
+  revalidatePath(`/facturacion/${id}`);
+  revalidatePath("/facturacion");
+  return res.ok ? null : res.error;
 }

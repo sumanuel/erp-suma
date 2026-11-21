@@ -6,8 +6,10 @@ model Factura {
   id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Número correlativo interno (se muestra como FAC-000123).
   numero           Int            @unique @default(autoincrement())
-  /// Número que asigna el equipo fiscal, si aplica.
-  numeroFiscal     String?        @map("numero_fiscal")
+  /// Número de factura que asigna el equipo fiscal o la imprenta, si aplica (único). Se registra una sola vez.
+  numeroFiscal     String?        @unique @map("numero_fiscal")
+  /// Número de control de la factura (único). Se registra una sola vez.
+  numeroControl    String?        @unique @map("numero_control")
   clienteId        String         @map("cliente_id") @db.Uuid
   cliente          Cliente        @relation(fields: [clienteId], references: [id])
   pedidoId         String?        @map("pedido_id") @db.Uuid

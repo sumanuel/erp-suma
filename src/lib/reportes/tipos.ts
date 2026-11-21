@@ -11,7 +11,7 @@ export type Parametro =
   | { id: string; etiqueta: string; tipo: "fecha"; defecto: "inicioMes" | "hoy" | "inicioAnio" }
   | { id: string; etiqueta: string; tipo: "opciones"; opciones: Opcion[]; defecto: string };
 
-export type MetaReporte = { id: string; titulo: string; descripcion: string; grupo: "Ventas" | "Inventario" | "Cobranza y pagos" | "Contabilidad" };
+export type MetaReporte = { id: string; titulo: string; descripcion: string; grupo: "Ventas" | "Inventario" | "Cobranza y pagos" | "Contabilidad" | "Fiscal" };
 
 const nf = (min: number, max: number) => new Intl.NumberFormat("es-VE", { minimumFractionDigits: min, maximumFractionDigits: max });
 const moneda = nf(2, 2), numero = nf(0, 4), entero = nf(0, 0);

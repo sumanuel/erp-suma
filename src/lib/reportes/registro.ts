@@ -1,5 +1,6 @@
 import "server-only";
 import type { Db } from "@/lib/tenant";
+import { reporteLibroCompras, reporteLibroVentas, reporteResumenIva } from "./fiscal";
 import { reporteBalanceGeneral, reporteEstadoResultados } from "./financieros";
 import { reporteInventarioValorado } from "./inventario";
 import { reporteAntiguedadCxc, reporteAntiguedadCxp } from "./saldos";
@@ -36,6 +37,9 @@ export const REPORTES: DefReporte[] = [
   { id: "antiguedad-cxp", titulo: "Antigüedad de cuentas por pagar", grupo: "Cobranza y pagos", descripcion: "Saldos con proveedores por tramos de vencimiento, o detalle por factura.", parametros: () => [vista()], consultar: reporteAntiguedadCxp },
   { id: "balance-general", titulo: "Balance general", grupo: "Contabilidad", descripcion: "Activo, pasivo y patrimonio en bolívares a una fecha.", parametros: () => [{ id: "hasta", etiqueta: "Al", tipo: "fecha", defecto: "hoy" }], consultar: reporteBalanceGeneral },
   { id: "estado-resultados", titulo: "Estado de resultados", grupo: "Contabilidad", descripcion: "Ingresos, costos, gastos y utilidad del período en bolívares.", parametros: () => fechas(), consultar: reporteEstadoResultados },
+  { id: "libro-ventas", titulo: "Libro de ventas (IVA)", grupo: "Fiscal", descripcion: "Facturas de venta del período con base, IVA por alícuota y número fiscal y de control, en bolívares.", parametros: () => fechas(), consultar: reporteLibroVentas },
+  { id: "libro-compras", titulo: "Libro de compras (IVA)", grupo: "Fiscal", descripcion: "Facturas de proveedores del período con base e IVA por alícuota, en bolívares.", parametros: () => fechas(), consultar: reporteLibroCompras },
+  { id: "resumen-iva", titulo: "Resumen de IVA del período", grupo: "Fiscal", descripcion: "Débito fiscal, crédito fiscal e IVA a pagar o excedente, para preparar la declaración.", parametros: () => fechas(), consultar: reporteResumenIva },
 ];
 
 export const buscarReporte = (id: string) => REPORTES.find((r) => r.id === id);
