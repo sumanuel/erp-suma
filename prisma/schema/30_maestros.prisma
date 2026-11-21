@@ -1,0 +1,41 @@
+model Cliente {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// RIF / documento fiscal, sin puntos ni guiones.
+  documento     String   @unique
+  razonSocial   String   @map("razon_social")
+  nombreComercial String? @map("nombre_comercial")
+  tipo          String
+  categoria     String?
+  direccion     String?
+  telefono      String?
+  email         String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@index([razonSocial])
+  @@map("cliente")
+}
+
+model Proveedor {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// RIF / documento fiscal, sin puntos ni guiones.
+  documento       String   @unique
+  razonSocial     String   @map("razon_social")
+  nombreComercial String?  @map("nombre_comercial")
+  contacto        String?
+  telefono        String?
+  email           String?
+  direccion       String?
+  /// Días de crédito que da el proveedor (0 = contado).
+  diasCredito     Int      @default(0) @map("dias_credito")
+  activo          Boolean  @default(true)
+  creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn   DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  productos       ProductoProveedor[]
+  ordenesCompra   OrdenCompra[]
+
+  @@index([razonSocial])
+  @@map("proveedor")
+}

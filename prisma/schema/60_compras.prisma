@@ -1,0 +1,90 @@
+// Compras de mercancía: orden de compra → recepciones que entran al inventario (kardex) con su costo. Equivale a admOrdenCompra y su detalle del
+// sistema anterior. Costos en USD. Las facturas del proveedor y las retenciones son de Cuentas por pagar; los gastos de importación, de Importaciones.
+
+model OrdenCompra {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo de la orden (se muestra como OC-000123).
+  numero          Int                @unique @default(autoincrement())
+  proveedorId     String             @map("proveedor_id") @db.Uuid
+  proveedor       Proveedor          @relation(fields: [proveedorId], references: [id])
+  fecha           DateTime           @db.Date
+  fechaEsperada   DateTime?          @map("fecha_esperada") @db.Date
+  /// BORRADOR, EMITIDA, RECIBIDA_PARCIAL, RECIBIDA, ANULADA
+  estado          String             @default("BORRADOR")
+  observaciones   String?
+  /// Suma de las líneas ya con descuento, sin IVA.
+  subtotal        Decimal            @default(0) @db.Decimal(18, 4)
+  descuento       Decimal            @default(0) @db.Decimal(18, 4)
+  iva             Decimal            @default(0) @db.Decimal(18, 4)
+  total           Decimal            @default(0) @db.Decimal(18, 4)
+  creadoPorId     String?            @map("creado_por_id") @db.Uuid
+  creadoPorNombre String?            @map("creado_por_nombre")
+  creadoEn        DateTime           @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn   DateTime           @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  lineas          OrdenCompraLinea[]
+  recepciones     Recepcion[]
+
+  @@index([proveedorId])
+  @@index([estado, fecha(sort: Desc)])
+  @@map("orden_compra")
+}
+
+model OrdenCompraLinea {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ordenId          String            @map("orden_id") @db.Uuid
+  orden            OrdenCompra       @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  linea            Int
+  productoCodigo   String            @map("producto_codigo")
+  producto         Producto          @relation(fields: [productoCodigo], references: [codigo])
+  /// Descripción del producto al momento de la orden.
+  descripcion      String
+  cantidad         Decimal           @db.Decimal(18, 4)
+  /// Costo unitario en USD, antes de descuento.
+  costoUnitario    Decimal           @map("costo_unitario") @db.Decimal(18, 4)
+  /// Porcentaje de descuento de la línea.
+  descuento        Decimal           @default(0) @db.Decimal(7, 4)
+  /// Alícuota de IVA de compra del producto al momento de la orden.
+  ivaPorcentaje    Decimal           @default(0) @map("iva_porcentaje") @db.Decimal(7, 4)
+  cantidadRecibida Decimal           @default(0) @map("cantidad_recibida") @db.Decimal(18, 4)
+  /// Total de la línea: neto + IVA.
+  total            Decimal           @default(0) @db.Decimal(18, 4)
+  recepciones      RecepcionLinea[]
+
+  @@unique([ordenId, linea])
+  @@index([productoCodigo])
+  @@map("orden_compra_linea")
+}
+
+/// Mercancía que llegó contra una orden. Cada línea entra al inventario como ENTRADA con el costo neto de la orden.
+model Recepcion {
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  numero        Int              @unique @default(autoincrement())
+  ordenId       String           @map("orden_id") @db.Uuid
+  orden         OrdenCompra      @relation(fields: [ordenId], references: [id])
+  almacenId     String           @map("almacen_id") @db.Uuid
+  almacen       Almacen          @relation(fields: [almacenId], references: [id])
+  fecha         DateTime         @default(now()) @db.Timestamptz(6)
+  /// Factura o guía del proveedor.
+  documento     String?
+  observaciones String?
+  usuarioId     String?          @map("usuario_id") @db.Uuid
+  usuarioNombre String?          @map("usuario_nombre")
+  lineas        RecepcionLinea[]
+
+  @@index([ordenId])
+  @@map("recepcion")
+}
+
+model RecepcionLinea {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recepcionId    String           @map("recepcion_id") @db.Uuid
+  recepcion      Recepcion        @relation(fields: [recepcionId], references: [id], onDelete: Cascade)
+  ordenLineaId   String           @map("orden_linea_id") @db.Uuid
+  ordenLinea     OrdenCompraLinea @relation(fields: [ordenLineaId], references: [id])
+  productoCodigo String           @map("producto_codigo")
+  cantidad       Decimal          @db.Decimal(18, 4)
+  /// Costo unitario neto (con descuento) con que entró al inventario.
+  costoUnitario  Decimal          @map("costo_unitario") @db.Decimal(18, 4)
+
+  @@map("recepcion_linea")
+}

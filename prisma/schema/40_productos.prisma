@@ -1,0 +1,160 @@
+// Productos e inventario (catálogo). Equivale a admgrupo, admsubgrupo, admiva, admarancel, adminv, adminv2, adminvmed y adminvparam del sistema anterior.
+// Costos y precios en USD (moneda base); las existencias y los movimientos son del módulo Existencias.
+
+model Categoria {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String         @unique
+  nombre        String
+  comisionVenta Decimal        @default(0) @map("comision_venta") @db.Decimal(7, 4)
+  comisionCobro Decimal        @default(0) @map("comision_cobro") @db.Decimal(7, 4)
+  activo        Boolean        @default(true)
+  creadoEn      DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime       @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  subcategorias Subcategoria[]
+  productos     Producto[]
+
+  @@map("categoria")
+}
+
+model Subcategoria {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoriaId   String     @map("categoria_id") @db.Uuid
+  categoria     Categoria  @relation(fields: [categoriaId], references: [id])
+  codigo        String
+  nombre        String
+  comisionVenta Decimal    @default(0) @map("comision_venta") @db.Decimal(7, 4)
+  comisionCobro Decimal    @default(0) @map("comision_cobro") @db.Decimal(7, 4)
+  activo        Boolean    @default(true)
+  creadoEn      DateTime   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime   @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  productos     Producto[]
+
+  @@unique([categoriaId, codigo])
+  @@map("subcategoria")
+}
+
+model AlicuotaIva {
+  id                 String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre             String     @unique
+  porcentajeVenta    Decimal    @default(0) @map("porcentaje_venta") @db.Decimal(7, 4)
+  porcentajeCompra   Decimal    @default(0) @map("porcentaje_compra") @db.Decimal(7, 4)
+  porcentajeZonaLibre Decimal   @default(0) @map("porcentaje_zona_libre") @db.Decimal(7, 4)
+  activo             Boolean    @default(true)
+  creadoEn           DateTime   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn      DateTime   @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  productos          Producto[]
+
+  @@map("alicuota_iva")
+}
+
+model Arancel {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String     @unique
+  descripcion   String
+  porcentaje    Decimal    @default(0) @db.Decimal(7, 4)
+  impuesto      Decimal    @default(0) @db.Decimal(7, 4)
+  kilos         Decimal    @default(0) @db.Decimal(14, 4)
+  activo        Boolean    @default(true)
+  creadoEn      DateTime   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime   @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  productos     Producto[]
+
+  @@map("arancel")
+}
+
+model UnidadMedida {
+  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String                 @unique
+  nombre        String
+  activo        Boolean                @default(true)
+  creadoEn      DateTime               @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime               @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  presentaciones ProductoPresentacion[]
+
+  @@map("unidad_medida")
+}
+
+model Producto {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Código que el negocio usa para el producto. No cambia una vez creado.
+  codigo              String   @unique
+  descripcion         String
+  categoriaId         String   @map("categoria_id") @db.Uuid
+  categoria           Categoria @relation(fields: [categoriaId], references: [id])
+  subcategoriaId      String?  @map("subcategoria_id") @db.Uuid
+  subcategoria        Subcategoria? @relation(fields: [subcategoriaId], references: [id])
+  alicuotaIvaId       String   @map("alicuota_iva_id") @db.Uuid
+  alicuotaIva         AlicuotaIva @relation(fields: [alicuotaIvaId], references: [id])
+  arancelId           String?  @map("arancel_id") @db.Uuid
+  arancel             Arancel? @relation(fields: [arancelId], references: [id])
+  codigoFabricante    String?  @map("codigo_fabricante")
+  codigoBarras        String?  @map("codigo_barras")
+  procedencia         String?
+  garantia            String?
+  peso                Decimal  @default(0) @db.Decimal(14, 4)
+  volumen             Decimal  @default(0) @db.Decimal(14, 4)
+  alto                Decimal  @default(0) @db.Decimal(14, 4)
+  ancho               Decimal  @default(0) @db.Decimal(14, 4)
+  existenciaMinima    Decimal  @default(0) @map("existencia_minima") @db.Decimal(18, 4)
+  existenciaMaxima    Decimal  @default(0) @map("existencia_maxima") @db.Decimal(18, 4)
+  comisionVenta       Decimal  @default(0) @map("comision_venta") @db.Decimal(7, 4)
+  comisionCompra      Decimal  @default(0) @map("comision_compra") @db.Decimal(7, 4)
+  /// Costos y precios en USD.
+  ultimoCosto         Decimal  @default(0) @map("ultimo_costo") @db.Decimal(18, 4)
+  costoPromedio       Decimal  @default(0) @map("costo_promedio") @db.Decimal(18, 4)
+  precioLista         Decimal  @default(0) @map("precio_lista") @db.Decimal(18, 4)
+  /// Precio máximo de venta al público (productos con precio regulado). 0 = sin tope.
+  precioMaximoPublico Decimal  @default(0) @map("precio_maximo_publico") @db.Decimal(18, 4)
+  observaciones       String?
+  activo              Boolean  @default(true)
+  creadoEn            DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  presentaciones      ProductoPresentacion[]
+  proveedores         ProductoProveedor[]
+  existencias         Existencia[]
+  movimientos         MovimientoInventario[]
+  lineasCompra        OrdenCompraLinea[]
+
+  @@index([descripcion])
+  @@index([categoriaId])
+  @@index([codigoBarras])
+  @@map("producto")
+}
+
+/// Una forma de comprar/vender el producto (unidad, caja x 12…), con su precio. Equivale a adminvmed.
+model ProductoPresentacion {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productoCodigo String       @map("producto_codigo")
+  producto       Producto     @relation(fields: [productoCodigo], references: [codigo])
+  unidadMedidaId String       @map("unidad_medida_id") @db.Uuid
+  unidadMedida   UnidadMedida @relation(fields: [unidadMedidaId], references: [id])
+  nombre         String?
+  /// Unidades base que trae esta presentación.
+  cantidad       Decimal      @default(1) @db.Decimal(18, 4)
+  peso           Decimal      @default(0) @db.Decimal(14, 4)
+  volumen        Decimal      @default(0) @db.Decimal(14, 4)
+  precioCompra   Decimal      @default(0) @map("precio_compra") @db.Decimal(18, 4)
+  precioVenta    Decimal      @default(0) @map("precio_venta") @db.Decimal(18, 4)
+  principal      Boolean      @default(false)
+  creadoEn       DateTime     @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn  DateTime     @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([productoCodigo, unidadMedidaId])
+  @@map("producto_presentacion")
+}
+
+/// Proveedores que surten el producto. Equivale a adminvparam.
+model ProductoProveedor {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productoCodigo String    @map("producto_codigo")
+  producto       Producto  @relation(fields: [productoCodigo], references: [codigo])
+  proveedorId    String    @map("proveedor_id") @db.Uuid
+  proveedor      Proveedor @relation(fields: [proveedorId], references: [id])
+  moneda         String    @default("USD")
+  pais           String?
+  creadoEn       DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn  DateTime  @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([productoCodigo, proveedorId])
+  @@map("producto_proveedor")
+}

@@ -1,0 +1,49 @@
+{
+  "name": "erp-suma",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "prisma generate",
+    "local:preparar": "tsx scripts/local.ts",
+    "cliente:crear": "tsx scripts/clientes/crear.ts",
+    "cliente:listar": "tsx scripts/clientes/listar.ts",
+    "cliente:eliminar": "tsx scripts/clientes/eliminar.ts",
+    "cliente:suspender": "tsx scripts/clientes/suspender.ts",
+    "cliente:contrasena": "tsx scripts/clientes/restablecer-contrasena.ts",
+    "plataforma:admin": "tsx scripts/clientes/admin-plataforma.ts",
+    "cliente:demo": "tsx scripts/clientes/demo-clientes.ts",
+    "db:migrar:todos": "tsx scripts/clientes/migrar-todos.ts",
+    "probar:aislamiento": "tsx scripts/clientes/probar-aislamiento.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "dotenv": "^18.0.10",
+    "jose": "^6.2.18",
+    "lucide-react": "^1.76.0",
+    "next": "^16.4.6",
+    "pg": "^8.23.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.6",
+    "prisma": "^7.10.1",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}

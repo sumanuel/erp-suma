@@ -1,0 +1,35 @@
+// Monedas y tasas de cambio. La moneda base es el bolívar (VES); las tasas dicen cuántos bolívares vale UNA unidad de la moneda
+// (dólar BCV, euro), con 8 decimales como las publica el BCV. Equivale a admhistodivi del sistema anterior.
+
+model Moneda {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Código ISO de 3 letras (USD, EUR, VES).
+  codigo        String       @unique
+  nombre        String
+  simbolo       String
+  /// La moneda en que se llevan los libros (VES). No tiene tasa.
+  esBase        Boolean      @default(false) @map("es_base")
+  activo        Boolean      @default(true)
+  creadoEn      DateTime     @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime     @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  tasas         TasaCambio[]
+
+  @@map("moneda")
+}
+
+model TasaCambio {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  monedaId    String   @map("moneda_id") @db.Uuid
+  moneda      Moneda   @relation(fields: [monedaId], references: [id])
+  /// Día desde el que rige. Si un día no tiene tasa (fin de semana), rige la última anterior.
+  fecha       DateTime @db.Date
+  /// Bolívares por 1 unidad de la moneda, con 8 decimales.
+  valor       Decimal  @db.Decimal(18, 8)
+  fuente      String   @default("Manual")
+  observacion String?
+  /// Si un día tiene varias tasas, rige la última cargada.
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@index([monedaId, fecha(sort: Desc), creadoEn(sort: Desc)])
+  @@map("tasa_cambio")
+}

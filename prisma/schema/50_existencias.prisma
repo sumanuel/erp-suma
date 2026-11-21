@@ -1,0 +1,62 @@
+// Existencias por almacén y kardex (registro inmutable de movimientos). El saldo (existencia) solo se toca desde
+// src/lib/inventario/movimientos.ts, dentro de una transacción con el movimiento que lo explica. Equivale a adminvmov y adminv2.existencia
+// del sistema anterior, ahora con saldo por almacén.
+
+model Almacen {
+  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String                 @unique
+  nombre        String
+  direccion     String?
+  activo        Boolean                @default(true)
+  creadoEn      DateTime               @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime               @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  existencias   Existencia[]
+  movimientos   MovimientoInventario[]
+  recepciones   Recepcion[]
+
+  @@map("almacen")
+}
+
+/// Saldo de un producto en un almacén. Nunca negativo (restricción en la base).
+model Existencia {
+  almacenId      String   @map("almacen_id") @db.Uuid
+  almacen        Almacen  @relation(fields: [almacenId], references: [id])
+  productoCodigo String   @map("producto_codigo")
+  producto       Producto @relation(fields: [productoCodigo], references: [codigo])
+  cantidad       Decimal  @default(0) @db.Decimal(18, 4)
+  actualizadoEn  DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@id([almacenId, productoCodigo])
+  @@index([productoCodigo])
+  @@map("existencia")
+}
+
+/// Una línea del kardex. No se edita ni se borra: un error se corrige con otro movimiento.
+model MovimientoInventario {
+  id             BigInt   @id @default(autoincrement())
+  fecha          DateTime @default(now()) @db.Timestamptz(6)
+  /// ENTRADA, SALIDA, AJUSTE_POSITIVO, AJUSTE_NEGATIVO, TRASLADO_ENTRADA, TRASLADO_SALIDA
+  tipo           String
+  almacenId      String   @map("almacen_id") @db.Uuid
+  almacen        Almacen  @relation(fields: [almacenId], references: [id])
+  productoCodigo String   @map("producto_codigo")
+  producto       Producto @relation(fields: [productoCodigo], references: [codigo])
+  /// Con signo: entradas positivas, salidas negativas.
+  cantidad       Decimal  @db.Decimal(18, 4)
+  /// Costo unitario en USD al momento del movimiento.
+  costoUnitario  Decimal  @default(0) @map("costo_unitario") @db.Decimal(18, 4)
+  /// Saldo del producto en ese almacén después del movimiento.
+  saldoDespues   Decimal  @map("saldo_despues") @db.Decimal(18, 4)
+  /// Documento que lo originó (factura, compra, nota…), si lo hay.
+  documento      String?
+  motivo         String?
+  /// Une las dos líneas de un traslado.
+  grupo          String?  @db.Uuid
+  usuarioId      String?  @map("usuario_id") @db.Uuid
+  usuarioNombre  String?  @map("usuario_nombre")
+
+  @@index([productoCodigo, fecha(sort: Desc)])
+  @@index([almacenId, fecha(sort: Desc)])
+  @@index([fecha(sort: Desc)])
+  @@map("movimiento_inventario")
+}
