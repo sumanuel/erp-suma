@@ -1,0 +1,82 @@
+// Contabilidad (núcleo). Libros en bolívares, partida doble. Un asiento solo existe si cuadra: lo verifica el servicio y, como segunda barrera, un trigger
+// diferido de la base de datos que revisa debe = haber al confirmar la transacción. Los asientos no se editan: se anulan (quedan en el historial pero no
+// suman en los reportes) y se registra uno nuevo. Los períodos cerrados no admiten asientos ni anulaciones.
+// Los asientos automáticos desde ventas, compras, cobros y pagos son una fase posterior; hoy el asiento es manual.
+
+model CuentaContable {
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Código jerárquico con puntos: 1, 1.1, 1.1.01, 1.1.01.001. El de un hijo empieza con el código del padre.
+  codigo        String           @unique
+  nombre        String
+  /// ACTIVO, PASIVO, PATRIMONIO, INGRESO, COSTO, GASTO. Los hijos heredan el tipo del padre.
+  tipo          String
+  padreId       String?          @map("padre_id") @db.Uuid
+  padre         CuentaContable?  @relation("Jerarquia", fields: [padreId], references: [id])
+  hijas         CuentaContable[] @relation("Jerarquia")
+  nivel         Int              @default(1)
+  /// Solo las cuentas «de movimiento» reciben asientos; las demás agrupan.
+  posteable     Boolean          @default(false)
+  activo        Boolean          @default(true)
+  creadoEn      DateTime         @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime         @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  lineas        AsientoLinea[]
+
+  @@index([padreId])
+  @@map("cuenta_contable")
+}
+
+model PeriodoContable {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  anio             Int
+  mes              Int
+  /// ABIERTO o CERRADO. Se crea abierto al registrar el primer asiento del mes.
+  estado           String    @default("ABIERTO")
+  cerradoEn        DateTime? @map("cerrado_en") @db.Timestamptz(6)
+  cerradoPorNombre String?   @map("cerrado_por_nombre")
+
+  @@unique([anio, mes])
+  @@map("periodo_contable")
+}
+
+model Asiento {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo (se muestra como AS-000123).
+  numero           Int            @unique @default(autoincrement())
+  fecha            DateTime       @db.Date
+  anio             Int
+  mes              Int
+  descripcion      String
+  /// MANUAL por ahora; luego VENTA, COMPRA, COBRO, PAGO, TESORERIA…
+  origen           String         @default("MANUAL")
+  /// Documento que lo originó, si lo hay.
+  referencia       String?
+  /// REGISTRADO o ANULADO
+  estado           String         @default("REGISTRADO")
+  motivoAnulacion  String?        @map("motivo_anulacion")
+  anuladoEn        DateTime?      @map("anulado_en") @db.Timestamptz(6)
+  anuladoPorNombre String?        @map("anulado_por_nombre")
+  creadoPorId      String?        @map("creado_por_id") @db.Uuid
+  creadoPorNombre  String?        @map("creado_por_nombre")
+  creadoEn         DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  lineas           AsientoLinea[]
+
+  @@index([fecha(sort: Desc)])
+  @@index([anio, mes])
+  @@map("asiento")
+}
+
+model AsientoLinea {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  asientoId   String         @map("asiento_id") @db.Uuid
+  asiento     Asiento        @relation(fields: [asientoId], references: [id], onDelete: Cascade)
+  linea       Int
+  cuentaId    String         @map("cuenta_id") @db.Uuid
+  cuenta      CuentaContable @relation(fields: [cuentaId], references: [id])
+  descripcion String?
+  debe        Decimal        @default(0) @db.Decimal(18, 2)
+  haber       Decimal        @default(0) @db.Decimal(18, 2)
+
+  @@unique([asientoId, linea])
+  @@index([cuentaId])
+  @@map("asiento_linea")
+}

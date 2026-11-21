@@ -1,4 +1,5 @@
 import type { Client } from "pg";
+import { PLAN_CUENTAS_BASE } from "./plan-cuentas-base";
 
 // Catálogos que todo cliente necesita desde el primer día. Idempotente: se puede correr sobre un cliente existente.
 export async function sembrarCatalogosBase(c: Client) {
@@ -12,6 +13,14 @@ export async function sembrarCatalogosBase(c: Client) {
     );
   }
   await c.query("INSERT INTO almacen (codigo, nombre) VALUES ('PRINC', 'Almacén principal') ON CONFLICT (codigo) DO NOTHING");
+  for (const [codigo, nombre, tipo, posteable] of PLAN_CUENTAS_BASE) {
+    const partes = codigo.split(".");
+    const padre = partes.length > 1 ? partes.slice(0, -1).join(".") : null;
+    await c.query(
+      "INSERT INTO cuenta_contable (codigo, nombre, tipo, padre_id, nivel, posteable) VALUES ($1,$2,$3,(SELECT id FROM cuenta_contable WHERE codigo = $4),$5,$6) ON CONFLICT (codigo) DO NOTHING",
+      [codigo, nombre, tipo, padre, partes.length, posteable],
+    );
+  }
   await c.query("INSERT INTO cuenta_tesoreria (codigo, nombre, tipo, moneda) VALUES ('CAJA-USD', 'Caja en dólares', 'CAJA', 'USD'), ('CAJA-VES', 'Caja en bolívares', 'CAJA', 'VES') ON CONFLICT (codigo) DO NOTHING");
   for (const [codigo, nombre] of [["UND", "Unidad"], ["CJ", "Caja"], ["PQ", "Paquete"], ["KG", "Kilogramo"], ["MT", "Metro"], ["LT", "Litro"], ["GL", "Galón"]] as const) {
     await c.query("INSERT INTO unidad_medida (codigo, nombre) VALUES ($1,$2) ON CONFLICT (codigo) DO NOTHING", [codigo, nombre]);
