@@ -4,10 +4,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
-import { anularPedido, confirmarPedido, disponibles, guardarPedido } from "@/lib/pedidos/servicio";
+import { anularPedido, buscarProductosVenta, confirmarPedido, guardarPedido, type ProductoVenta } from "@/lib/pedidos/servicio";
 
 export type EstadoPedidoForm = { error?: string };
-export type ProductoVenta = { codigo: string; descripcion: string; precioLista: number; ivaPorcentaje: number; disponible: number };
 
 const Fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida").transform((s) => new Date(`${s}T00:00:00.000Z`)).refine((d) => !Number.isNaN(d.getTime()), "Fecha inválida");
 
@@ -24,18 +23,9 @@ const Pedido = z.object({
 });
 
 /** Busca productos activos para armar el pedido, con su precio de lista y lo disponible (existencia menos reservas). */
-export async function buscarProductosVenta(texto: string): Promise<ProductoVenta[]> {
+export async function buscarProductosPedido(texto: string): Promise<ProductoVenta[]> {
   const { db } = await requerirPermisoAccion("pedidos", "ver");
-  const q = texto.trim().slice(0, 60);
-  if (q.length < 2) return [];
-  const r = await db.producto.findMany({
-    where: { activo: true, OR: [{ codigo: { contains: q, mode: "insensitive" } }, { descripcion: { contains: q, mode: "insensitive" } }, { codigoBarras: q }] },
-    include: { alicuotaIva: { select: { porcentajeVenta: true } } },
-    orderBy: { descripcion: "asc" },
-    take: 12,
-  });
-  const libre = await disponibles(db, r.map((p) => p.codigo));
-  return r.map((p) => ({ codigo: p.codigo, descripcion: p.descripcion, precioLista: Number(p.precioLista), ivaPorcentaje: Number(p.alicuotaIva.porcentajeVenta), disponible: libre.get(p.codigo) ?? 0 }));
+  return buscarProductosVenta(db, texto);
 }
 
 export async function guardarPedidoVenta(id: string | null, datos: unknown): Promise<EstadoPedidoForm> {

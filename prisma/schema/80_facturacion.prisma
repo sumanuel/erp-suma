@@ -1,0 +1,63 @@
+// Facturas de venta (factura administrativa). Emitir descuenta el inventario de un almacén (kardex) en la misma transacción y, si viene de un pedido,
+// lo pasa a FACTURADO. Una factura emitida no se edita: se anula (devuelve la mercancía) y se emite otra. Montos en USD; la tasa del día se congela
+// y se guarda el total en bolívares. El número fiscal lo asignará la impresora fiscal / máquina fiscal cuando se integre (campo numero_fiscal).
+
+model Factura {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo interno (se muestra como FAC-000123).
+  numero           Int            @unique @default(autoincrement())
+  /// Número que asigna el equipo fiscal, si aplica.
+  numeroFiscal     String?        @map("numero_fiscal")
+  clienteId        String         @map("cliente_id") @db.Uuid
+  cliente          Cliente        @relation(fields: [clienteId], references: [id])
+  pedidoId         String?        @map("pedido_id") @db.Uuid
+  pedido           PedidoVenta?   @relation(fields: [pedidoId], references: [id])
+  almacenId        String         @map("almacen_id") @db.Uuid
+  almacen          Almacen        @relation(fields: [almacenId], references: [id])
+  fecha            DateTime       @db.Date
+  /// EMITIDA, ANULADA
+  estado           String         @default("EMITIDA")
+  observaciones    String?
+  subtotal         Decimal        @default(0) @db.Decimal(18, 4)
+  descuento        Decimal        @default(0) @db.Decimal(18, 4)
+  iva              Decimal        @default(0) @db.Decimal(18, 4)
+  total            Decimal        @default(0) @db.Decimal(18, 4)
+  /// Bolívares por 1 USD al emitir (8 decimales).
+  tasaUsd          Decimal        @map("tasa_usd") @db.Decimal(18, 8)
+  /// Total en bolívares con la tasa congelada, redondeado a 2 decimales.
+  totalBs          Decimal        @map("total_bs") @db.Decimal(18, 2)
+  creadoPorId      String?        @map("creado_por_id") @db.Uuid
+  creadoPorNombre  String?        @map("creado_por_nombre")
+  creadoEn         DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  anuladaEn        DateTime?      @map("anulada_en") @db.Timestamptz(6)
+  anuladaPorNombre String?        @map("anulada_por_nombre")
+  motivoAnulacion  String?        @map("motivo_anulacion")
+  lineas           FacturaLinea[]
+
+  @@index([clienteId])
+  @@index([pedidoId])
+  @@index([estado, fecha(sort: Desc)])
+  @@map("factura")
+}
+
+model FacturaLinea {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  facturaId      String   @map("factura_id") @db.Uuid
+  factura        Factura  @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  linea          Int
+  productoCodigo String   @map("producto_codigo")
+  producto       Producto @relation(fields: [productoCodigo], references: [codigo])
+  descripcion    String
+  cantidad       Decimal  @db.Decimal(18, 4)
+  /// Precio unitario en USD, antes de descuento.
+  precioUnitario Decimal  @map("precio_unitario") @db.Decimal(18, 4)
+  descuento      Decimal  @default(0) @db.Decimal(7, 4)
+  ivaPorcentaje  Decimal  @default(0) @map("iva_porcentaje") @db.Decimal(7, 4)
+  total          Decimal  @default(0) @db.Decimal(18, 4)
+  /// Costo promedio unitario (USD) al vender: base para el margen.
+  costoUnitario  Decimal  @default(0) @map("costo_unitario") @db.Decimal(18, 4)
+
+  @@unique([facturaId, linea])
+  @@index([productoCodigo])
+  @@map("factura_linea")
+}

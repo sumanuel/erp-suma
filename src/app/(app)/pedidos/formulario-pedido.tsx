@@ -5,7 +5,8 @@ import { Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { calcularLinea, calcularTotales } from "@/lib/pedidos/calculos";
-import { buscarProductosVenta, guardarPedidoVenta, type ProductoVenta } from "./acciones";
+import { buscarProductosPedido, guardarPedidoVenta } from "./acciones";
+import type { ProductoVenta } from "@/lib/pedidos/servicio";
 import { formatoCantidad, formatoUsd } from "./formato";
 
 export type LineaForm = { productoCodigo: string; descripcion: string; ivaPorcentaje: number; cantidad: string; precioUnitario: string; descuento: string };
@@ -33,7 +34,7 @@ export function FormularioPedido({ id, inicial, clientes }: { id: string | null;
     if (q.length < 2) return;
     const turno = ++ultima.current;
     const t = setTimeout(async () => {
-      const r = await buscarProductosVenta(q).catch(() => []);
+      const r = await buscarProductosPedido(q).catch(() => []);
       if (turno === ultima.current) setResultados(r);
     }, 250);
     return () => clearTimeout(t);

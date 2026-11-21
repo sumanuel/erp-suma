@@ -4,6 +4,7 @@ import { Pencil } from "lucide-react";
 import { Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { ESTADOS_PEDIDO, numeroPedido, type EstadoPedido } from "@/lib/pedidos/calculos";
+import { numeroFactura } from "@/lib/facturacion/estados";
 import { aBolivares, textoTasa } from "@/lib/tasas";
 import { formatoCantidad, formatoFecha, formatoFechaHora, formatoUsd } from "../formato";
 import { BotonesEstado } from "./botones";
@@ -16,7 +17,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const ctx = await requerirSesion();
   const p = await ctx.db.pedidoVenta.findUnique({
     where: { id },
-    include: { cliente: { select: { razonSocial: true, documento: true } }, lineas: { orderBy: { linea: "asc" } } },
+    include: { cliente: { select: { razonSocial: true, documento: true } }, lineas: { orderBy: { linea: "asc" } }, facturas: { where: { estado: "EMITIDA" }, select: { id: true, numero: true } } },
   });
   if (!p) notFound();
   const e = ESTADOS_PEDIDO[p.estado as EstadoPedido];
@@ -38,6 +39,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
             <p className="text-sm text-gris-600">{p.cliente.razonSocial} ({p.cliente.documento})</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {p.estado === "CONFIRMADO" && tienePermiso(ctx, "facturacion", "crear") ? <Link href={`/facturacion/nueva?pedido=${id}`} className={clasesBoton("primario")}>Facturar</Link> : null}
             {borrador && puedeEditar ? <Link href={`/pedidos/${id}/editar`} className={clasesBoton("secundario")}><Pencil className="size-4" aria-hidden />Editar</Link> : null}
             <BotonesEstado id={id} puedeConfirmar={borrador && puedeEditar} puedeAnular={anulable && tienePermiso(ctx, "pedidos", "eliminar")} />
           </div>
@@ -47,6 +49,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           <div><dt className="text-gris-500">Creado por</dt><dd>{p.creadoPorNombre ?? "—"} · {formatoFechaHora(p.creadoEn)}</dd></div>
           <div><dt className="text-gris-500">Tasa USD (al confirmar)</dt><dd>{tasa ? textoTasa(tasa) : "—"}</dd></div>
           <div><dt className="text-gris-500">Observaciones</dt><dd>{p.observaciones ?? "—"}</dd></div>
+          {p.facturas.length > 0 ? <div><dt className="text-gris-500">Factura</dt><dd>{p.facturas.map((f) => <Link key={f.id} href={`/facturacion/${f.id}`} className="text-marca-texto hover:underline">{numeroFactura(f.numero)}</Link>)}</dd></div> : null}
         </dl>
       </Tarjeta>
 

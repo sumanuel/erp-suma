@@ -13,8 +13,8 @@ export type LineaPedido = { productoCodigo: string; cantidad: number; precioUnit
 export type DatosPedido = { clienteId: string; fecha: Date; observaciones: string | null; lineas: LineaPedido[] };
 export type ResultadoPedido<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
-class PedidoError extends Error {}
-type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
+export class PedidoError extends Error {}
+export type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
 
 async function ejecutar<T>(trabajo: () => Promise<ResultadoPedido<T>>): Promise<ResultadoPedido<T>> {
   try {
@@ -41,7 +41,7 @@ export async function disponibles(db: Db | Tx, codigos: string[], excluirPedidoI
   return r;
 }
 
-async function prepararLineas(tx: Tx, d: DatosPedido) {
+export async function prepararLineasVenta(tx: Tx, d: Pick<DatosPedido, "clienteId" | "lineas">) {
   const cliente = await tx.cliente.findUnique({ where: { id: d.clienteId }, select: { activo: true } });
   if (!cliente || !cliente.activo) throw new PedidoError("El cliente no existe o está inactivo.");
   if (d.lineas.length === 0) throw new PedidoError("Agrega al menos un producto.");
@@ -69,7 +69,7 @@ async function prepararLineas(tx: Tx, d: DatosPedido) {
 export async function guardarPedido(db: Db, actor: Actor, id: string | null, d: DatosPedido): Promise<ResultadoPedido<{ id: string; numero: number }>> {
   return ejecutar(async () => {
     const r = await db.$transaction(async (tx) => {
-      const lineas = await prepararLineas(tx, d);
+      const lineas = await prepararLineasVenta(tx, d);
       const t = calcularTotales(lineas.map((l) => l._e));
       const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, ivaPorcentaje: l.ivaPorcentaje, total: l.total }));
       const base = { clienteId: d.clienteId, fecha: d.fecha, observaciones: d.observaciones, ...t };
@@ -132,4 +132,20 @@ export async function anularPedido(db: Db, actor: Actor, id: string): Promise<Re
     await registrarCambio(db, actor, { modulo: "pedidos", entidad: "pedido_venta", entidadId: id, descripcion: numeroPedido(numero), accion: "otro", despues: { estado: "ANULADO", operacion: "Anulado" } });
     return { ok: true };
   });
+}
+
+export type ProductoVenta = { codigo: string; descripcion: string; precioLista: number; ivaPorcentaje: number; disponible: number };
+
+/** Busca productos activos para armar un documento de venta, con su precio de lista y lo disponible (existencia menos reservas). */
+export async function buscarProductosVenta(db: Db, texto: string): Promise<ProductoVenta[]> {
+  const q = texto.trim().slice(0, 60);
+  if (q.length < 2) return [];
+  const r = await db.producto.findMany({
+    where: { activo: true, OR: [{ codigo: { contains: q, mode: "insensitive" } }, { descripcion: { contains: q, mode: "insensitive" } }, { codigoBarras: q }] },
+    include: { alicuotaIva: { select: { porcentajeVenta: true } } },
+    orderBy: { descripcion: "asc" },
+    take: 12,
+  });
+  const libre = await disponibles(db, r.map((p) => p.codigo));
+  return r.map((p) => ({ codigo: p.codigo, descripcion: p.descripcion, precioLista: Number(p.precioLista), ivaPorcentaje: Number(p.alicuotaIva.porcentajeVenta), disponible: libre.get(p.codigo) ?? 0 }));
 }
