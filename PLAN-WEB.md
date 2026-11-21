@@ -203,12 +203,14 @@ erp-suma/
 
 ## 11. Estado de avance
 
+> Cada entrada trae su lista «Pendiente». La lista **consolidada y priorizada** está en la sección 12, al final de este archivo.
+
 - **2026-11-20 · Base técnica inicial hecha.** Proyecto `erp-suma` creado con el stack de `wms-web` (Next 16, React 19, Prisma 7 + `adapter-pg`, Tailwind 4),
   mismo diseño que la referencia TEYMA en **azul** (tokens en `src/app/globals.css`), menú lateral por áreas, inicio con tarjetas por módulo,
   login con sesión JWT, permisos por módulo/acción y primer módulo real: **Clientes** (listado, búsqueda, alta, edición, baja).
 - Base local `erp_suma` en el PostgreSQL 14 (roles `suma_migrador` y `suma_app`). `npm run local:preparar`, `npx prisma migrate dev`,
   `npm run usuario:crear -- correo "Nombre" contraseña`. Credenciales locales en `USUARIOS-DE-PRUEBA.md` (no versionado).
-- Pendiente de esta base: auditoría de cambios, pantalla de usuarios y perfiles, motor de listados/maestros reutilizable.
+- Pendiente de esta base (todo hecho más abajo): auditoría de cambios, pantalla de usuarios y perfiles, motor de listados/maestros reutilizable.
 - **2026-11-20 · Usuarios y perfiles** (`/seguridad`): usuarios, perfiles y matriz de permisos por módulo, con protección del último administrador.
 - **2026-11-20 · Servicio alquilado (SaaS):** `erp_control` + una base por cliente, resolución por subdominio, sesión con cliente, cambio obligatorio de la
   contraseña temporal, módulos por cliente y scripts de ciclo de vida (sección 3). Aislamiento verificado con `npm run probar:aislamiento`.
@@ -243,7 +245,7 @@ Lo que no cabe en el motor (documentos con líneas, flujos) se escribe como pant
   simultáneas no pueden pasarse del saldo); el kardex no se edita ni se borra (un error se corrige con otro movimiento); los ajustes exigen motivo; un traslado son dos líneas ligadas por `grupo`, y si falla una se revierten ambas;
   una entrada con costo actualiza último costo y **costo promedio ponderado** (con el saldo de todos los almacenes). Verificado con pruebas de transacción, concurrencia y costo promedio (sin script permanente todavía).
   Compras, Facturación y Pedidos deben mover inventario **solo** con `registrarMovimiento()`/`trasladar()`. Motor de maestros ampliado: `sinEdicion`, `sinEliminar`, `crear` (alta personalizada), `encabezado` y búsqueda por relación (`producto.descripcion`).
-  **Pendiente:** reservas (pedidos/prefacturas), lotes y vencimientos si el cliente los usa, conteo físico con conciliación, costo por lote, reporte de kardex por producto/fecha, exportar a Excel, y la carga inicial desde `adminv2.existencia`.
+  **Pendiente:** reserva por almacén (la reserva global ya existe en Pedidos), lotes y vencimientos si el cliente los usa, conteo físico con conciliación, costo por lote, reporte de kardex por producto/fecha, exportar a Excel, y la carga inicial desde `adminv2.existencia`.
 - **2026-11-21 · Cotizaciones:** modelo `cotizacion`/`cotizacion_linea` (migración `…110000_cotizaciones`, con `CHECK`; el pedido gana `cotizacion_id`), servicio `src/lib/cotizaciones/servicio.ts` y pantallas `/cotizaciones` (lista, nueva, editar, detalle). Estados: borrador → emitida → aceptada / rechazada / anulada; «vencida» se calcula por la fecha de vigencia (días de validez, 1–365). Emitir congela la tasa del dólar (muestra el total en Bs.). **Convertir en pedido** crea un pedido en borrador con los mismos precios (revalida producto activo y precio máximo) y marca la cotización aceptada en la misma transacción; el cambio de estado condicionado impide convertirla dos veces y una vencida se rechaza sin dejar nada a medias. No reserva inventario (la reserva ocurre al confirmar el pedido).
   Verificado por script (vigencia 0 rechazada, borrador no se convierte, emitida no se edita, dos conversiones simultáneas → un solo pedido, vencida rechazada y sigue emitida, rechazo exige motivo) y en navegador (500 × 0,09 + IVA 16 % = 52,20 USD = 1.955,24 Bs.; convertir lleva al pedido en borrador con el mismo total).
   **Pendiente:** versiones/revisiones de una cotización, enviar por correo o PDF para el cliente, descuentos por perfil o lista de precios por cliente, convertir directo en factura, seguimiento comercial (vendedor, probabilidad) y reporte de cotizaciones vs. ventas.
@@ -254,21 +256,83 @@ Lo que no cabe en el motor (documentos con líneas, flujos) se escribe como pant
 - **2026-11-21 · Cuentas por pagar:** modelo `factura_compra`, `pago_proveedor` y `pago_aplicacion` (migración `…090000_cxp`, con `CHECK`: total = base + IVA, saldo entre 0 y el total, montos positivos, moneda coherente con tasa) y servicio `src/lib/cxp/servicio.ts`. Pantallas `/cxp` (saldos por proveedor con antigüedad), `/cxp/proveedor/[id]` (estado de cuenta), `/cxp/facturas` (registrar y anular facturas del proveedor, con orden de compra opcional como referencia), `/cxp/pagos` (pagos aplicados a facturas, en USD o Bs. con la tasa del día, con anulación).
   Es el espejo de Cuentas por cobrar y comparte tramos y formas de pago. La factura del proveedor se registra por montos (el inventario entra por la recepción de Compras); el mismo proveedor no puede repetir un número de factura; no se anula una factura con pagos vigentes.
   Verificado por script (duplicada y fecha futura rechazadas, exceso rechazado, dos pagos simultáneos de 50 sobre 80 → solo uno, anulaciones) y en navegador (factura de 1.000 + 16 % a 30 días vence 21/12; pago de 400 USD en Bs. = 14.982,72; saldo por pagar 760).
-  **Pendiente:** retenciones de IVA/ISLR (comprobantes), facturas del proveedor en bolívares, anticipos a proveedores, notas de débito/crédito del proveedor, programación de pagos por vencimiento, cuentas bancarias y caja (Tesorería), y cargar los gastos de importación.
+  **Pendiente:** retenciones de IVA/ISLR (comprobantes), facturas del proveedor en bolívares, anticipos a proveedores, notas de débito/crédito del proveedor, programación de pagos por vencimiento, y cargar los gastos de importación.
 - **2026-11-21 · Cuentas por cobrar:** la factura ahora lleva `dias_credito`, `fecha_vencimiento` y `saldo` (USD); modelo `cobro`/`cobro_aplicacion` (migración `…080000_cxc`, con `CHECK`: saldo entre 0 y el total, montos positivos, moneda USD/VES coherente con tasa), servicio `src/lib/cxc/servicio.ts` y pantallas `/cxc` (saldos por cliente con antigüedad por tramos), `/cxc/cliente/[id]` (estado de cuenta), `/cxc/cobros` (lista), `/cxc/cobros/nuevo?cliente=ID` y detalle con anular.
   Un cobro reparte lo recibido entre las facturas abiertas del cliente; todo se lleva en USD: si paga en Bs., se guarda el monto en Bs. (USD × tasa de hoy) y la tasa. El saldo baja con un `UPDATE` atómico condicionado (`saldo >= monto`). Anular un cobro restituye lo aplicado; una factura con cobros vigentes no se anula hasta anular esos cobros.
   Verificado por script (cliente ajeno y exceso rechazados; dos cobros simultáneos de 60 sobre 80 → solo uno; anulaciones; factura anulada no se cobra) y en navegador (factura a 15 días vence 06/12; cobro de 100 USD en Bs. = 3.745,68; anular devuelve el saldo a 208,80).
-  **Pendiente:** anticipos y pagos sin factura (con Tesorería), abonos en varias monedas en un mismo recibo, notas de crédito/débito, retenciones, intereses de mora, recibo imprimible/PDF, conciliación con bancos y cuenta de caja, y cobranza (recordatorios).
+  **Pendiente:** anticipos y pagos sin factura (con Tesorería), abonos en varias monedas en un mismo recibo, notas de crédito/débito, retenciones, intereses de mora, recibo imprimible/PDF y cobranza (recordatorios).
 - **2026-11-21 · Facturación (factura administrativa):** modelo `factura`/`factura_linea` (migración `…070000_facturacion`, con `CHECK`), servicio `src/lib/facturacion/servicio.ts` y pantallas `/facturacion` (lista, nueva directa o `?pedido=ID`, detalle con anular y motivo). Botón «Facturar» en el pedido confirmado.
   Emitir = una transacción: crea la factura (número FAC-xxxxxx, tasa USD congelada, total Bs.), guarda el costo promedio de cada línea (margen futuro) y descuenta el almacén elegido vía `aplicarMovimiento` (SALIDA). Factura directa respeta lo reservado por pedidos confirmados; la de un pedido pasa el pedido a FACTURADO y consume su reserva. Anular exige motivo, devuelve la mercancía como ajuste sobrante (no cambia el costo promedio) y reabre el pedido (CONFIRMADO). Una factura emitida no se edita.
   Verificado por script (reserva respetada, dos facturaciones simultáneas del mismo pedido → una sola, anulaciones, cuadre de Bs.) y en navegador (50 > 40 disponibles rechazado; 5 × 7,50 + IVA 16 % = 43,50 USD = 1.629,37 Bs.; anulación y kardex 40→35→40).
-  **Pendiente:** número fiscal e integración con la impresora/máquina fiscal (campo `numero_fiscal` listo), cobro y condiciones de pago (CxC), notas de crédito/débito, retenciones de IVA/ISLR, POS, descuentos por perfil, factura en PDF/Excel y libro de ventas.
+  **Pendiente:** número fiscal e integración con la impresora/máquina fiscal (campo `numero_fiscal` listo), notas de crédito/débito, retenciones de IVA/ISLR, POS, descuentos por perfil, factura en PDF/Excel y libro de ventas.
 - **2026-11-21 · Pedidos de venta:** modelo `pedido_venta`/`pedido_venta_linea` (migración `…060000_pedidos`, con `CHECK`), servicio `src/lib/pedidos/servicio.ts` y pantallas `/pedidos` (lista, nuevo, editar, detalle con confirmar y anular).
   **Reserva sin columna:** lo reservado de un producto es la suma de sus líneas en pedidos CONFIRMADOS; disponible = existencia total − reservado. Confirmar toma un candado por producto (`pg_advisory_xact_lock`), valida disponibilidad, exige tasa USD cargada y la congela en el pedido (muestra Bs.). Respeta `precioMaximoPublico`.
   Verificado: dos confirmaciones simultáneas de 3.000 sobre 5.000 → solo una pasa; anular libera la reserva; no se edita ni anula dos veces; en pantalla 4.000 × 0,09 + IVA 16 % = 417,60 USD = 15.641,96 Bs. a 37,45678912.
-  **Pendiente:** reserva por almacén, pasar el pedido a FACTURADO (lo hará Facturación), cotizaciones, lista de precios por cliente/condición de pago, y descuentos por perfil.
+  **Pendiente:** reserva por almacén, lista de precios por cliente/condición de pago, y descuentos por perfil.
 - **2026-11-21 · Compras con pantallas:** `/compras` (lista con filtro por número/proveedor/estado), `/compras/nueva` y `/compras/[id]/editar` (líneas con buscador de productos y totales en vivo; el servidor recalcula), `/compras/[id]` (detalle, emitir, anular, registrar recepción parcial o total, historial de recepciones). Permisos: crear/editar (emitir y recibir) /eliminar (anular).
   Verificado en navegador: crear, emitir, sobre-recepción rechazada, recepción parcial 40 + 60 → orden «Recibida» y kardex 36→76→136. **Pendiente:** probar editar/anular en pantalla y concurrencia de recepciones; los números de recepción pueden saltar (la secuencia no se revierte si la recepción falla).
 - **2026-11-20 · Compras (modelo y servicio):** hecho el modelo (`orden_compra`, `orden_compra_linea`, `recepcion`, `recepcion_linea`, con `CHECK`), los cálculos (`src/lib/compras/calculos.ts`) y el servicio transaccional
   (`src/lib/compras/servicio.ts`: guardar orden, emitir, anular, recibir). La recepción entra al inventario con el costo neto de la orden vía `aplicarMovimiento()`. Migración aplicada a los clientes.
-  **Falta:** pantallas (`/compras` lista, nueva/editar con líneas y buscador de productos, detalle con emitir/anular/recibir), permisos por acción, pruebas del servicio (recepción parcial, sobre-recepción, concurrencia) y verificación en navegador. Órdenes solo en USD por ahora.
+  (Las pantallas, permisos y pruebas que faltaban se hicieron el 2026-11-21: ver la entrada de arriba.) Órdenes solo en USD por ahora.
+
+## 12. Pendientes consolidados
+
+Reúne lo que cada módulo dejó fuera y lo que quedó sin verificar. Prioridad: **A** = bloquea operar con clientes reales, **M** = importante pero hay alternativa, **B** = mejora. Al cerrar un punto, bórralo aquí y de la entrada del módulo.
+
+### 12.1 Deuda técnica y cosas sin verificar
+- **A · Pruebas automatizadas permanentes.** Todo lo verificado (concurrencia, transacciones, cuadre de saldos) se probó con scripts temporales que se borraron. Armar una suite que corra en CI contra una base de pruebas: reservas, inventario, cobros/pagos, tesorería, anulaciones.
+- **A · Permisos de usuarios que no son administradores.** Las acciones de anular, convertir, recibir, cobrar y pagar se probaron solo con el administrador. Verificar `ver/crear/editar/eliminar` por módulo con perfiles limitados (y que un módulo apagado al cliente no se pueda usar por URL).
+- **M · Anular una factura desde el navegador:** en una prueba el botón no la anuló y se anuló por script; en Facturación sí funcionó antes. Investigar (probablemente el `prompt` del navegador de pruebas, pero no está confirmado).
+- **M · Selector de cuenta en los formularios de cobro y pago:** verificado por script y `tsc`, no en pantalla (el demo no tenía facturas con saldo).
+- **M · Sin probar de punta a punta:** suspender/reactivar un cliente, entrar por subdominio real, editar y eliminar en varios maestros, un traslado exitoso en pantalla (el demo tiene un solo almacén), editar/anular una orden de compra y recepciones simultáneas.
+- **M · Huecos en los correlativos.** `FAC-`, `PED-`, `COT-`, `COB-`, `PAG-`, `REC-` usan secuencias de la base: si una transacción falla, el número se salta. Para documentos internos es aceptable; **para el número fiscal de la factura no** (ver 12.2).
+- **M · Migraciones:** aplicarlas siempre con el rol migrador (`npm run db:migrar:todos` sin `MIGRATION_DATABASE_URL` de administrador exportada); ya pasó una vez que una tabla quedó con dueño `postgres`. Agregar una verificación en `migrar-todos` que lo detecte.
+- **B · Limpieza:** la cuenta demo `BCO-VES` conserva movimientos de prueba; un comentario con redacción incorrecta en `cotizaciones/[id]/editar/page.tsx`; los cobros y pagos anteriores a Tesorería quedaron sin cuenta (solo existen en datos de prueba).
+
+### 12.2 Fiscal y legal (confirmar con el contador de cada cliente)
+- **A · Impresora/máquina fiscal:** prueba de concepto del agente local, número fiscal en la factura (campo `numero_fiscal` ya existe) y **correlativo fiscal sin saltos**, que debe asignarlo la máquina o una secuencia propia protegida, no la secuencia de la base.
+- **A · Notas de crédito y débito** de venta y de compra (devoluciones, ajustes) y su efecto en inventario, saldos y tesorería. Hoy la única corrección es anular.
+- **A · Retenciones de IVA e ISLR** (comprobantes de retención de clientes y a proveedores), y su efecto en cobros y pagos.
+- **A · Libros de compras y de ventas**, ARC y demás reportes fiscales.
+- **M · Facturas de proveedor en bolívares** y órdenes de compra en bolívares (hoy todo es USD con la tasa del día).
+- **M · Revisar con el contador** si aplican cargos adicionales a pagos en divisas (por ejemplo IGTF) y otras normas vigentes antes del primer cliente; hoy no están modeladas.
+
+### 12.3 Ventas y cobranza
+- **A · Punto de venta (POS):** venta rápida con caja, cierre y arqueo; depende del agente fiscal.
+- **M · Listas de precios por cliente o condición de pago, descuentos por perfil, vendedor y comisiones.**
+- **M · PDF y envío por correo** de cotización, pedido, factura y recibo de cobro.
+- **M · Anticipos y pagos sin factura** (de clientes y a proveedores); cobro con varias monedas en un solo recibo.
+- **M · Cobranza:** recordatorios de mora, intereses de mora, estado de cuenta imprimible.
+- **B · Convertir una cotización directo en factura**, versiones de cotización, seguimiento comercial (probabilidad de cierre).
+- **B · Reserva por almacén** (hoy la reserva es global por producto).
+
+### 12.4 Compras, importaciones y pagos
+- **A · Importaciones:** liquidación con gastos de importación y su efecto en el costo del producto (módulo sin empezar).
+- **M · Compras sugeridas** (por mínimos, ventas y proveedor) y condiciones de pago por proveedor.
+- **M · Programación de pagos por vencimiento** y notas de débito/crédito del proveedor.
+- **M · Número de recepción:** puede saltar cuando una recepción falla.
+
+### 12.5 Inventario y productos
+- **M · Conteo físico con conciliación**, reporte de kardex por producto y fecha, exportar a Excel.
+- **M · Cambio masivo de precios, promociones, listas de precios, etiquetas y códigos de barras, importación masiva desde Excel.**
+- **M · Precio en bolívares** en la ficha del producto (con la tasa del día).
+- **B · Lotes y vencimientos** y costo por lote, solo si el cliente los usa.
+- **B · Regla de presentación principal única por producto** (sin validar todavía).
+
+### 12.6 Tesorería y bancos
+- **M · Cambio de divisas** entre cuentas de distinta moneda.
+- **M · Importar el estado de cuenta del banco** y conciliar automáticamente; cheques emitidos y en tránsito.
+- **M · Arqueo y cierre de caja**; comisiones bancarias automáticas.
+- **B · Reportes de tesorería** (flujo de caja, saldos por fecha).
+
+### 12.7 Plataforma como servicio (alquiler)
+- **A · Respaldos por cliente** (`pg_dump` programado y prueba de restauración) y plan de recuperación.
+- **A · Facturación del alquiler** y planes (qué módulos y qué límites incluye cada plan).
+- **A · Panel del proveedor restringido a `admin.<dominio>`** y endurecimiento (límite de intentos, auditoría del panel).
+- **M · Carga automática de la tasa desde el BCV** (tarea programada por cliente) y otras divisas con su fuente.
+- **M · Monitoreo** (errores, rendimiento, espacio por cliente) y despliegue (Docker/CI).
+
+### 12.8 Módulos y fases sin empezar
+- **A · Contabilidad:** plan de cuentas, asientos automáticos desde ventas, compras, cobros, pagos y tesorería, cierres y libros.
+- **A · Reportes e indicadores:** equivalentes de los Crystal Reports (PDF/Excel), gerencial, ventas por producto/cliente, antigüedad de saldos, existencias valoradas.
+- **A · Datos, paralelo y corte:** importación repetible desde el MySQL de Lebrun (clientes, proveedores, productos, existencias, saldos), operación en paralelo por empresa, capacitación y plan de vuelta atrás (fase 12 del plan).
