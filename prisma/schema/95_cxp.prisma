@@ -1,0 +1,88 @@
+// Cuentas por pagar. La factura del proveedor se registra por sus montos (el inventario entra por la recepción de la orden de compra, no por aquí);
+// un pago reparte lo pagado entre las facturas abiertas de un proveedor y baja su saldo. Todo en USD: si se paga en bolívares se guarda el monto en Bs. con la
+// tasa del día. Es el espejo de Cuentas por cobrar. Retenciones, anticipos y facturas en bolívares quedan para después.
+
+model FacturaCompra {
+  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número interno (se muestra como FC-000123).
+  numero           Int                 @unique @default(autoincrement())
+  proveedorId      String              @map("proveedor_id") @db.Uuid
+  proveedor        Proveedor           @relation(fields: [proveedorId], references: [id])
+  /// Orden de compra a la que corresponde, si se quiere referenciar.
+  ordenId          String?             @map("orden_id") @db.Uuid
+  orden            OrdenCompra?        @relation(fields: [ordenId], references: [id])
+  /// Número de la factura del proveedor.
+  documento        String
+  numeroControl    String?             @map("numero_control")
+  fecha            DateTime            @db.Date
+  diasCredito      Int                 @default(0) @map("dias_credito")
+  fechaVencimiento DateTime            @map("fecha_vencimiento") @db.Date
+  /// Base imponible, IVA y total en USD.
+  subtotal         Decimal             @db.Decimal(18, 4)
+  iva              Decimal             @default(0) @db.Decimal(18, 4)
+  total            Decimal             @db.Decimal(18, 4)
+  /// Lo que falta por pagar, en USD. Solo lo mueven los pagos y la anulación.
+  saldo            Decimal             @default(0) @db.Decimal(18, 4)
+  /// REGISTRADA, ANULADA
+  estado           String              @default("REGISTRADA")
+  observaciones    String?
+  creadoPorId      String?             @map("creado_por_id") @db.Uuid
+  creadoPorNombre  String?             @map("creado_por_nombre")
+  creadoEn         DateTime            @default(now()) @map("creado_en") @db.Timestamptz(6)
+  anuladaEn        DateTime?           @map("anulada_en") @db.Timestamptz(6)
+  anuladaPorNombre String?             @map("anulada_por_nombre")
+  motivoAnulacion  String?             @map("motivo_anulacion")
+  aplicaciones     PagoAplicacion[]
+
+  /// El mismo proveedor no puede repetir un número de factura (evita cargarla dos veces).
+  @@unique([proveedorId, documento])
+  @@index([ordenId])
+  @@index([estado, fechaVencimiento])
+  @@map("factura_compra")
+}
+
+model PagoProveedor {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo (se muestra como PAG-000123).
+  numero           Int              @unique @default(autoincrement())
+  proveedorId      String           @map("proveedor_id") @db.Uuid
+  proveedor        Proveedor        @relation(fields: [proveedorId], references: [id])
+  fecha            DateTime         @db.Date
+  /// REGISTRADO, ANULADO
+  estado           String           @default("REGISTRADO")
+  /// EFECTIVO, TRANSFERENCIA, PAGO_MOVIL, ZELLE, CHEQUE, OTRO
+  formaPago        String           @map("forma_pago")
+  /// USD o VES: la moneda en que se pagó.
+  moneda           String
+  montoMoneda      Decimal          @map("monto_moneda") @db.Decimal(18, 2)
+  /// Bolívares por 1 USD al pagar (solo si se pagó en VES).
+  tasaUsd          Decimal?         @map("tasa_usd") @db.Decimal(18, 8)
+  /// Total aplicado a facturas, en USD.
+  montoUsd         Decimal          @map("monto_usd") @db.Decimal(18, 4)
+  referencia       String?
+  observaciones    String?
+  creadoPorId      String?          @map("creado_por_id") @db.Uuid
+  creadoPorNombre  String?          @map("creado_por_nombre")
+  creadoEn         DateTime         @default(now()) @map("creado_en") @db.Timestamptz(6)
+  anuladoEn        DateTime?        @map("anulado_en") @db.Timestamptz(6)
+  anuladoPorNombre String?          @map("anulado_por_nombre")
+  motivoAnulacion  String?          @map("motivo_anulacion")
+  aplicaciones     PagoAplicacion[]
+
+  @@index([proveedorId, fecha(sort: Desc)])
+  @@index([estado])
+  @@map("pago_proveedor")
+}
+
+model PagoAplicacion {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pagoId    String        @map("pago_id") @db.Uuid
+  pago      PagoProveedor @relation(fields: [pagoId], references: [id], onDelete: Cascade)
+  facturaId String        @map("factura_id") @db.Uuid
+  factura   FacturaCompra @relation(fields: [facturaId], references: [id])
+  montoUsd  Decimal       @map("monto_usd") @db.Decimal(18, 4)
+
+  @@unique([pagoId, facturaId])
+  @@index([facturaId])
+  @@map("pago_aplicacion")
+}

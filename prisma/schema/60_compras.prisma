@@ -23,6 +23,7 @@ model OrdenCompra {
   actualizadoEn   DateTime           @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
   lineas          OrdenCompraLinea[]
   recepciones     Recepcion[]
+  facturasCompra  FacturaCompra[]
 
   @@index([proveedorId])
   @@index([estado, fecha(sort: Desc)])

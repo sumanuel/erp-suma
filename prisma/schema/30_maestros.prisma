@@ -39,6 +39,8 @@ model Proveedor {
 
   productos       ProductoProveedor[]
   ordenesCompra   OrdenCompra[]
+  facturasCompra  FacturaCompra[]
+  pagos           PagoProveedor[]
 
   @@index([razonSocial])
   @@map("proveedor")
