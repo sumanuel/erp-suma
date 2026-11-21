@@ -8,6 +8,10 @@ export const CONCEPTOS = {
   COMPRAS: { etiqueta: "Compras (base de facturas de proveedor)", sugerida: "1.1.03", uso: "Base de la factura del proveedor" },
   IVA_CREDITO: { etiqueta: "IVA crédito fiscal", sugerida: "1.1.04", uso: "IVA de las facturas de proveedor" },
   CXP: { etiqueta: "Cuentas por pagar proveedores", sugerida: "2.1.01", uso: "Se abona al registrar la factura y se carga al pagar" },
+  RET_IVA_PAGAR: { etiqueta: "Retenciones de IVA por pagar", sugerida: "2.1.03", uso: "IVA que retenemos a proveedores y debemos enterar" },
+  RET_ISLR_PAGAR: { etiqueta: "Retenciones de ISLR por pagar", sugerida: "2.1.04", uso: "ISLR que retenemos a proveedores y debemos enterar" },
+  RET_IVA_SUFRIDA: { etiqueta: "IVA retenido por clientes (a favor)", sugerida: "1.1.05", uso: "IVA que un cliente nos retuvo al pagarnos" },
+  RET_ISLR_SUFRIDA: { etiqueta: "ISLR retenido por clientes (anticipo)", sugerida: "1.1.06", uso: "ISLR que un cliente nos retuvo al pagarnos" },
   DIFERENCIAL_CAMBIARIO: { etiqueta: "Diferencial cambiario", sugerida: "6.1.04", uso: "Ganancia o pérdida por cobrar/pagar a una tasa distinta de la de la factura" },
 } as const;
 export type Concepto = keyof typeof CONCEPTOS;
@@ -27,4 +31,6 @@ export const ORIGENES_ASIENTO: Record<string, string> = {
   ANULACION_NOTA_VENTA: "Anulación de nota de venta",
   NOTA_COMPRA: "Nota del proveedor",
   ANULACION_NOTA_COMPRA: "Anulación de nota del proveedor",
+  RETENCION: "Retención de IVA o ISLR",
+  ANULACION_RETENCION: "Anulación de retención",
 };

@@ -8,7 +8,7 @@ export default async function LayoutCxc({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col gap-6">
       <EncabezadoPagina titulo="Cuentas por cobrar" descripcion="Saldos, vencimientos y cobros de clientes." />
-      <Pestanas pestanas={[{ href: "/cxc", etiqueta: "Saldos por cliente" }, { href: "/cxc/cobros", etiqueta: "Cobros" }]} />
+      <Pestanas pestanas={[{ href: "/cxc", etiqueta: "Saldos por cliente" }, { href: "/cxc/cobros", etiqueta: "Cobros" }, { href: "/cxc/retenciones", etiqueta: "Retenciones" }]} />
       {children}
     </div>
   );

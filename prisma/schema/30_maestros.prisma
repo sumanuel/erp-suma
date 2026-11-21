@@ -18,6 +18,7 @@ model Cliente {
   facturas      Factura[]
   cobros        Cobro[]
   notasVenta    NotaVenta[]
+  retenciones   Retencion[]
 
   @@index([razonSocial])
   @@map("cliente")
@@ -35,6 +36,8 @@ model Proveedor {
   direccion       String?
   /// Días de crédito que da el proveedor (0 = contado).
   diasCredito     Int      @default(0) @map("dias_credito")
+  /// Porcentaje del IVA que se le retiene en cada factura (0 = no se le retiene; 75 o 100 según su contribuyente).
+  retencionIvaPct Decimal  @default(0) @map("retencion_iva_pct") @db.Decimal(7, 4)
   activo          Boolean  @default(true)
   creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn   DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
@@ -44,6 +47,7 @@ model Proveedor {
   facturasCompra  FacturaCompra[]
   pagos           PagoProveedor[]
   notasCompra     NotaCompra[]
+  retenciones     Retencion[]
 
   @@index([razonSocial])
   @@map("proveedor")

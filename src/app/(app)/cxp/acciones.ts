@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
+import { anularRetencion, registrarRetencionPracticada } from "@/lib/retenciones/servicio";
 import { anularNotaCompra, crearNotaCompra } from "@/lib/notas/servicio";
 import { anularFacturaCompra, anularPago, registrarFacturaCompra, registrarPago } from "@/lib/cxp/servicio";
 
@@ -98,6 +99,31 @@ export async function registrarNotaProveedor(datos: unknown): Promise<{ error?: 
 export async function anularNotaProveedor(id: string, motivo: string): Promise<string | null> {
   const ctx = await requerirPermisoAccion("cxp", "eliminar");
   const r = await anularNotaCompra(ctx.db, ctx.usuario, id, motivo);
+  revalidatePath("/cxp", "layout");
+  return r.ok ? null : r.error;
+}
+
+const RetencionPracticada = z.object({
+  facturaId: z.string().uuid(),
+  tipo: z.enum(["IVA", "ISLR"]),
+  porcentaje: z.number().finite("Porcentaje inválido"),
+  base: z.number().finite().nullable().optional(),
+  concepto: z.string().trim().max(120).nullable().optional(),
+});
+
+export async function aplicarRetencionProveedor(datos: unknown): Promise<{ error?: string }> {
+  const ctx = await requerirPermisoAccion("cxp", "crear");
+  const r = RetencionPracticada.safeParse(datos);
+  if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
+  const res = await registrarRetencionPracticada(ctx.db, ctx.usuario, r.data);
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/cxp", "layout");
+  redirect(`/cxp/retenciones/${res.id}`);
+}
+
+export async function anularRetencionProveedor(id: string, motivo: string): Promise<string | null> {
+  const ctx = await requerirPermisoAccion("cxp", "eliminar");
+  const r = await anularRetencion(ctx.db, ctx.usuario, id, motivo);
   revalidatePath("/cxp", "layout");
   return r.ok ? null : r.error;
 }

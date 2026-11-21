@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
+import { anularRetencion, registrarRetencionSufrida } from "@/lib/retenciones/servicio";
 import { anularCobro, registrarCobro } from "@/lib/cxc/servicio";
 
 export type EstadoCobroForm = { error?: string };
@@ -35,5 +36,34 @@ export async function anularCobroCliente(id: string, motivo: string): Promise<st
   revalidatePath("/cxc");
   revalidatePath(`/cxc/cobros/${id}`);
   revalidatePath("/facturacion");
+  return r.ok ? null : r.error;
+}
+
+const RetencionSufrida = z.object({
+  facturaId: z.string().uuid(),
+  tipo: z.enum(["IVA", "ISLR"]),
+  porcentaje: z.number().finite("Porcentaje inválido"),
+  base: z.number().finite().nullable().optional(),
+  concepto: z.string().trim().max(120).nullable().optional(),
+  comprobante: z.string().trim().min(1, "Indica el número del comprobante de retención").max(40),
+  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida").transform((s) => new Date(`${s}T00:00:00.000Z`)).refine((d) => !Number.isNaN(d.getTime()), "Fecha inválida"),
+});
+
+export async function registrarRetencionCliente(datos: unknown): Promise<{ error?: string }> {
+  const ctx = await requerirPermisoAccion("cxc", "crear");
+  const r = RetencionSufrida.safeParse(datos);
+  if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
+  const res = await registrarRetencionSufrida(ctx.db, ctx.usuario, r.data);
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/cxc", "layout");
+  revalidatePath("/facturacion", "layout");
+  redirect(`/cxc/retenciones/${res.id}`);
+}
+
+export async function anularRetencionCliente(id: string, motivo: string): Promise<string | null> {
+  const ctx = await requerirPermisoAccion("cxc", "eliminar");
+  const r = await anularRetencion(ctx.db, ctx.usuario, id, motivo);
+  revalidatePath("/cxc", "layout");
+  revalidatePath("/facturacion", "layout");
   return r.ok ? null : r.error;
 }

@@ -38,6 +38,7 @@ model FacturaCompra {
   motivoAnulacion  String?             @map("motivo_anulacion")
   aplicaciones     PagoAplicacion[]
   notas            NotaCompra[]
+  retenciones      Retencion[]
 
   /// El mismo proveedor no puede repetir un número de factura (evita cargarla dos veces).
   @@unique([proveedorId, documento])

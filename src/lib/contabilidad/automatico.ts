@@ -4,6 +4,7 @@ import { numeroFactura } from "@/lib/facturacion/estados";
 import { numeroCobro } from "@/lib/cxc/estados";
 import { numeroFacturaCompra, numeroPago } from "@/lib/cxp/estados";
 import { numeroNotaCompra, numeroNotaVenta } from "@/lib/notas/estados";
+import { numeroRetencion } from "@/lib/retenciones/estados";
 import { hoyCaracas, tasaVigente } from "@/lib/tasas";
 import type { Db } from "@/lib/tenant";
 import { CONCEPTOS, type Concepto } from "./conceptos";
@@ -180,3 +181,18 @@ export async function contabilizarNotaCompra(tx: Tx, actor: Actor, id: string) {
   await publicar(tx, actor, { origen: "NOTA_COMPRA", referencia: ref, fecha: n.fecha, descripcion, lineas });
 }
 export const revertirNotaCompra = (tx: Tx, actor: Actor, tipo: string, numero: number) => revertir(tx, actor, "NOTA_COMPRA", "ANULACION_NOTA_COMPRA", numeroNotaCompra(tipo, numero), `Anulación de ${numeroNotaCompra(tipo, numero)}`);
+
+// ---------- Retenciones de IVA e ISLR ----------
+/** Practicada: baja lo que debemos al proveedor y sube lo que debemos al fisco. Sufrida: baja lo que nos debe el cliente y sube el crédito a nuestro favor. Mismos bolívares que el saldo de la factura. */
+export async function contabilizarRetencion(tx: Tx, actor: Actor, id: string) {
+  const r = await tx.retencion.findUniqueOrThrow({ where: { id }, include: { proveedor: { select: { razonSocial: true } }, cliente: { select: { razonSocial: true } } } });
+  const monto = Number(r.montoBs);
+  const ref = numeroRetencion(r.numero);
+  const iva = r.tipo === "IVA";
+  if (r.sentido === "PRACTICADA") {
+    await publicar(tx, actor, { origen: "RETENCION", referencia: ref, fecha: r.fecha, descripcion: `Retención de ${r.tipo} practicada ${ref} (comprobante ${r.comprobante}) · ${r.proveedor?.razonSocial ?? ""}`, lineas: [{ concepto: "CXP", debe: monto }, { concepto: iva ? "RET_IVA_PAGAR" : "RET_ISLR_PAGAR", haber: monto }] });
+  } else {
+    await publicar(tx, actor, { origen: "RETENCION", referencia: ref, fecha: r.fecha, descripcion: `Retención de ${r.tipo} sufrida ${ref} (comprobante ${r.comprobante}) · ${r.cliente?.razonSocial ?? ""}`, lineas: [{ concepto: iva ? "RET_IVA_SUFRIDA" : "RET_ISLR_SUFRIDA", debe: monto }, { concepto: "CXC", haber: monto }] });
+  }
+}
+export const revertirRetencion = (tx: Tx, actor: Actor, numero: number) => revertir(tx, actor, "RETENCION", "ANULACION_RETENCION", numeroRetencion(numero), `Anulación de retención ${numeroRetencion(numero)}`);

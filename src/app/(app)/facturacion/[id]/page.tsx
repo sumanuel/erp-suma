@@ -8,6 +8,7 @@ import { textoTasa } from "@/lib/tasas";
 import { formatoCantidad, formatoFecha, formatoFechaHora, formatoUsd } from "../formato";
 import { ESTADOS_NOTA, TIPOS_NOTA, numeroNotaVenta, type EstadoNota } from "@/lib/notas/estados";
 import { BotonAnular } from "./boton-anular";
+import { numeroRetencion } from "@/lib/retenciones/estados";
 import { NumerosFiscales } from "./numeros-fiscales";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -20,7 +21,7 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
     where: { id },
     include: {
       cliente: { select: { razonSocial: true, documento: true } }, almacen: { select: { nombre: true } },
-      pedido: { select: { id: true, numero: true } }, lineas: { orderBy: { linea: "asc" } }, notas: { orderBy: { numero: "asc" } },
+      pedido: { select: { id: true, numero: true } }, lineas: { orderBy: { linea: "asc" } }, notas: { orderBy: { numero: "asc" } }, retenciones: { orderBy: { numero: "asc" } },
     },
   });
   if (!f) notFound();
@@ -43,6 +44,7 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
               <>
                 <Link href={`/facturacion/notas/nueva?factura=${id}&tipo=CREDITO`} className={clasesBoton("secundario")}>Nota de crédito</Link>
                 <Link href={`/facturacion/notas/nueva?factura=${id}&tipo=DEBITO`} className={clasesBoton("secundario")}>Nota de débito</Link>
+                {tienePermiso(ctx, "cxc", "crear") ? <Link href={`/cxc/retenciones/nueva?factura=${id}`} className={clasesBoton("secundario")}>Retención sufrida</Link> : null}
               </>
             ) : null}
             {puedeAnular ? <BotonAnular id={id} /> : null}
@@ -108,6 +110,19 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
                 </li>
               );
             })}
+          </ul>
+        </Tarjeta>
+      ) : null}
+      {f.retenciones.length > 0 ? (
+        <Tarjeta className="p-6">
+          <h3 className="mb-3 text-base font-semibold">Retenciones sufridas</h3>
+          <ul className="flex flex-col gap-2 text-[13.5px]">
+            {f.retenciones.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-linea p-3">
+                <span><Link href={`/cxc/retenciones/${r.id}`} className="font-semibold hover:underline">{numeroRetencion(r.numero)}</Link> · {r.tipo} {formatoCantidad(Number(r.porcentaje))} % · comprobante {r.comprobante}</span>
+                <span className="flex items-center gap-2">{r.estado === "ANULADA" ? <Etiqueta tono="error">Anulada</Etiqueta> : null}<span className="tabular-nums">−{formatoUsd(Number(r.montoUsd))}</span></span>
+              </li>
+            ))}
           </ul>
         </Tarjeta>
       ) : null}

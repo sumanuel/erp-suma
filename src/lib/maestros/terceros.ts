@@ -88,14 +88,16 @@ export const proveedores: Maestro = {
   campos: camposComunes([
     { nombre: "contacto", etiqueta: "Persona de contacto (opcional)", tipo: "texto", max: 120 },
     { nombre: "diasCredito", etiqueta: "Días de crédito", tipo: "entero", requerido: true, ayuda: "0 = contado." },
+    { nombre: "retencionIvaPct", etiqueta: "Retención de IVA (%)", tipo: "decimal", requerido: true, ayuda: "0 = no se le retiene IVA; 75 o 100 según su caso. Se propone al aplicar la retención." },
   ]),
-  valoresIniciales: { activo: true, diasCredito: "0" },
+  valoresIniciales: { activo: true, diasCredito: "0", retencionIvaPct: "0" },
   columnas: [
     { id: "razonSocial", titulo: "Razón social", campo: "razonSocial", fija: true },
     { id: "documento", titulo: "RIF", campo: "documento" },
     { id: "contacto", titulo: "Contacto", campo: "contacto" },
     { id: "telefono", titulo: "Teléfono", campo: "telefono" },
     { id: "diasCredito", titulo: "Días de crédito", campo: "diasCredito", alinear: "derecha" },
+    { id: "retencionIvaPct", titulo: "Retención IVA %", campo: "retencionIvaPct", alinear: "derecha", oculta: true },
     { id: "email", titulo: "Correo", campo: "email", oculta: true },
     { id: "activo", titulo: "Estado", campo: "activo", etiqueta: estado },
   ],
@@ -109,6 +111,8 @@ export const proveedores: Maestro = {
     const errores = (await validarTercero(db, datos)) ?? {};
     const d = datos.diasCredito;
     if (typeof d === "number" && (d < 0 || d > 365)) errores.diasCredito = "Entre 0 y 365 días.";
+    const r = datos.retencionIvaPct;
+    if (typeof r === "number" && (r < 0 || r > 100)) errores.retencionIvaPct = "Entre 0 y 100.";
     return Object.keys(errores).length ? errores : null;
   },
   mensajeDuplicado: "Ya existe un proveedor con este documento.",

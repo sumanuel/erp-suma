@@ -11,7 +11,7 @@ import type { Columna, Fila, Resultado } from "./tipos";
 // Las facturas anuladas se listan con montos en cero, como exige el libro. REVISAR con el contador de cada cliente el formato y las columnas que pida el SENIAT.
 
 type Asiento = { exenta: number; porAlicuota: Map<number, { base: number; iva: number }> };
-type Registro = { fecha: Date; rif: string; nombre: string; numero: string; control: string; total: number; anulada: boolean; sinNumeroFiscal: boolean; obs: string } & Asiento;
+type Registro = { retComprobante?: string; retIva?: number; fecha: Date; rif: string; nombre: string; numero: string; control: string; total: number; anulada: boolean; sinNumeroFiscal: boolean; obs: string } & Asiento;
 
 const c = (n: number) => Math.round(n * 100); // a centavos
 const aBs = (centavos: number) => centavos / 100;
@@ -72,6 +72,9 @@ async function registrosVentas(db: Db, desde: Date, hasta: Date): Promise<Regist
     const tasa = Number(n.tasaUsd);
     return { ...base, ...multiplicar(desglosarVenta(neto, Number(n.subtotal), Math.round(Number(n.total) * tasa * 100) / 100, tasa), n.tipo === "CREDITO" ? -1 : 1) };
   });
+  const ret = await db.retencion.findMany({ where: { tipo: "IVA", sentido: "SUFRIDA", estado: "ACTIVA", facturaId: { in: facturas.map((f) => f.id) } }, select: { facturaId: true, comprobante: true, montoBs: true } });
+  const porFactura = new Map(ret.map((x) => [x.facturaId, x]));
+  facturas.forEach((f, i) => { const x = porFactura.get(f.id); if (x) { deFacturas[i].retComprobante = x.comprobante; deFacturas[i].retIva = c(Number(x.montoBs)); } });
   return [...deFacturas, ...deNotas].sort((x, y) => x.fecha.getTime() - y.fecha.getTime() || (x.obs.includes("Nota") ? 1 : 0) - (y.obs.includes("Nota") ? 1 : 0));
 }
 
@@ -106,6 +109,9 @@ async function registrosCompras(db: Db, desde: Date, hasta: Date): Promise<Regis
     const base: Registro = { fecha: n.fecha, rif: n.proveedor.documento, nombre: n.proveedor.razonSocial, numero: n.documento, control: n.numeroControl ?? "", total: 0, anulada, sinNumeroFiscal: false, obs: `${nombre} sobre ${n.factura.documento}${anulada ? " · ANULADA" : ""}`, exenta: 0, porAlicuota: new Map() };
     return anulada ? base : desglosar(Number(n.subtotal), Number(n.iva), Number(n.total), Number(n.tasaUsd), base, n.tipo === "CREDITO" ? -1 : 1);
   });
+  const ret = await db.retencion.findMany({ where: { tipo: "IVA", sentido: "PRACTICADA", estado: "ACTIVA", facturaCompraId: { in: facturas.map((f) => f.id) } }, select: { facturaCompraId: true, comprobante: true, montoBs: true } });
+  const porFactura = new Map(ret.map((x) => [x.facturaCompraId, x]));
+  facturas.forEach((f, i) => { const x = porFactura.get(f.id); if (x) { deFacturas[i].retComprobante = x.comprobante; deFacturas[i].retIva = c(Number(x.montoBs)); } });
   return [...deFacturas, ...deNotas].sort((x, y) => x.fecha.getTime() - y.fecha.getTime() || (x.obs.includes("Nota") ? 1 : 0) - (y.obs.includes("Nota") ? 1 : 0));
 }
 
@@ -117,6 +123,7 @@ function columnasLibro(registros: Registro[], terceroEtiqueta: string, numeroEti
       { clave: "n", titulo: "Nº", tipo: "entero" }, { clave: "fecha", titulo: "Fecha", tipo: "fecha" }, { clave: "rif", titulo: "RIF", tipo: "texto" }, { clave: "nombre", titulo: terceroEtiqueta, tipo: "texto" },
       { clave: "numero", titulo: numeroEtiqueta, tipo: "texto" }, { clave: "control", titulo: "Nº de control", tipo: "texto" }, { clave: "total", titulo: "Total (IVA incluido) Bs.", tipo: "moneda" }, { clave: "exenta", titulo: "Exentas o no gravadas Bs.", tipo: "moneda" },
       ...alicuotas.flatMap((a): Columna[] => [{ clave: `base_${a}`, titulo: `Base imponible ${a} % Bs.`, tipo: "moneda" }, { clave: `iva_${a}`, titulo: `IVA ${a} % Bs.`, tipo: "moneda" }]),
+      { clave: "retComp", titulo: "Nº comprobante de retención de IVA", tipo: "texto" }, { clave: "retIva", titulo: "IVA retenido Bs.", tipo: "moneda" },
       { clave: "obs", titulo: "Observaciones", tipo: "texto" },
     ],
   };
@@ -125,12 +132,12 @@ function columnasLibro(registros: Registro[], terceroEtiqueta: string, numeroEti
 function armarLibro(registros: Registro[], terceroEtiqueta: string, numeroEtiqueta: string, notas: string[]): Resultado {
   const { columnas, alicuotas } = columnasLibro(registros, terceroEtiqueta, numeroEtiqueta);
   const filas: Fila[] = registros.map((r, i) => {
-    const f: Fila = { n: i + 1, fecha: r.fecha, rif: r.rif, nombre: r.nombre, numero: r.numero, control: r.control, total: aBs(r.total), exenta: aBs(r.exenta), obs: r.obs };
+    const f: Fila = { n: i + 1, fecha: r.fecha, rif: r.rif, nombre: r.nombre, numero: r.numero, control: r.control, total: aBs(r.total), exenta: aBs(r.exenta), retComp: r.retComprobante ?? "", retIva: aBs(r.retIva ?? 0), obs: r.obs };
     for (const a of alicuotas) { f[`base_${a}`] = aBs(r.porAlicuota.get(a)?.base ?? 0); f[`iva_${a}`] = aBs(r.porAlicuota.get(a)?.iva ?? 0); }
     return f;
   });
   const sumar = (clave: string) => Math.round(filas.reduce((s, f) => s + ((f[clave] as number) ?? 0), 0) * 100) / 100;
-  const totales: Record<string, number> = { total: sumar("total"), exenta: sumar("exenta") };
+  const totales: Record<string, number> = { total: sumar("total"), exenta: sumar("exenta"), retIva: sumar("retIva") };
   for (const a of alicuotas) { totales[`base_${a}`] = sumar(`base_${a}`); totales[`iva_${a}`] = sumar(`iva_${a}`); }
   return { columnas, filas, totales, notas };
 }
@@ -141,7 +148,7 @@ export async function reporteLibroVentas(db: Db, v: Record<string, string>): Pro
   return armarLibro(r, "Nombre o razón social del cliente", "Nº de factura", [
     "Montos en bolívares con la tasa de cada factura. Las facturas anuladas aparecen con montos en cero.",
     ...(sin ? [`${sin} factura(s) sin número fiscal registrado muestran su número interno (FAC-…): regístralo en la factura para que salga en el libro.`] : []),
-    "Falta la columna de retenciones de IVA que le practican los clientes (aún no está modelado). Revisa con tu contador el formato exigido.",
+    "La columna de retención de IVA muestra la que el cliente nos practicó sobre la factura (comprobante e importe), en la fila de la factura. Revisa con tu contador el formato exigido.",
   ]);
 }
 
@@ -150,7 +157,7 @@ export async function reporteLibroCompras(db: Db, v: Record<string, string>): Pr
   return armarLibro(r, "Nombre o razón social del proveedor", "Nº de factura del proveedor", [
     "Montos en bolívares con la tasa de la fecha de cada factura. Las facturas anuladas aparecen con montos en cero.",
     "La factura del proveedor se registra con un solo IVA: la alícuota se deduce de la proporción IVA/base. Importaciones y compras con varias alícuotas aún no están separadas.",
-    "Falta la columna de retenciones de IVA practicadas (aún no está modelado). Revisa con tu contador el formato exigido.",
+    "La columna de retención de IVA muestra la que nosotros le practicamos al proveedor sobre la factura (comprobante e importe). Revisa con tu contador el formato exigido.",
   ]);
 }
 
@@ -171,12 +178,43 @@ export async function reporteResumenIva(db: Db, v: Record<string, string>): Prom
   filas.push({ concepto: "CRÉDITO FISCAL (compras)", base: null, iva: null, _negrita: true });
   for (const [a, x] of [...C.m].sort((p, q) => q[0] - p[0])) filas.push({ concepto: `Compras gravadas al ${a} %`, base: aBs(x.base), iva: aBs(x.iva), _nivel: 1 });
   filas.push({ concepto: "Compras exentas o no gravadas", base: aBs(C.exenta), iva: null, _nivel: 1 }, { concepto: "Total crédito fiscal", base: null, iva: aBs(C.iva), _negrita: true });
+  const retClientes = ventas.reduce((s, r) => s + (r.retIva ?? 0), 0);
+  const retProveedores = compras.reduce((s, r) => s + (r.retIva ?? 0), 0);
   const cuota = V.iva - C.iva;
   filas.push({ concepto: cuota >= 0 ? "IVA a pagar del período (débito − crédito)" : "Excedente de crédito fiscal (a favor)", base: null, iva: aBs(Math.abs(cuota)), _negrita: true });
+  filas.push({ concepto: "RETENCIONES DE IVA", base: null, iva: null, _negrita: true }, { concepto: "Retenido por clientes (a nuestro favor)", base: null, iva: aBs(retClientes), _nivel: 1 }, { concepto: "Cuota después de retenciones soportadas (débito − crédito − retenido por clientes)", base: null, iva: aBs(cuota - retClientes), _nivel: 1 }, { concepto: "Retenido a proveedores (por enterar al fisco)", base: null, iva: aBs(retProveedores), _nivel: 1 });
   return {
     columnas: [{ clave: "concepto", titulo: "Concepto", tipo: "texto" }, { clave: "base", titulo: "Base imponible Bs.", tipo: "moneda" }, { clave: "iva", titulo: "IVA Bs.", tipo: "moneda" }],
     filas,
-    notas: ["No descuenta retenciones de IVA ni excedentes de períodos anteriores (aún no modelados). Es una ayuda para preparar la declaración: valida las cifras con tu contador."],
+    notas: ["Las retenciones se toman de la fila de la factura que afectan. No incluye excedentes de períodos anteriores. Es una ayuda para preparar la declaración: valida las cifras con tu contador."],
   };
 }
 
+
+/** Retenciones del período, practicadas a proveedores o sufridas de clientes, para declarar y enterar. */
+export async function reporteRetenciones(db: Db, v: Record<string, string>): Promise<Resultado> {
+  const practicada = v.sentido !== "SUFRIDA";
+  const rs = await db.retencion.findMany({
+    where: { sentido: practicada ? "PRACTICADA" : "SUFRIDA", fecha: { gte: aFecha(v.desde), lte: aFecha(v.hasta) }, ...(v.tipo ? { tipo: v.tipo } : {}) },
+    include: { proveedor: { select: { documento: true, razonSocial: true } }, cliente: { select: { documento: true, razonSocial: true } }, facturaCompra: { select: { documento: true } }, factura: { select: { numero: true, numeroFiscal: true } } },
+    orderBy: [{ fecha: "asc" }, { numero: "asc" }],
+  });
+  const filas: Fila[] = rs.map((r) => {
+    const t = practicada ? r.proveedor : r.cliente;
+    const anulada = r.estado === "ANULADA";
+    return {
+      fecha: r.fecha, comprobante: r.comprobante, rif: t?.documento ?? "", nombre: t?.razonSocial ?? "", factura: practicada ? (r.facturaCompra?.documento ?? "") : (r.factura?.numeroFiscal ?? `FAC-${String(r.factura?.numero ?? 0).padStart(6, "0")}`),
+      tipo: r.tipo, concepto: r.concepto ?? "", base: anulada ? 0 : Number(r.baseUsd), pct: anulada ? 0 : Number(r.porcentaje), montoUsd: anulada ? 0 : Number(r.montoUsd), montoBs: anulada ? 0 : Number(r.montoBs), obs: anulada ? "ANULADA" : "",
+    };
+  });
+  const sum = (k: string) => Math.round(filas.reduce((s, f) => s + (f[k] as number), 0) * 100) / 100;
+  return {
+    columnas: [
+      { clave: "fecha", titulo: "Fecha", tipo: "fecha" }, { clave: "comprobante", titulo: "Nº de comprobante", tipo: "texto" }, { clave: "rif", titulo: "RIF", tipo: "texto" }, { clave: "nombre", titulo: practicada ? "Proveedor" : "Cliente", tipo: "texto" },
+      { clave: "factura", titulo: "Factura", tipo: "texto" }, { clave: "tipo", titulo: "Impuesto", tipo: "texto" }, { clave: "concepto", titulo: "Concepto", tipo: "texto" }, { clave: "base", titulo: "Base USD", tipo: "moneda" },
+      { clave: "pct", titulo: "%", tipo: "numero" }, { clave: "montoUsd", titulo: "Retenido USD", tipo: "moneda" }, { clave: "montoBs", titulo: "Retenido Bs.", tipo: "moneda" }, { clave: "obs", titulo: "Observaciones", tipo: "texto" },
+    ],
+    filas, totales: { base: sum("base"), montoUsd: sum("montoUsd"), montoBs: sum("montoBs") },
+    notas: [practicada ? "Retenciones que practicamos a proveedores: es lo que se debe enterar al fisco. El retenido en Bs. usa la tasa de cada factura." : "Retenciones que nos practicaron los clientes: crédito a nuestro favor contra la declaración. El retenido en Bs. usa la tasa de cada factura."],
+  };
+}

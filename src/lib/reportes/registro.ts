@@ -1,6 +1,6 @@
 import "server-only";
 import type { Db } from "@/lib/tenant";
-import { reporteLibroCompras, reporteLibroVentas, reporteResumenIva } from "./fiscal";
+import { reporteLibroCompras, reporteLibroVentas, reporteResumenIva, reporteRetenciones } from "./fiscal";
 import { reporteBalanceGeneral, reporteEstadoResultados } from "./financieros";
 import { reporteInventarioValorado } from "./inventario";
 import { reporteAntiguedadCxc, reporteAntiguedadCxp } from "./saldos";
@@ -40,6 +40,11 @@ export const REPORTES: DefReporte[] = [
   { id: "libro-ventas", titulo: "Libro de ventas (IVA)", grupo: "Fiscal", descripcion: "Facturas de venta del período con base, IVA por alícuota y número fiscal y de control, en bolívares.", parametros: () => fechas(), consultar: reporteLibroVentas },
   { id: "libro-compras", titulo: "Libro de compras (IVA)", grupo: "Fiscal", descripcion: "Facturas de proveedores del período con base e IVA por alícuota, en bolívares.", parametros: () => fechas(), consultar: reporteLibroCompras },
   { id: "resumen-iva", titulo: "Resumen de IVA del período", grupo: "Fiscal", descripcion: "Débito fiscal, crédito fiscal e IVA a pagar o excedente, para preparar la declaración.", parametros: () => fechas(), consultar: reporteResumenIva },
+  {
+    id: "retenciones", titulo: "Retenciones de IVA e ISLR", grupo: "Fiscal", descripcion: "Retenciones practicadas a proveedores (a enterar) o sufridas de clientes, por período.",
+    parametros: () => [...fechas(), { id: "sentido", etiqueta: "Retenciones", tipo: "opciones", defecto: "PRACTICADA", opciones: [{ valor: "PRACTICADA", etiqueta: "Practicadas a proveedores" }, { valor: "SUFRIDA", etiqueta: "Sufridas (de clientes)" }] }, { id: "tipo", etiqueta: "Impuesto", tipo: "opciones", defecto: "", opciones: [{ valor: "", etiqueta: "IVA e ISLR" }, { valor: "IVA", etiqueta: "Solo IVA" }, { valor: "ISLR", etiqueta: "Solo ISLR" }] }],
+    consultar: reporteRetenciones,
+  },
 ];
 
 export const buscarReporte = (id: string) => REPORTES.find((r) => r.id === id);

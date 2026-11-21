@@ -44,6 +44,7 @@ model Factura {
   lineas           FacturaLinea[]
   aplicaciones     CobroAplicacion[]
   notas            NotaVenta[]
+  retenciones      Retencion[]
 
   @@index([clienteId])
   @@index([pedidoId])

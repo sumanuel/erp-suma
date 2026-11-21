@@ -114,6 +114,7 @@ export async function anularFactura(db: Db, actor: Actor, id: string, motivo: st
       if (u.count === 0) throw new FacturaError("La factura ya está anulada o no existe. Recarga la página.");
       // Con cobros vigentes no se anula: primero hay que anular el cobro (así el saldo y la caja siempre cuadran).
       if ((await tx.cobroAplicacion.count({ where: { facturaId: id, cobro: { estado: "REGISTRADO" } } })) > 0) throw new FacturaError("La factura tiene cobros registrados: anula primero esos cobros en Cuentas por cobrar.");
+      if ((await tx.retencion.count({ where: { facturaId: id, estado: "ACTIVA" } })) > 0) throw new FacturaError("La factura tiene retenciones vigentes: anúlalas primero.");
       if ((await tx.notaVenta.count({ where: { facturaId: id, estado: "ACTIVA" } })) > 0) throw new FacturaError("La factura tiene notas de crédito o débito vigentes: anúlalas primero.");
       const f = await tx.factura.findUniqueOrThrow({ where: { id }, include: { lineas: true } });
       for (const l of f.lineas) {

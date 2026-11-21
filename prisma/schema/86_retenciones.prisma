@@ -1,0 +1,48 @@
+// Retenciones de IVA e ISLR. Dos sentidos:
+//  · PRACTICADA: nosotros (agente de retención) le retenemos a un proveedor al pagarle una factura de compra; lo retenido se debe enterar al fisco.
+//  · SUFRIDA: un cliente nos retiene al pagarnos una factura de venta; lo retenido es un crédito a nuestro favor.
+// En ambos casos la retención funciona como una parte pagada de la factura: baja su saldo (sin dinero de por medio) con un UPDATE atómico. Se calcula con la tasa de la factura
+// original, así los bolívares de la cuenta por cobrar/pagar y de la retención cuadran exactamente. Una retención no se edita: se anula.
+
+model Retencion {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo interno (se muestra RET-000123).
+  numero           Int            @unique @default(autoincrement())
+  /// IVA o ISLR
+  tipo             String
+  /// PRACTICADA (a un proveedor) o SUFRIDA (nos la hizo un cliente)
+  sentido          String
+  facturaCompraId  String?        @map("factura_compra_id") @db.Uuid
+  facturaCompra    FacturaCompra? @relation(fields: [facturaCompraId], references: [id])
+  proveedorId      String?        @map("proveedor_id") @db.Uuid
+  proveedor        Proveedor?     @relation(fields: [proveedorId], references: [id])
+  facturaId        String?        @map("factura_id") @db.Uuid
+  factura          Factura?       @relation(fields: [facturaId], references: [id])
+  clienteId        String?        @map("cliente_id") @db.Uuid
+  cliente          Cliente?       @relation(fields: [clienteId], references: [id])
+  /// Nº del comprobante de retención: el nuestro (autogenerado) en las practicadas, el del cliente en las sufridas.
+  comprobante      String
+  fecha            DateTime       @db.Date
+  /// Concepto (ISLR) o descripción.
+  concepto         String?
+  /// Base sobre la que se calcula, en USD (IVA de la factura, o base imponible para ISLR).
+  baseUsd          Decimal        @map("base_usd") @db.Decimal(18, 4)
+  porcentaje       Decimal        @db.Decimal(7, 4)
+  montoUsd         Decimal        @map("monto_usd") @db.Decimal(18, 4)
+  /// Bolívares por 1 USD: la de la factura original.
+  tasaUsd          Decimal        @map("tasa_usd") @db.Decimal(18, 8)
+  montoBs          Decimal        @map("monto_bs") @db.Decimal(18, 2)
+  /// ACTIVA o ANULADA
+  estado           String         @default("ACTIVA")
+  creadoPorId      String?        @map("creado_por_id") @db.Uuid
+  creadoPorNombre  String?        @map("creado_por_nombre")
+  creadoEn         DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  anuladaEn        DateTime?      @map("anulada_en") @db.Timestamptz(6)
+  anuladaPorNombre String?        @map("anulada_por_nombre")
+  motivoAnulacion  String?        @map("motivo_anulacion")
+
+  @@index([facturaCompraId])
+  @@index([facturaId])
+  @@index([estado, fecha(sort: Desc)])
+  @@map("retencion")
+}
