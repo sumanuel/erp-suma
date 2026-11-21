@@ -5,6 +5,8 @@ import { aplicarMovimiento, MovimientoRechazado, type Actor } from "@/lib/invent
 import { calcularTotales } from "@/lib/pedidos/calculos";
 import { disponibles, prepararLineasVenta, PedidoError, type LineaPedido, type Tx } from "@/lib/pedidos/servicio";
 import { numeroFactura } from "./estados";
+import { contabilizarFactura, revertirFactura } from "@/lib/contabilidad/automatico";
+import { ContaError } from "@/lib/contabilidad/servicio";
 import { aBolivares, hoyCaracas, tasaVigente } from "@/lib/tasas";
 
 // Servicio de facturación. Emitir y anular son transacciones completas: la factura, su kardex y el estado del pedido quedan juntos o no quedan.
@@ -17,7 +19,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoFactura<T>>): Promise
   try {
     return await trabajo();
   } catch (e) {
-    if (e instanceof FacturaError || e instanceof PedidoError) return { ok: false, error: e.message };
+    if (e instanceof FacturaError || e instanceof PedidoError || e instanceof ContaError) return { ok: false, error: e.message };
     if (e instanceof MovimientoRechazado) return { ok: false, error: Object.values(e.errores)[0] ?? "No se pudo mover el inventario." };
     throw e;
   }
@@ -54,6 +56,7 @@ async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedido
       throw e;
     }
   }
+  await contabilizarFactura(tx, actor, f.id);
   return { ...f, total: t.total, lineas: d.lineas.length };
 }
 
@@ -115,6 +118,7 @@ export async function anularFactura(db: Db, actor: Actor, id: string, motivo: st
       for (const l of f.lineas) {
         await aplicarMovimiento(tx, actor, { tipo: "AJUSTE_POSITIVO", almacenId: f.almacenId, productoCodigo: l.productoCodigo, cantidad: Number(l.cantidad), documento: numeroFactura(f.numero), motivo: `Anulación de factura: ${m.slice(0, 200)}` });
       }
+      await revertirFactura(tx, actor, f.numero);
       if (f.pedidoId) await tx.pedidoVenta.updateMany({ where: { id: f.pedidoId, estado: "FACTURADO" }, data: { estado: "CONFIRMADO" } });
       return f.numero;
     });

@@ -5,6 +5,8 @@ import type { Actor } from "@/lib/inventario/movimientos";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { hoyCaracas, tasaVigente } from "@/lib/tasas";
 import { aplicarMovimientoCuenta, TesoreriaRechazada } from "@/lib/tesoreria/movimientos";
+import { contabilizarCobro, revertirCobro } from "@/lib/contabilidad/automatico";
+import { ContaError } from "@/lib/contabilidad/servicio";
 import { FORMAS_PAGO, numeroCobro, type FormaPago } from "./estados";
 
 // Servicio de cuentas por cobrar. Un cobro baja el saldo de sus facturas con un UPDATE atómico condicionado (nadie puede cobrar más de lo que
@@ -31,7 +33,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoCobro<T>>): Promise<R
   try {
     return await trabajo();
   } catch (e) {
-    if (e instanceof CobroError || e instanceof TesoreriaRechazada) return { ok: false, error: e.message };
+    if (e instanceof CobroError || e instanceof TesoreriaRechazada || e instanceof ContaError) return { ok: false, error: e.message };
     throw e;
   }
 }
@@ -82,6 +84,7 @@ export async function registrarCobro(db: Db, actor: Actor, d: DatosCobro): Promi
         select: { id: true, numero: true },
       });
       await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.cuentaId, tipo: "COBRO", monto: montoMoneda, documento: numeroCobro(c.numero), descripcion: `Cobro a cliente${d.referencia ? ` · ref. ${d.referencia}` : ""}` });
+      await contabilizarCobro(tx, actor, c.id);
       return { ...c, montoUsd, montoMoneda };
     });
     await registrarCambio(db, actor, {
@@ -104,6 +107,7 @@ export async function anularCobro(db: Db, actor: Actor, id: string, motivo: stri
       for (const a of c.aplicaciones) await tx.factura.update({ where: { id: a.facturaId }, data: { saldo: { increment: a.montoUsd } } });
       // El dinero que entró vuelve a salir de la cuenta; si ya se gastó y no alcanza, la anulación se rechaza completa.
       if (c.cuentaId) await aplicarMovimientoCuenta(tx, actor, { cuentaId: c.cuentaId, tipo: "ANULACION_COBRO", monto: Number(c.montoMoneda), documento: numeroCobro(c.numero), descripcion: `Anulación: ${m.slice(0, 120)}` });
+      await revertirCobro(tx, actor, c.numero);
       return c.numero;
     });
     await registrarCambio(db, actor, { modulo: "cxc", entidad: "cobro", entidadId: id, descripcion: numeroCobro(numero), accion: "otro", despues: { estado: "ANULADO", motivo: m } });

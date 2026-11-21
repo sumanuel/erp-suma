@@ -16,6 +16,9 @@ model CuentaTesoreria {
   saldo            Decimal                @default(0) @db.Decimal(18, 2)
   /// Si permite que el saldo quede negativo (sobregiro).
   permiteSobregiro Boolean                @default(false) @map("permite_sobregiro")
+  /// Cuenta contable (caja o banco) donde se contabilizan sus movimientos.
+  cuentaContableId String?                @map("cuenta_contable_id") @db.Uuid
+  cuentaContable   CuentaContable?        @relation(fields: [cuentaContableId], references: [id])
   activo           Boolean                @default(true)
   creadoEn         DateTime               @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn    DateTime               @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)

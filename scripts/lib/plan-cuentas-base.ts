@@ -30,4 +30,5 @@ export const PLAN_CUENTAS_BASE: [string, string, string, boolean][] = [
   ["6.1.01", "Gastos de administración", "GASTO", true],
   ["6.1.02", "Gastos de ventas", "GASTO", true],
   ["6.1.03", "Gastos financieros", "GASTO", true],
+  ["6.1.04", "Diferencial cambiario", "GASTO", true],
 ];

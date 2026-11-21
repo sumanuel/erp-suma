@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
+import { guardarConfiguracion } from "@/lib/contabilidad/configuracion";
 import { anularAsiento, cambiarEstadoPeriodo, crearCuentaContable, editarCuentaContable, eliminarCuentaContable, registrarAsiento } from "@/lib/contabilidad/servicio";
 
 export type EstadoContaForm = { error?: string };
@@ -74,4 +75,16 @@ export async function cambiarPeriodo(anio: number, mes: number, cerrar: boolean)
   const r = await cambiarEstadoPeriodo(ctx.db, ctx.usuario, anio, mes, cerrar);
   revalidatePath("/contabilidad/periodos");
   return r.ok ? null : r.error;
+}
+
+const Configuracion = z.object({ automatica: z.boolean(), conceptos: z.record(z.string(), z.string()), tesoreria: z.record(z.string(), z.string()) });
+
+export async function guardarConfiguracionContable(datos: unknown): Promise<EstadoContaForm> {
+  const ctx = await requerirPermisoAccion("contabilidad", "editar");
+  const r = Configuracion.safeParse(datos);
+  if (!r.success) return { error: "Datos inválidos" };
+  const res = await guardarConfiguracion(ctx.db, ctx.usuario, r.data);
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/contabilidad", "layout");
+  return {};
 }

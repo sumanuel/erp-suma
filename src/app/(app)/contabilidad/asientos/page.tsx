@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Eye, Plus } from "lucide-react";
 import { Etiqueta, Tarjeta, claseControl, clasesBoton } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
+import { ORIGENES_ASIENTO } from "@/lib/contabilidad/conceptos";
 import { ESTADOS_ASIENTO, numeroAsiento, type EstadoAsiento } from "@/lib/contabilidad/tipos";
 import { formatoFecha, formatoUsd } from "../formato";
 
@@ -57,7 +58,7 @@ export default async function ListaAsientos({ searchParams }: { searchParams: Pr
                   <td className="px-4 py-3 font-semibold"><Link href={`/contabilidad/asientos/${a.id}`} className="hover:underline">{numeroAsiento(a.numero)}</Link></td>
                   <td className="px-3 py-3">{formatoFecha(a.fecha)}</td>
                   <td className="px-3 py-3">{a.descripcion}</td>
-                  <td className="px-3 py-3">{a.origen === "MANUAL" ? "Manual" : a.origen}</td>
+                  <td className="px-3 py-3">{ORIGENES_ASIENTO[a.origen] ?? a.origen}</td>
                   <td className="px-3 py-3">{e ? <Etiqueta tono={e.tono}>{e.etiqueta}</Etiqueta> : a.estado}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatoUsd(monto)}</td>
                   <td className="px-4 py-3"><div className="flex justify-end"><Link href={`/contabilidad/asientos/${a.id}`} aria-label={`Ver ${numeroAsiento(a.numero)}`} className="flex size-9 items-center justify-center rounded-[9px] border border-borde-campo hover:bg-hover"><Eye className="size-4" aria-hidden /></Link></div></td>

@@ -4,6 +4,8 @@ import { registrarCambio } from "@/lib/auditoria";
 import type { Actor } from "@/lib/inventario/movimientos";
 import { hoyCaracas, tasaVigente } from "@/lib/tasas";
 import { aplicarMovimientoCuenta, TesoreriaRechazada } from "@/lib/tesoreria/movimientos";
+import { contabilizarFacturaCompra, contabilizarPago, revertirFacturaCompra, revertirPago } from "@/lib/contabilidad/automatico";
+import { ContaError } from "@/lib/contabilidad/servicio";
 import { FORMAS_PAGO, numeroFacturaCompra, numeroPago } from "./estados";
 
 // Servicio de cuentas por pagar. Espejo de Cuentas por cobrar: un pago baja el saldo de sus facturas con un UPDATE atómico condicionado, y anular un
@@ -19,7 +21,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoCxp<T>>): Promise<Res
   try {
     return await trabajo();
   } catch (e) {
-    if (e instanceof CxpError || e instanceof TesoreriaRechazada) return { ok: false, error: e.message };
+    if (e instanceof CxpError || e instanceof TesoreriaRechazada || e instanceof ContaError) return { ok: false, error: e.message };
     throw e;
   }
 }
@@ -57,13 +59,17 @@ export async function registrarFacturaCompra(db: Db, actor: Actor, d: DatosFactu
       }
       const repetida = await tx.facturaCompra.findUnique({ where: { proveedorId_documento: { proveedorId: d.proveedorId, documento: d.documento } }, select: { numero: true } });
       if (repetida) throw new CxpError(`Este proveedor ya tiene la factura ${d.documento} registrada (${numeroFacturaCompra(repetida.numero)}).`);
-      return tx.facturaCompra.create({
+      const tasa = await tasaVigente(tx as unknown as Db, "USD", d.fecha);
+      if (!tasa) throw new CxpError("No hay tasa del dólar cargada a la fecha de la factura: regístrala en Tasa de cambio.");
+      const creada = await tx.facturaCompra.create({
         data: {
-          proveedorId: d.proveedorId, ordenId: d.ordenId, documento: d.documento, numeroControl: d.numeroControl, fecha: d.fecha, diasCredito: d.diasCredito,
+          tasaUsd: tasa.valor, proveedorId: d.proveedorId, ordenId: d.ordenId, documento: d.documento, numeroControl: d.numeroControl, fecha: d.fecha, diasCredito: d.diasCredito,
           fechaVencimiento: vence, subtotal: d.subtotal, iva: d.iva, total, saldo: total, observaciones: d.observaciones, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
         },
         select: { id: true, numero: true },
       });
+      await contabilizarFacturaCompra(tx, actor, creada.id);
+      return creada;
     });
     await registrarCambio(db, actor, { modulo: "cxp", entidad: "factura_compra", entidadId: r.id, descripcion: numeroFacturaCompra(r.numero), accion: "crear", despues: { documento: d.documento, totalUsd: total, diasCredito: d.diasCredito } });
     return { ok: true, id: r.id, numero: r.numero };
@@ -79,7 +85,9 @@ export async function anularFacturaCompra(db: Db, actor: Actor, id: string, moti
       if (u.count === 0) throw new CxpError("La factura ya está anulada o no existe. Recarga la página.");
       // Con pagos vigentes no se anula: primero se anula el pago (así el saldo y la caja siempre cuadran).
       if ((await tx.pagoAplicacion.count({ where: { facturaId: id, pago: { estado: "REGISTRADO" } } })) > 0) throw new CxpError("La factura tiene pagos registrados: anula primero esos pagos.");
-      return (await tx.facturaCompra.findUniqueOrThrow({ where: { id }, select: { numero: true } })).numero;
+      const n = (await tx.facturaCompra.findUniqueOrThrow({ where: { id }, select: { numero: true } })).numero;
+      await revertirFacturaCompra(tx, actor, n);
+      return n;
     });
     await registrarCambio(db, actor, { modulo: "cxp", entidad: "factura_compra", entidadId: id, descripcion: numeroFacturaCompra(numero), accion: "otro", despues: { estado: "ANULADA", motivo: m } });
     return { ok: true };
@@ -140,6 +148,7 @@ export async function registrarPago(db: Db, actor: Actor, d: DatosPago): Promise
         select: { id: true, numero: true },
       });
       await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.cuentaId, tipo: "PAGO", monto: montoMoneda, documento: numeroPago(p.numero), descripcion: `Pago a proveedor${d.referencia ? ` · ref. ${d.referencia}` : ""}` });
+      await contabilizarPago(tx, actor, p.id);
       return { ...p, montoUsd, montoMoneda };
     });
     await registrarCambio(db, actor, { modulo: "cxp", entidad: "pago_proveedor", entidadId: r.id, descripcion: numeroPago(r.numero), accion: "crear", despues: { formaPago: d.formaPago, moneda: d.moneda, montoMoneda: r.montoMoneda, montoUsd: r.montoUsd, facturas: aplic.length } });
@@ -157,6 +166,7 @@ export async function anularPago(db: Db, actor: Actor, id: string, motivo: strin
       const p = await tx.pagoProveedor.findUniqueOrThrow({ where: { id }, include: { aplicaciones: true } });
       for (const a of p.aplicaciones) await tx.facturaCompra.update({ where: { id: a.facturaId }, data: { saldo: { increment: a.montoUsd } } });
       if (p.cuentaId) await aplicarMovimientoCuenta(tx, actor, { cuentaId: p.cuentaId, tipo: "ANULACION_PAGO", monto: Number(p.montoMoneda), documento: numeroPago(p.numero), descripcion: `Anulación: ${m.slice(0, 120)}` });
+      await revertirPago(tx, actor, p.numero);
       return p.numero;
     });
     await registrarCambio(db, actor, { modulo: "cxp", entidad: "pago_proveedor", entidadId: id, descripcion: numeroPago(numero), accion: "otro", despues: { estado: "ANULADO", motivo: m } });

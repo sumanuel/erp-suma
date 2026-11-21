@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Etiqueta, Tarjeta } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
+import { ORIGENES_ASIENTO } from "@/lib/contabilidad/conceptos";
 import { ESTADOS_ASIENTO, nombrePeriodo, numeroAsiento, type EstadoAsiento } from "@/lib/contabilidad/tipos";
 import { formatoFecha, formatoFechaHora, formatoUsd } from "../../formato";
 import { BotonAnularAsiento } from "./boton-anular";
@@ -35,7 +36,7 @@ export default async function DetalleAsiento({ params }: { params: Promise<{ id:
         <dl className="mt-4 grid gap-3 text-[13.5px] sm:grid-cols-2 xl:grid-cols-4">
           <div><dt className="text-gris-500">Fecha</dt><dd>{formatoFecha(a.fecha)}</dd></div>
           <div><dt className="text-gris-500">Período</dt><dd>{nombrePeriodo(a.anio, a.mes)}</dd></div>
-          <div><dt className="text-gris-500">Origen</dt><dd>{a.origen === "MANUAL" ? "Manual" : a.origen}{a.referencia ? ` · ${a.referencia}` : ""}</dd></div>
+          <div><dt className="text-gris-500">Origen</dt><dd>{ORIGENES_ASIENTO[a.origen] ?? a.origen}{a.referencia ? ` · ${a.referencia}` : ""}</dd></div>
           <div><dt className="text-gris-500">Registrado por</dt><dd>{a.creadoPorNombre ?? "—"} · {formatoFechaHora(a.creadoEn)}</dd></div>
           {a.estado === "ANULADO" ? <div className="sm:col-span-2 xl:col-span-4"><dt className="text-gris-500">Anulado</dt><dd>{a.anuladoPorNombre ?? "—"} · {formatoFechaHora(a.anuladoEn)} · {a.motivoAnulacion}</dd></div> : null}
         </dl>

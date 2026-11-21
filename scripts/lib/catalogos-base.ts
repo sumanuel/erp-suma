@@ -1,4 +1,5 @@
 import type { Client } from "pg";
+import { CONCEPTOS } from "../../src/lib/contabilidad/conceptos";
 import { PLAN_CUENTAS_BASE } from "./plan-cuentas-base";
 
 // Catálogos que todo cliente necesita desde el primer día. Idempotente: se puede correr sobre un cliente existente.
@@ -21,7 +22,13 @@ export async function sembrarCatalogosBase(c: Client) {
       [codigo, nombre, tipo, padre, partes.length, posteable],
     );
   }
-  await c.query("INSERT INTO cuenta_tesoreria (codigo, nombre, tipo, moneda) VALUES ('CAJA-USD', 'Caja en dólares', 'CAJA', 'USD'), ('CAJA-VES', 'Caja en bolívares', 'CAJA', 'VES') ON CONFLICT (codigo) DO NOTHING");
+  // Cuentas por concepto propuestas y cajas/bancos ligados a Caja y bancos. La contabilización automática queda apagada hasta que el contador la active.
+  await c.query("INSERT INTO config_contable (id, automatica) VALUES (1, false) ON CONFLICT (id) DO NOTHING");
+  for (const [concepto, { sugerida }] of Object.entries(CONCEPTOS)) {
+    await c.query("INSERT INTO cuenta_concepto (concepto, cuenta_id) SELECT $1, id FROM cuenta_contable WHERE codigo = $2 ON CONFLICT (concepto) DO NOTHING", [concepto, sugerida]);
+  }
+  await c.query("UPDATE cuenta_tesoreria SET cuenta_contable_id = (SELECT id FROM cuenta_contable WHERE codigo = '1.1.01') WHERE cuenta_contable_id IS NULL");
+  await c.query("INSERT INTO cuenta_tesoreria (codigo, nombre, tipo, moneda, cuenta_contable_id) SELECT v.codigo, v.nombre, 'CAJA', v.moneda, (SELECT id FROM cuenta_contable WHERE codigo = '1.1.01') FROM (VALUES ('CAJA-USD', 'Caja en dólares', 'USD'), ('CAJA-VES', 'Caja en bolívares', 'VES')) AS v(codigo, nombre, moneda) ON CONFLICT (codigo) DO NOTHING");
   for (const [codigo, nombre] of [["UND", "Unidad"], ["CJ", "Caja"], ["PQ", "Paquete"], ["KG", "Kilogramo"], ["MT", "Metro"], ["LT", "Litro"], ["GL", "Galón"]] as const) {
     await c.query("INSERT INTO unidad_medida (codigo, nombre) VALUES ($1,$2) ON CONFLICT (codigo) DO NOTHING", [codigo, nombre]);
   }

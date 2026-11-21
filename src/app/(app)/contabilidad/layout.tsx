@@ -15,6 +15,7 @@ export default async function LayoutContabilidad({ children }: { children: React
           { href: "/contabilidad/mayor", etiqueta: "Libro mayor" },
           { href: "/contabilidad/balance", etiqueta: "Balance de comprobación" },
           { href: "/contabilidad/periodos", etiqueta: "Períodos" },
+          { href: "/contabilidad/configuracion", etiqueta: "Configuración" },
         ]}
       />
       {children}

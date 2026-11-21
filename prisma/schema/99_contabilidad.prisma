@@ -20,6 +20,8 @@ model CuentaContable {
   creadoEn      DateTime         @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn DateTime         @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
   lineas        AsientoLinea[]
+  conceptos     CuentaConcepto[]
+  tesoreria     CuentaTesoreria[]
 
   @@index([padreId])
   @@map("cuenta_contable")
@@ -79,4 +81,22 @@ model AsientoLinea {
   @@unique([asientoId, linea])
   @@index([cuentaId])
   @@map("asiento_linea")
+}
+
+/// Parámetros de la contabilidad del cliente (una sola fila, id = 1).
+model ConfigContable {
+  id         Int     @id @default(1)
+  /// Si está activa, cada factura, cobro, pago y factura de proveedor genera su asiento en la misma transacción.
+  automatica Boolean @default(false)
+
+  @@map("config_contable")
+}
+
+/// Qué cuenta contable usa cada concepto al contabilizar (VENTAS, CXC, IVA_DEBITO, INVENTARIO, COSTO_VENTAS, COMPRAS, IVA_CREDITO, CXP, DIFERENCIAL_CAMBIARIO).
+model CuentaConcepto {
+  concepto String         @id
+  cuentaId String         @map("cuenta_id") @db.Uuid
+  cuenta   CuentaContable @relation(fields: [cuentaId], references: [id])
+
+  @@map("cuenta_concepto")
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
-import type { Actor } from "@/lib/inventario/movimientos";
+import type { Actor, Tx } from "@/lib/inventario/movimientos";
 import { hoyCaracas } from "@/lib/tasas";
 import { TIPOS_CUENTA_CONTABLE, aCentavos, nombrePeriodo, numeroAsiento } from "./tipos";
 
@@ -9,7 +9,8 @@ import { TIPOS_CUENTA_CONTABLE, aCentavos, nombrePeriodo, numeroAsiento } from "
 // se anula (con motivo) y se registra otro. Un período cerrado no admite asientos ni anulaciones.
 
 export type ResultadoConta<T = object> = ({ ok: true } & T) | { ok: false; error: string };
-class ContaError extends Error {}
+/** Error de una regla contable. También lo lanzan los asientos automáticos: quien contabiliza dentro de su transacción lo traduce a un mensaje y revierte todo. */
+export class ContaError extends Error {}
 
 async function ejecutar<T>(trabajo: () => Promise<ResultadoConta<T>>): Promise<ResultadoConta<T>> {
   try {
@@ -76,43 +77,46 @@ export async function eliminarCuentaContable(db: Db, actor: Actor, id: string): 
 // ---------- Asientos ----------
 export type DatosAsiento = { fecha: Date; descripcion: string; referencia: string | null; lineas: { cuentaId: string; descripcion: string | null; debe: number; haber: number }[] };
 
+/** Crea un asiento completo dentro de la transacción recibida (manual o automático). Valida todo; si algo falla lanza `ContaError` y no deja nada. */
+export async function crearAsientoEnTx(tx: Tx, actor: Actor, d: DatosAsiento, origen = "MANUAL"): Promise<{ id: string; numero: number; total: number }> {
+  if (d.descripcion.trim().length < 3) throw new ContaError("Escribe la descripción del asiento.");
+  if (d.fecha.getTime() > hoyCaracas().getTime()) throw new ContaError("La fecha del asiento no puede ser futura.");
+  if (d.lineas.length < 2) throw new ContaError("Un asiento necesita al menos dos líneas.");
+  if (d.lineas.length > 300) throw new ContaError("Máximo 300 líneas por asiento.");
+  let debe = 0, haber = 0;
+  const filas = d.lineas.map((l, i) => {
+    const cd = aCentavos(l.debe), ch = aCentavos(l.haber);
+    if (cd === null || ch === null) throw new ContaError(`Línea ${i + 1}: los montos admiten máximo 2 decimales.`);
+    if (cd < 0 || ch < 0 || cd > 1e14 || ch > 1e14) throw new ContaError(`Línea ${i + 1}: monto inválido.`);
+    if ((cd > 0) === (ch > 0)) throw new ContaError(`Línea ${i + 1}: indica el monto en el debe o en el haber (uno solo).`);
+    debe += cd;
+    haber += ch;
+    return { linea: i + 1, cuentaId: l.cuentaId, descripcion: l.descripcion?.trim() || null, debe: cd / 100, haber: ch / 100 };
+  });
+  if (debe !== haber) throw new ContaError(`El asiento no cuadra: debe ${(debe / 100).toFixed(2)} y haber ${(haber / 100).toFixed(2)}.`);
+  const anio = d.fecha.getUTCFullYear(), mes = d.fecha.getUTCMonth() + 1;
+  const periodo = await tx.periodoContable.upsert({ where: { anio_mes: { anio, mes } }, create: { anio, mes }, update: {} });
+  if (periodo.estado === "CERRADO") throw new ContaError(`El período contable ${nombrePeriodo(anio, mes)} está cerrado.`);
+  const ids = [...new Set(filas.map((f) => f.cuentaId))];
+  const cuentas = await tx.cuentaContable.findMany({ where: { id: { in: ids } }, select: { id: true, codigo: true, posteable: true, activo: true } });
+  const porId = new Map(cuentas.map((c) => [c.id, c]));
+  for (const f of filas) {
+    const c = porId.get(f.cuentaId);
+    if (!c) throw new ContaError(`Línea ${f.linea}: la cuenta no existe.`);
+    if (!c.activo) throw new ContaError(`Línea ${f.linea}: la cuenta ${c.codigo} está inactiva.`);
+    if (!c.posteable) throw new ContaError(`Línea ${f.linea}: la cuenta ${c.codigo} es de agrupación y no recibe asientos.`);
+  }
+  const a = await tx.asiento.create({
+    data: { fecha: d.fecha, anio, mes, descripcion: d.descripcion.trim(), origen, referencia: d.referencia, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: filas } },
+    select: { id: true, numero: true },
+  });
+  return { ...a, total: debe / 100 };
+}
+
 export async function registrarAsiento(db: Db, actor: Actor, d: DatosAsiento): Promise<ResultadoConta<{ id: string; numero: number }>> {
   return ejecutar(async () => {
-    if (d.descripcion.trim().length < 3) throw new ContaError("Escribe la descripción del asiento.");
-    if (d.fecha.getTime() > hoyCaracas().getTime()) throw new ContaError("La fecha del asiento no puede ser futura.");
-    if (d.lineas.length < 2) throw new ContaError("Un asiento necesita al menos dos líneas.");
-    if (d.lineas.length > 300) throw new ContaError("Máximo 300 líneas por asiento.");
-    let debe = 0, haber = 0;
-    const filas = d.lineas.map((l, i) => {
-      const cd = aCentavos(l.debe), ch = aCentavos(l.haber);
-      if (cd === null || ch === null) throw new ContaError(`Línea ${i + 1}: los montos admiten máximo 2 decimales.`);
-      if (cd < 0 || ch < 0 || cd > 1e14 || ch > 1e14) throw new ContaError(`Línea ${i + 1}: monto inválido.`);
-      if ((cd > 0) === (ch > 0)) throw new ContaError(`Línea ${i + 1}: indica el monto en el debe o en el haber (uno solo).`);
-      debe += cd;
-      haber += ch;
-      return { linea: i + 1, cuentaId: l.cuentaId, descripcion: l.descripcion?.trim() || null, debe: cd / 100, haber: ch / 100 };
-    });
-    if (debe !== haber) throw new ContaError(`El asiento no cuadra: debe ${(debe / 100).toFixed(2)} y haber ${(haber / 100).toFixed(2)}.`);
-    const anio = d.fecha.getUTCFullYear(), mes = d.fecha.getUTCMonth() + 1;
-
-    const r = await db.$transaction(async (tx) => {
-      const periodo = await tx.periodoContable.upsert({ where: { anio_mes: { anio, mes } }, create: { anio, mes }, update: {} });
-      if (periodo.estado === "CERRADO") throw new ContaError(`El período ${nombrePeriodo(anio, mes)} está cerrado.`);
-      const ids = [...new Set(filas.map((f) => f.cuentaId))];
-      const cuentas = await tx.cuentaContable.findMany({ where: { id: { in: ids } }, select: { id: true, codigo: true, posteable: true, activo: true } });
-      const porId = new Map(cuentas.map((c) => [c.id, c]));
-      for (const f of filas) {
-        const c = porId.get(f.cuentaId);
-        if (!c) throw new ContaError(`Línea ${f.linea}: la cuenta no existe.`);
-        if (!c.activo) throw new ContaError(`Línea ${f.linea}: la cuenta ${c.codigo} está inactiva.`);
-        if (!c.posteable) throw new ContaError(`Línea ${f.linea}: la cuenta ${c.codigo} es de agrupación y no recibe asientos.`);
-      }
-      return tx.asiento.create({
-        data: { fecha: d.fecha, anio, mes, descripcion: d.descripcion.trim(), referencia: d.referencia, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: filas } },
-        select: { id: true, numero: true },
-      });
-    });
-    await registrarCambio(db, actor, { modulo: "contabilidad", entidad: "asiento", entidadId: r.id, descripcion: numeroAsiento(r.numero), accion: "crear", despues: { descripcion: d.descripcion.trim(), lineas: d.lineas.length, total: debe / 100 } });
+    const r = await db.$transaction((tx) => crearAsientoEnTx(tx, actor, d));
+    await registrarCambio(db, actor, { modulo: "contabilidad", entidad: "asiento", entidadId: r.id, descripcion: numeroAsiento(r.numero), accion: "crear", despues: { descripcion: d.descripcion.trim(), lineas: d.lineas.length, total: r.total } });
     return { ok: true, id: r.id, numero: r.numero };
   });
 }
