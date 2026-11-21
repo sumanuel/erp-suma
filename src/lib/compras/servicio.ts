@@ -53,7 +53,7 @@ export async function guardarOrden(db: Db, actor: Actor, id: string | null, d: D
     const r = await db.$transaction(async (tx) => {
       const lineas = await prepararLineas(tx, d);
       const t = calcularTotales(lineas.map((l) => l._e));
-      const filas = lineas.map(({ _e, ...l }) => l);
+      const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, costoUnitario: l.costoUnitario, descuento: l.descuento, ivaPorcentaje: l.ivaPorcentaje, total: l.total }));
       if (id) {
         const actual = await tx.ordenCompra.findUnique({ where: { id }, select: { estado: true } });
         if (!actual) throw new ComprasError("La orden ya no existe.");
