@@ -3,6 +3,7 @@ import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import type { Actor } from "@/lib/inventario/movimientos";
 import { hoyCaracas, tasaVigente } from "@/lib/tasas";
+import { aplicarMovimientoCuenta, TesoreriaRechazada } from "@/lib/tesoreria/movimientos";
 import { FORMAS_PAGO, numeroFacturaCompra, numeroPago } from "./estados";
 
 // Servicio de cuentas por pagar. Espejo de Cuentas por cobrar: un pago baja el saldo de sus facturas con un UPDATE atómico condicionado, y anular un
@@ -18,7 +19,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoCxp<T>>): Promise<Res
   try {
     return await trabajo();
   } catch (e) {
-    if (e instanceof CxpError) return { ok: false, error: e.message };
+    if (e instanceof CxpError || e instanceof TesoreriaRechazada) return { ok: false, error: e.message };
     throw e;
   }
 }
@@ -89,6 +90,8 @@ export type DatosPago = {
   proveedorId: string;
   formaPago: string;
   moneda: string;
+  /// Cuenta de tesorería de la que sale el dinero; debe ser de la misma moneda en que se paga.
+  cuentaId: string;
   referencia: string | null;
   observaciones: string | null;
   aplicaciones: { facturaId: string; montoUsd: number }[];
@@ -125,14 +128,18 @@ export async function registrarPago(db: Db, actor: Actor, d: DatosPago): Promise
           throw new CxpError(`${numeroFacturaCompra(f.numero)}: solo se debe ${Number(f.saldo)} USD.`);
         }
       }
+      const cuenta = await tx.cuentaTesoreria.findUnique({ where: { id: d.cuentaId }, select: { moneda: true, activo: true, codigo: true } });
+      if (!cuenta || !cuenta.activo) throw new CxpError("Elige una cuenta de tesorería activa.");
+      if (cuenta.moneda !== d.moneda) throw new CxpError(`La cuenta ${cuenta.codigo} es en ${cuenta.moneda}: no sirve para un pago en ${d.moneda}.`);
       const p = await tx.pagoProveedor.create({
         data: {
-          proveedorId: d.proveedorId, fecha: hoyCaracas(), formaPago: d.formaPago, moneda: d.moneda, montoMoneda, tasaUsd: tasa, montoUsd,
+          cuentaId: d.cuentaId, proveedorId: d.proveedorId, fecha: hoyCaracas(), formaPago: d.formaPago, moneda: d.moneda, montoMoneda, tasaUsd: tasa, montoUsd,
           referencia: d.referencia, observaciones: d.observaciones, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
           aplicaciones: { create: aplic.map((a) => ({ facturaId: a.facturaId, montoUsd: a.montoUsd })) },
         },
         select: { id: true, numero: true },
       });
+      await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.cuentaId, tipo: "PAGO", monto: montoMoneda, documento: numeroPago(p.numero), descripcion: `Pago a proveedor${d.referencia ? ` · ref. ${d.referencia}` : ""}` });
       return { ...p, montoUsd, montoMoneda };
     });
     await registrarCambio(db, actor, { modulo: "cxp", entidad: "pago_proveedor", entidadId: r.id, descripcion: numeroPago(r.numero), accion: "crear", despues: { formaPago: d.formaPago, moneda: d.moneda, montoMoneda: r.montoMoneda, montoUsd: r.montoUsd, facturas: aplic.length } });
@@ -149,6 +156,7 @@ export async function anularPago(db: Db, actor: Actor, id: string, motivo: strin
       if (u.count === 0) throw new CxpError("El pago ya está anulado o no existe. Recarga la página.");
       const p = await tx.pagoProveedor.findUniqueOrThrow({ where: { id }, include: { aplicaciones: true } });
       for (const a of p.aplicaciones) await tx.facturaCompra.update({ where: { id: a.facturaId }, data: { saldo: { increment: a.montoUsd } } });
+      if (p.cuentaId) await aplicarMovimientoCuenta(tx, actor, { cuentaId: p.cuentaId, tipo: "ANULACION_PAGO", monto: Number(p.montoMoneda), documento: numeroPago(p.numero), descripcion: `Anulación: ${m.slice(0, 120)}` });
       return p.numero;
     });
     await registrarCambio(db, actor, { modulo: "cxp", entidad: "pago_proveedor", entidadId: id, descripcion: numeroPago(numero), accion: "otro", despues: { estado: "ANULADO", motivo: m } });

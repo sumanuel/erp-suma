@@ -16,7 +16,7 @@ export default async function DetalleCobro({ params }: { params: Promise<{ id: s
   const ctx = await requerirSesion();
   const c = await ctx.db.cobro.findUnique({
     where: { id },
-    include: { cliente: { select: { id: true, razonSocial: true, documento: true } }, aplicaciones: { include: { factura: { select: { id: true, numero: true } } }, orderBy: { factura: { numero: "asc" } } } },
+    include: { cuenta: { select: { id: true, codigo: true, nombre: true } }, cliente: { select: { id: true, razonSocial: true, documento: true } }, aplicaciones: { include: { factura: { select: { id: true, numero: true } } }, orderBy: { factura: { numero: "asc" } } } },
   });
   if (!c) notFound();
   const e = ESTADOS_COBRO[c.estado as EstadoCobro];
@@ -39,6 +39,7 @@ export default async function DetalleCobro({ params }: { params: Promise<{ id: s
           <div><dt className="text-gris-500">Forma de pago</dt><dd>{FORMAS_PAGO[c.formaPago as keyof typeof FORMAS_PAGO] ?? c.formaPago}</dd></div>
           <div><dt className="text-gris-500">Pagó</dt><dd>{c.moneda === "VES" ? "Bs. " : "$ "}{formatoUsd(Number(c.montoMoneda))}{c.tasaUsd ? ` (tasa ${textoTasa(Number(c.tasaUsd))})` : ""}</dd></div>
           <div><dt className="text-gris-500">Aplicado USD</dt><dd className="font-semibold">{formatoUsd(Number(c.montoUsd))}</dd></div>
+          <div><dt className="text-gris-500">Cuenta</dt><dd>{c.cuenta ? <Link href={`/tesoreria/cuentas/${c.cuenta.id}`} className="text-marca-texto hover:underline">{c.cuenta.codigo}</Link> : "—"}</dd></div>
           <div><dt className="text-gris-500">Referencia</dt><dd>{c.referencia ?? "—"}</dd></div>
           <div><dt className="text-gris-500">Registrado por</dt><dd>{c.creadoPorNombre ?? "—"} · {formatoFechaHora(c.creadoEn)}</dd></div>
           <div className="sm:col-span-2"><dt className="text-gris-500">Observaciones</dt><dd>{c.observaciones ?? "—"}</dd></div>

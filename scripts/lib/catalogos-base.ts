@@ -12,6 +12,7 @@ export async function sembrarCatalogosBase(c: Client) {
     );
   }
   await c.query("INSERT INTO almacen (codigo, nombre) VALUES ('PRINC', 'Almacén principal') ON CONFLICT (codigo) DO NOTHING");
+  await c.query("INSERT INTO cuenta_tesoreria (codigo, nombre, tipo, moneda) VALUES ('CAJA-USD', 'Caja en dólares', 'CAJA', 'USD'), ('CAJA-VES', 'Caja en bolívares', 'CAJA', 'VES') ON CONFLICT (codigo) DO NOTHING");
   for (const [codigo, nombre] of [["UND", "Unidad"], ["CJ", "Caja"], ["PQ", "Paquete"], ["KG", "Kilogramo"], ["MT", "Metro"], ["LT", "Litro"], ["GL", "Galón"]] as const) {
     await c.query("INSERT INTO unidad_medida (codigo, nombre) VALUES ($1,$2) ON CONFLICT (codigo) DO NOTHING", [codigo, nombre]);
   }

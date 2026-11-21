@@ -1,0 +1,52 @@
+// Tesorería: cajas y cuentas bancarias con su libro de movimientos. El saldo de una cuenta SOLO lo mueve src/lib/tesoreria/movimientos.ts: cada cambio se
+// escribe junto con su línea del libro, en la misma transacción, con descuento atómico (sin sobregiro salvo que la cuenta lo permita). Cobros y pagos
+// (CxC/CxP) entran y salen por aquí. Un error se corrige con otro movimiento, nunca editando o borrando uno.
+
+model CuentaTesoreria {
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo           String                 @unique
+  nombre           String
+  /// CAJA o BANCO
+  tipo             String
+  /// USD o VES: una cuenta tiene una sola moneda.
+  moneda           String
+  banco            String?
+  numeroCuenta     String?                @map("numero_cuenta")
+  /// Saldo actual en la moneda de la cuenta.
+  saldo            Decimal                @default(0) @db.Decimal(18, 2)
+  /// Si permite que el saldo quede negativo (sobregiro).
+  permiteSobregiro Boolean                @default(false) @map("permite_sobregiro")
+  activo           Boolean                @default(true)
+  creadoEn         DateTime               @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime               @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  movimientos      MovimientoTesoreria[]
+  cobros           Cobro[]
+  pagos            PagoProveedor[]
+
+  @@map("cuenta_tesoreria")
+}
+
+/// Una línea del libro de la cuenta. Con signo: ingresos positivos, egresos negativos.
+model MovimientoTesoreria {
+  id            BigInt          @id @default(autoincrement())
+  fecha         DateTime        @default(now()) @db.Timestamptz(6)
+  cuentaId      String          @map("cuenta_id") @db.Uuid
+  cuenta        CuentaTesoreria @relation(fields: [cuentaId], references: [id])
+  /// SALDO_INICIAL, COBRO, PAGO, ANULACION_COBRO, ANULACION_PAGO, INGRESO, EGRESO, TRANSFERENCIA_ENTRADA, TRANSFERENCIA_SALIDA
+  tipo          String
+  monto         Decimal         @db.Decimal(18, 2)
+  saldoDespues  Decimal         @map("saldo_despues") @db.Decimal(18, 2)
+  /// Documento que lo originó (COB-000001, PAG-000001…).
+  documento     String?
+  descripcion   String?
+  /// Une las dos líneas de una transferencia.
+  grupo         String?         @db.Uuid
+  conciliado    Boolean         @default(false)
+  conciliadoEn  DateTime?       @map("conciliado_en") @db.Timestamptz(6)
+  usuarioId     String?         @map("usuario_id") @db.Uuid
+  usuarioNombre String?         @map("usuario_nombre")
+
+  @@index([cuentaId, fecha(sort: Desc)])
+  @@index([grupo])
+  @@map("movimiento_tesoreria")
+}

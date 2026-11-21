@@ -4,6 +4,7 @@ import { registrarCambio } from "@/lib/auditoria";
 import type { Actor } from "@/lib/inventario/movimientos";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { hoyCaracas, tasaVigente } from "@/lib/tasas";
+import { aplicarMovimientoCuenta, TesoreriaRechazada } from "@/lib/tesoreria/movimientos";
 import { FORMAS_PAGO, numeroCobro, type FormaPago } from "./estados";
 
 // Servicio de cuentas por cobrar. Un cobro baja el saldo de sus facturas con un UPDATE atómico condicionado (nadie puede cobrar más de lo que
@@ -19,6 +20,8 @@ export type DatosCobro = {
   clienteId: string;
   formaPago: string;
   moneda: string;
+  /// Cuenta de tesorería (caja o banco) donde entra el dinero; debe ser de la misma moneda en que pagó el cliente.
+  cuentaId: string;
   referencia: string | null;
   observaciones: string | null;
   aplicaciones: { facturaId: string; montoUsd: number }[];
@@ -28,7 +31,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoCobro<T>>): Promise<R
   try {
     return await trabajo();
   } catch (e) {
-    if (e instanceof CobroError) return { ok: false, error: e.message };
+    if (e instanceof CobroError || e instanceof TesoreriaRechazada) return { ok: false, error: e.message };
     throw e;
   }
 }
@@ -67,14 +70,18 @@ export async function registrarCobro(db: Db, actor: Actor, d: DatosCobro): Promi
           throw new CobroError(`${numeroFactura(f.numero)}: solo se debe ${Number(f.saldo)} USD.`);
         }
       }
+      const cuenta = await tx.cuentaTesoreria.findUnique({ where: { id: d.cuentaId }, select: { moneda: true, activo: true, codigo: true } });
+      if (!cuenta || !cuenta.activo) throw new CobroError("Elige una cuenta de tesorería activa.");
+      if (cuenta.moneda !== d.moneda) throw new CobroError(`La cuenta ${cuenta.codigo} es en ${cuenta.moneda}: no recibe un pago en ${d.moneda}.`);
       const c = await tx.cobro.create({
         data: {
-          clienteId: d.clienteId, fecha: hoyCaracas(), formaPago: d.formaPago, moneda: d.moneda, montoMoneda, tasaUsd: tasa, montoUsd,
+          cuentaId: d.cuentaId, clienteId: d.clienteId, fecha: hoyCaracas(), formaPago: d.formaPago, moneda: d.moneda, montoMoneda, tasaUsd: tasa, montoUsd,
           referencia: d.referencia, observaciones: d.observaciones, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
           aplicaciones: { create: aplic.map((a) => ({ facturaId: a.facturaId, montoUsd: a.montoUsd })) },
         },
         select: { id: true, numero: true },
       });
+      await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.cuentaId, tipo: "COBRO", monto: montoMoneda, documento: numeroCobro(c.numero), descripcion: `Cobro a cliente${d.referencia ? ` · ref. ${d.referencia}` : ""}` });
       return { ...c, montoUsd, montoMoneda };
     });
     await registrarCambio(db, actor, {
@@ -95,6 +102,8 @@ export async function anularCobro(db: Db, actor: Actor, id: string, motivo: stri
       if (u.count === 0) throw new CobroError("El cobro ya está anulado o no existe. Recarga la página.");
       const c = await tx.cobro.findUniqueOrThrow({ where: { id }, include: { aplicaciones: true } });
       for (const a of c.aplicaciones) await tx.factura.update({ where: { id: a.facturaId }, data: { saldo: { increment: a.montoUsd } } });
+      // El dinero que entró vuelve a salir de la cuenta; si ya se gastó y no alcanza, la anulación se rechaza completa.
+      if (c.cuentaId) await aplicarMovimientoCuenta(tx, actor, { cuentaId: c.cuentaId, tipo: "ANULACION_COBRO", monto: Number(c.montoMoneda), documento: numeroCobro(c.numero), descripcion: `Anulación: ${m.slice(0, 120)}` });
       return c.numero;
     });
     await registrarCambio(db, actor, { modulo: "cxc", entidad: "cobro", entidadId: id, descripcion: numeroCobro(numero), accion: "otro", despues: { estado: "ANULADO", motivo: m } });

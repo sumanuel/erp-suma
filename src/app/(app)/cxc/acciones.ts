@@ -12,6 +12,7 @@ const Cobro = z.object({
   clienteId: z.string().uuid("Elige un cliente"),
   formaPago: z.string().min(1, "Elige la forma de pago").max(30),
   moneda: z.enum(["USD", "VES"]),
+  cuentaId: z.string().uuid("Elige la cuenta donde entra el dinero"),
   referencia: z.string().trim().max(100).transform((v) => v || null),
   observaciones: z.string().trim().max(1000).transform((v) => v || null),
   aplicaciones: z.array(z.object({ facturaId: z.string().uuid(), montoUsd: z.number().finite() })).max(200),

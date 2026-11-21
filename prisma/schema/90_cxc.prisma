@@ -21,6 +21,9 @@ model Cobro {
   tasaUsd         Decimal?          @map("tasa_usd") @db.Decimal(18, 8)
   /// Total aplicado a facturas, en USD.
   montoUsd        Decimal           @map("monto_usd") @db.Decimal(18, 4)
+  /// Cuenta de tesorería a la que entró el dinero (nulo solo en cobros anteriores a Tesorería).
+  cuentaId        String?           @map("cuenta_id") @db.Uuid
+  cuenta          CuentaTesoreria?  @relation(fields: [cuentaId], references: [id])
   referencia      String?
   observaciones   String?
   creadoPorId     String?           @map("creado_por_id") @db.Uuid

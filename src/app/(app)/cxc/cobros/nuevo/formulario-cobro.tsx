@@ -15,10 +15,11 @@ const num = (s: string) => {
 };
 
 /** Reparte un cobro entre las facturas abiertas del cliente. Lo aplicado se lleva en USD; si paga en Bs., se muestra el equivalente con la tasa de hoy. */
-export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa }: { clienteId: string; clienteNombre: string; facturas: FacturaAbierta[]; tasa: number | null }) {
+export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa, cuentas }: { clienteId: string; clienteNombre: string; facturas: FacturaAbierta[]; tasa: number | null; cuentas: { id: string; moneda: "USD" | "VES"; etiqueta: string }[] }) {
   const [montos, setMontos] = useState<Record<string, string>>({});
   const [formaPago, setFormaPago] = useState("TRANSFERENCIA");
   const [moneda, setMoneda] = useState<"USD" | "VES">("USD");
+  const [cuentaId, setCuentaId] = useState("");
   const [referencia, setReferencia] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa }: { 
     setError(null);
     iniciar(async () => {
       const r = await registrarCobroCliente({
-        clienteId, formaPago, moneda, referencia, observaciones,
+        clienteId, formaPago, moneda, cuentaId, referencia, observaciones,
         aplicaciones: facturas.map((f) => ({ facturaId: f.id, montoUsd: num(montos[f.id] ?? "") })).filter((a) => a.montoUsd > 0),
       });
       if (r?.error) setError(r.error);
@@ -52,10 +53,18 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa }: { 
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="moneda" className="text-[13px] font-medium">Moneda en que pagó</label>
-            <select id="moneda" value={moneda} onChange={(e) => setMoneda(e.target.value as "USD" | "VES")} className={`${claseControl} pr-9`}>
+            <select id="moneda" value={moneda} onChange={(e) => { setMoneda(e.target.value as "USD" | "VES"); setCuentaId(""); }} className={`${claseControl} pr-9`}>
               <option value="USD">Dólares (USD)</option>
               <option value="VES" disabled={!tasa}>Bolívares (Bs.){tasa ? "" : " — sin tasa cargada"}</option>
             </select>
+          </div>
+          <div className="flex flex-col gap-1.5 md:col-span-2">
+            <label htmlFor="cuentaId" className="text-[13px] font-medium">Cuenta donde entra el dinero</label>
+            <select id="cuentaId" value={cuentaId} onChange={(e) => setCuentaId(e.target.value)} required className={`${claseControl} pr-9`}>
+              <option value="">Elegir…</option>
+              {cuentas.filter((c) => c.moneda === moneda).map((c) => <option key={c.id} value={c.id}>{c.etiqueta}</option>)}
+            </select>
+            {cuentas.every((c) => c.moneda !== moneda) ? <p className="text-[12.5px] text-error">No hay una cuenta activa en esta moneda: créala en Tesorería.</p> : null}
           </div>
           <div className="flex flex-col gap-1.5 md:col-span-2">
             <label htmlFor="referencia" className="text-[13px] font-medium">Referencia (banco, nº de operación)</label>
