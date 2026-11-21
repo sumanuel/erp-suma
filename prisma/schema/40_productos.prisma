@@ -115,6 +115,7 @@ model Producto {
   movimientos         MovimientoInventario[]
   lineasCompra        OrdenCompraLinea[]
   lineasPedido        PedidoVentaLinea[]
+  lineasCotizacion    CotizacionLinea[]
   lineasFactura       FacturaLinea[]
 
   @@index([descripcion])

@@ -8,6 +8,9 @@ model PedidoVenta {
   numero          Int               @unique @default(autoincrement())
   clienteId       String            @map("cliente_id") @db.Uuid
   cliente         Cliente           @relation(fields: [clienteId], references: [id])
+  /// Cotización de la que nació, si vino de una.
+  cotizacionId    String?           @map("cotizacion_id") @db.Uuid
+  cotizacion      Cotizacion?       @relation(fields: [cotizacionId], references: [id])
   fecha           DateTime          @db.Date
   /// BORRADOR, CONFIRMADO, FACTURADO, ANULADO
   estado          String            @default("BORRADOR")

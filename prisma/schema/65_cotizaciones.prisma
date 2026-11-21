@@ -1,0 +1,55 @@
+// Cotizaciones a clientes. No reservan mercancía ni mueven inventario: son una oferta con precios y vigencia. Una cotización EMITIDA y vigente se
+// convierte en un pedido en borrador (que ya reserva al confirmarse) con los mismos precios; la cotización pasa a ACEPTADA y queda enlazada al pedido.
+// Precios en USD; la tasa del dólar se congela al emitir para mostrar el total en bolívares con la tasa de ese día.
+
+model Cotizacion {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo (se muestra como COT-000123).
+  numero           Int               @unique @default(autoincrement())
+  clienteId        String            @map("cliente_id") @db.Uuid
+  cliente          Cliente           @relation(fields: [clienteId], references: [id])
+  fecha            DateTime          @db.Date
+  /// Días de vigencia desde la fecha; después de la fecha de vencimiento ya no se puede convertir.
+  validezDias      Int               @default(15) @map("validez_dias")
+  fechaVencimiento DateTime          @map("fecha_vencimiento") @db.Date
+  /// BORRADOR, EMITIDA, ACEPTADA, RECHAZADA, ANULADA
+  estado           String            @default("BORRADOR")
+  observaciones    String?
+  subtotal         Decimal           @default(0) @db.Decimal(18, 4)
+  descuento        Decimal           @default(0) @db.Decimal(18, 4)
+  iva              Decimal           @default(0) @db.Decimal(18, 4)
+  total            Decimal           @default(0) @db.Decimal(18, 4)
+  /// Bolívares por 1 USD al emitir (8 decimales). Nulo mientras es borrador.
+  tasaUsd          Decimal?          @map("tasa_usd") @db.Decimal(18, 8)
+  motivoCierre     String?           @map("motivo_cierre")
+  creadoPorId      String?           @map("creado_por_id") @db.Uuid
+  creadoPorNombre  String?           @map("creado_por_nombre")
+  creadoEn         DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime          @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  lineas           CotizacionLinea[]
+  pedidos          PedidoVenta[]
+
+  @@index([clienteId])
+  @@index([estado, fecha(sort: Desc)])
+  @@map("cotizacion")
+}
+
+model CotizacionLinea {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cotizacionId   String     @map("cotizacion_id") @db.Uuid
+  cotizacion     Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+  linea          Int
+  productoCodigo String     @map("producto_codigo")
+  producto       Producto   @relation(fields: [productoCodigo], references: [codigo])
+  descripcion    String
+  cantidad       Decimal    @db.Decimal(18, 4)
+  /// Precio unitario en USD, antes de descuento.
+  precioUnitario Decimal    @map("precio_unitario") @db.Decimal(18, 4)
+  descuento      Decimal    @default(0) @db.Decimal(7, 4)
+  ivaPorcentaje  Decimal    @default(0) @map("iva_porcentaje") @db.Decimal(7, 4)
+  total          Decimal    @default(0) @db.Decimal(18, 4)
+
+  @@unique([cotizacionId, linea])
+  @@index([productoCodigo])
+  @@map("cotizacion_linea")
+}
