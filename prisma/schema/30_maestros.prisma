@@ -15,6 +15,7 @@ model Cliente {
 
   pedidos       PedidoVenta[]
   facturas      Factura[]
+  cobros        Cobro[]
 
   @@index([razonSocial])
   @@map("cliente")

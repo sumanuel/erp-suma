@@ -18,7 +18,7 @@ export default async function NuevaFactura({ searchParams }: { searchParams: Pro
   const almacenInicial = almacenes.length === 1 ? almacenes[0].id : "";
 
   let pedido: { id: string; etiqueta: string } | null = null;
-  let inicial: InicialFactura = { clienteId: "", almacenId: almacenInicial, observaciones: "", lineas: [] };
+  let inicial: InicialFactura = { clienteId: "", almacenId: almacenInicial, observaciones: "", diasCredito: "0", lineas: [] };
   let opcionesCliente = clientes.map((c) => ({ valor: c.id, etiqueta: `${c.razonSocial} (${c.documento})` }));
   if (pedidoId) {
     if (!UUID.test(pedidoId)) notFound();
@@ -28,7 +28,7 @@ export default async function NuevaFactura({ searchParams }: { searchParams: Pro
     pedido = { id: p.id, etiqueta: numeroPedido(p.numero) };
     opcionesCliente = [{ valor: p.clienteId, etiqueta: `${p.cliente.razonSocial} (${p.cliente.documento})` }];
     inicial = {
-      clienteId: p.clienteId, almacenId: almacenInicial, observaciones: p.observaciones ?? "",
+      clienteId: p.clienteId, almacenId: almacenInicial, observaciones: p.observaciones ?? "", diasCredito: "0",
       lineas: p.lineas.map((l) => ({ productoCodigo: l.productoCodigo, descripcion: l.descripcion, ivaPorcentaje: Number(l.ivaPorcentaje), cantidad: String(Number(l.cantidad)), precioUnitario: String(Number(l.precioUnitario)), descuento: String(Number(l.descuento)) })),
     };
   }

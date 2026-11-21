@@ -10,7 +10,7 @@ import { buscarProductosFactura, emitirFacturaVenta } from "./acciones";
 import { formatoCantidad, formatoUsd } from "./formato";
 
 export type LineaForm = { productoCodigo: string; descripcion: string; ivaPorcentaje: number; cantidad: string; precioUnitario: string; descuento: string };
-export type InicialFactura = { clienteId: string; almacenId: string; observaciones: string; lineas: LineaForm[] };
+export type InicialFactura = { clienteId: string; almacenId: string; observaciones: string; diasCredito: string; lineas: LineaForm[] };
 
 const num = (s: string) => {
   const n = Number(s.replace(",", "."));
@@ -27,6 +27,7 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes }: {
   const [clienteId, setClienteId] = useState(inicial.clienteId);
   const [almacenId, setAlmacenId] = useState(inicial.almacenId);
   const [observaciones, setObservaciones] = useState(inicial.observaciones);
+  const [diasCredito, setDiasCredito] = useState(inicial.diasCredito);
   const [lineas, setLineas] = useState<LineaForm[]>(inicial.lineas);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
@@ -65,8 +66,8 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes }: {
       const r = await emitirFacturaVenta(
         pedido?.id ?? null,
         fijo
-          ? { almacenId, observaciones }
-          : { clienteId, almacenId, observaciones, lineas: lineas.map((l) => ({ productoCodigo: l.productoCodigo, cantidad: num(l.cantidad), precioUnitario: num(l.precioUnitario), descuento: num(l.descuento) })) },
+          ? { almacenId, observaciones, diasCredito: Math.trunc(num(diasCredito)) }
+          : { clienteId, almacenId, observaciones, diasCredito: Math.trunc(num(diasCredito)), lineas: lineas.map((l) => ({ productoCodigo: l.productoCodigo, cantidad: num(l.cantidad), precioUnitario: num(l.precioUnitario), descuento: num(l.descuento) })) },
       );
       if (r?.error) setError(r.error);
     });
@@ -93,7 +94,12 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes }: {
               {almacenes.map((a) => <option key={a.valor} value={a.valor}>{a.etiqueta}</option>)}
             </select>
           </div>
-          <div className="flex flex-col gap-1.5 md:col-span-2">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="diasCredito" className="text-[13px] font-medium">Días de crédito</label>
+            <input id="diasCredito" inputMode="numeric" value={diasCredito} onChange={(e) => setDiasCredito(e.target.value)} className={claseControl} />
+            <p className="text-[12.5px] text-gris-500">0 = contado. Define el vencimiento en Cuentas por cobrar.</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
             <label htmlFor="observaciones" className="text-[13px] font-medium">Observaciones</label>
             <input id="observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} maxLength={1000} className={claseControl} />
           </div>

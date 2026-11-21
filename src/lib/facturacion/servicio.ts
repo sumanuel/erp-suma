@@ -26,7 +26,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoFactura<T>>): Promise
 type LineaLista = { productoCodigo: string; descripcion: string; cantidad: number; precioUnitario: number; descuento: number; ivaPorcentaje: number; total: number };
 
 /** Crea la factura y descuenta el inventario, todo dentro de la transacción recibida. */
-async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedidoId: string | null; almacenId: string; observaciones: string | null; lineas: LineaLista[] }) {
+async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedidoId: string | null; almacenId: string; observaciones: string | null; diasCredito: number; lineas: LineaLista[] }) {
   const tasa = await tasaVigente(tx as unknown as Db, "USD");
   if (!tasa) throw new FacturaError("No hay tasa del dólar cargada: regístrala en Tasa de cambio antes de facturar.");
   const almacen = await tx.almacen.findUnique({ where: { id: d.almacenId }, select: { activo: true } });
@@ -34,9 +34,13 @@ async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedido
 
   const t = calcularTotales(d.lineas.map((l) => ({ cantidad: l.cantidad, costoUnitario: l.precioUnitario, descuento: l.descuento, ivaPorcentaje: l.ivaPorcentaje })));
   const costos = new Map((await tx.producto.findMany({ where: { codigo: { in: d.lineas.map((l) => l.productoCodigo) } }, select: { codigo: true, costoPromedio: true } })).map((p) => [p.codigo, Number(p.costoPromedio)]));
+  if (!Number.isInteger(d.diasCredito) || d.diasCredito < 0 || d.diasCredito > 365) throw new FacturaError("Los días de crédito deben ser un número entero entre 0 y 365.");
+  const fecha = hoyCaracas();
+  const vence = new Date(fecha.getTime() + d.diasCredito * 86_400_000);
   const f = await tx.factura.create({
     data: {
-      clienteId: d.clienteId, pedidoId: d.pedidoId, almacenId: d.almacenId, fecha: hoyCaracas(), observaciones: d.observaciones, ...t,
+      clienteId: d.clienteId, pedidoId: d.pedidoId, almacenId: d.almacenId, fecha, observaciones: d.observaciones, ...t,
+      diasCredito: d.diasCredito, fechaVencimiento: vence, saldo: t.total,
       tasaUsd: tasa.valor, totalBs: aBolivares(t.total, tasa.valor), creadoPorId: actor.id, creadoPorNombre: actor.nombre,
       lineas: { create: d.lineas.map((l, i) => ({ linea: i + 1, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, ivaPorcentaje: l.ivaPorcentaje, total: l.total, costoUnitario: costos.get(l.productoCodigo) ?? 0 })) },
     },
@@ -57,7 +61,7 @@ async function auditarEmision(db: Db, actor: Actor, r: { id: string; numero: num
   await registrarCambio(db, actor, { modulo: "facturacion", entidad: "factura", entidadId: r.id, descripcion: numeroFactura(r.numero), accion: "crear", despues: { lineas: r.lineas, totalUsd: r.total, ...(pedidoId ? { pedidoId } : {}) } });
 }
 
-export type DatosFactura = { clienteId: string; almacenId: string; observaciones: string | null; lineas: LineaPedido[] };
+export type DatosFactura = { clienteId: string; almacenId: string; observaciones: string | null; diasCredito: number; lineas: LineaPedido[] };
 
 /** Factura directa (sin pedido). Respeta lo reservado por pedidos confirmados de otros clientes. */
 export async function emitirFactura(db: Db, actor: Actor, d: DatosFactura): Promise<ResultadoFactura<{ id: string; numero: number }>> {
@@ -71,7 +75,7 @@ export async function emitirFactura(db: Db, actor: Actor, d: DatosFactura): Prom
         const hay = libre.get(l.productoCodigo) ?? 0;
         if (l.cantidad > hay) throw new FacturaError(`${l.productoCodigo}: solo hay ${Math.max(hay, 0)} disponibles (existencia menos reservas de pedidos).`);
       }
-      return crearFactura(tx, actor, { clienteId: d.clienteId, pedidoId: null, almacenId: d.almacenId, observaciones: d.observaciones, lineas });
+      return crearFactura(tx, actor, { clienteId: d.clienteId, pedidoId: null, almacenId: d.almacenId, observaciones: d.observaciones, diasCredito: d.diasCredito, lineas });
     });
     await auditarEmision(db, actor, r, null);
     return { ok: true, id: r.id, numero: r.numero };
@@ -79,7 +83,7 @@ export async function emitirFactura(db: Db, actor: Actor, d: DatosFactura): Prom
 }
 
 /** Factura un pedido confirmado con sus mismas líneas y precios. La reserva del pedido se consume con la salida de inventario. */
-export async function emitirFacturaDePedido(db: Db, actor: Actor, pedidoId: string, almacenId: string, observaciones: string | null): Promise<ResultadoFactura<{ id: string; numero: number }>> {
+export async function emitirFacturaDePedido(db: Db, actor: Actor, pedidoId: string, almacenId: string, observaciones: string | null, diasCredito: number): Promise<ResultadoFactura<{ id: string; numero: number }>> {
   return ejecutar(async () => {
     const r = await db.$transaction(async (tx) => {
       // El estado se cambia primero y solo si sigue CONFIRMADO: dos personas no pueden facturar el mismo pedido.
@@ -90,7 +94,7 @@ export async function emitirFacturaDePedido(db: Db, actor: Actor, pedidoId: stri
         productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: Number(l.cantidad), precioUnitario: Number(l.precioUnitario),
         descuento: Number(l.descuento), ivaPorcentaje: Number(l.ivaPorcentaje), total: Number(l.total),
       }));
-      return crearFactura(tx, actor, { clienteId: p.clienteId, pedidoId, almacenId, observaciones, lineas });
+      return crearFactura(tx, actor, { clienteId: p.clienteId, pedidoId, almacenId, observaciones, diasCredito, lineas });
     });
     await auditarEmision(db, actor, r, pedidoId);
     return { ok: true, id: r.id, numero: r.numero };
@@ -103,8 +107,10 @@ export async function anularFactura(db: Db, actor: Actor, id: string, motivo: st
     const m = motivo.trim();
     if (m.length < 3) throw new FacturaError("Indica el motivo de la anulación.");
     const numero = await db.$transaction(async (tx) => {
-      const u = await tx.factura.updateMany({ where: { id, estado: "EMITIDA" }, data: { estado: "ANULADA", anuladaEn: new Date(), anuladaPorNombre: actor.nombre, motivoAnulacion: m.slice(0, 500) } });
+      const u = await tx.factura.updateMany({ where: { id, estado: "EMITIDA" }, data: { estado: "ANULADA", saldo: 0, anuladaEn: new Date(), anuladaPorNombre: actor.nombre, motivoAnulacion: m.slice(0, 500) } });
       if (u.count === 0) throw new FacturaError("La factura ya está anulada o no existe. Recarga la página.");
+      // Con cobros vigentes no se anula: primero hay que anular el cobro (así el saldo y la caja siempre cuadran).
+      if ((await tx.cobroAplicacion.count({ where: { facturaId: id, cobro: { estado: "REGISTRADO" } } })) > 0) throw new FacturaError("La factura tiene cobros registrados: anula primero esos cobros en Cuentas por cobrar.");
       const f = await tx.factura.findUniqueOrThrow({ where: { id }, include: { lineas: true } });
       for (const l of f.lineas) {
         await aplicarMovimiento(tx, actor, { tipo: "AJUSTE_POSITIVO", almacenId: f.almacenId, productoCodigo: l.productoCodigo, cantidad: Number(l.cantidad), documento: numeroFactura(f.numero), motivo: `Anulación de factura: ${m.slice(0, 200)}` });

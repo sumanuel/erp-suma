@@ -1,0 +1,51 @@
+// Cuentas por cobrar. Un cobro (recibo) reparte lo recibido entre las facturas abiertas de un cliente y baja su saldo. Todo se lleva en USD:
+// si el cliente paga en bolívares, se guarda el monto en Bs. que correspondió con la tasa del día, pero lo aplicado a la factura es el equivalente en USD.
+// Anticipos y pagos sin factura quedan para Tesorería. Un cobro registrado no se edita: se anula (restituye los saldos) y se registra otro.
+
+model Cobro {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo (se muestra como COB-000123).
+  numero          Int               @unique @default(autoincrement())
+  clienteId       String            @map("cliente_id") @db.Uuid
+  cliente         Cliente           @relation(fields: [clienteId], references: [id])
+  fecha           DateTime          @db.Date
+  /// REGISTRADO, ANULADO
+  estado          String            @default("REGISTRADO")
+  /// EFECTIVO, TRANSFERENCIA, PAGO_MOVIL, PUNTO_VENTA, ZELLE, CHEQUE, OTRO
+  formaPago       String            @map("forma_pago")
+  /// USD o VES: la moneda en que el cliente pagó.
+  moneda          String
+  /// Monto en la moneda en que pagó el cliente.
+  montoMoneda     Decimal           @map("monto_moneda") @db.Decimal(18, 2)
+  /// Bolívares por 1 USD al cobrar (solo si pagó en VES).
+  tasaUsd         Decimal?          @map("tasa_usd") @db.Decimal(18, 8)
+  /// Total aplicado a facturas, en USD.
+  montoUsd        Decimal           @map("monto_usd") @db.Decimal(18, 4)
+  referencia      String?
+  observaciones   String?
+  creadoPorId     String?           @map("creado_por_id") @db.Uuid
+  creadoPorNombre String?           @map("creado_por_nombre")
+  creadoEn        DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
+  anuladoEn       DateTime?         @map("anulado_en") @db.Timestamptz(6)
+  anuladoPorNombre String?          @map("anulado_por_nombre")
+  motivoAnulacion String?           @map("motivo_anulacion")
+  aplicaciones    CobroAplicacion[]
+
+  @@index([clienteId, fecha(sort: Desc)])
+  @@index([estado])
+  @@map("cobro")
+}
+
+model CobroAplicacion {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cobroId   String  @map("cobro_id") @db.Uuid
+  cobro     Cobro   @relation(fields: [cobroId], references: [id], onDelete: Cascade)
+  facturaId String  @map("factura_id") @db.Uuid
+  factura   Factura @relation(fields: [facturaId], references: [id])
+  /// USD que este cobro aplicó a la factura.
+  montoUsd  Decimal @map("monto_usd") @db.Decimal(18, 4)
+
+  @@unique([cobroId, facturaId])
+  @@index([facturaId])
+  @@map("cobro_aplicacion")
+}

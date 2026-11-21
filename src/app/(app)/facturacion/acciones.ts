@@ -13,6 +13,7 @@ const Factura = z.object({
   clienteId: z.string().uuid("Elige un cliente"),
   almacenId: z.string().uuid("Elige un almacén"),
   observaciones: z.string().trim().max(1000).transform((v) => v || null),
+  diasCredito: z.number().int("Días de crédito inválidos").min(0).max(365),
   lineas: z.array(z.object({
     productoCodigo: z.string().min(1).max(60),
     cantidad: z.number().finite(),
@@ -31,9 +32,9 @@ export async function emitirFacturaVenta(pedidoId: string | null, datos: unknown
   const ctx = await requerirPermisoAccion("facturacion", "crear");
   let res;
   if (pedidoId) {
-    const r = z.object({ almacenId: z.string().uuid("Elige un almacén"), observaciones: z.string().trim().max(1000).transform((v) => v || null) }).safeParse(datos);
+    const r = z.object({ almacenId: z.string().uuid("Elige un almacén"), observaciones: z.string().trim().max(1000).transform((v) => v || null), diasCredito: z.number().int("Días de crédito inválidos").min(0).max(365) }).safeParse(datos);
     if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
-    res = await emitirFacturaDePedido(ctx.db, ctx.usuario, pedidoId, r.data.almacenId, r.data.observaciones);
+    res = await emitirFacturaDePedido(ctx.db, ctx.usuario, pedidoId, r.data.almacenId, r.data.observaciones, r.data.diasCredito);
   } else {
     const r = Factura.safeParse(datos);
     if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };

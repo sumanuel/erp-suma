@@ -41,6 +41,7 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
         <dl className="mt-4 grid gap-3 text-[13.5px] sm:grid-cols-2 xl:grid-cols-4">
           <div><dt className="text-gris-500">Fecha</dt><dd>{formatoFecha(f.fecha)}</dd></div>
           <div><dt className="text-gris-500">Almacén</dt><dd>{f.almacen.nombre}</dd></div>
+          <div><dt className="text-gris-500">Vence</dt><dd>{formatoFecha(f.fechaVencimiento)}{f.diasCredito > 0 ? ` (${f.diasCredito} días)` : " (contado)"}</dd></div>
           <div><dt className="text-gris-500">Tasa USD</dt><dd>{textoTasa(Number(f.tasaUsd))}</dd></div>
           <div><dt className="text-gris-500">Pedido</dt><dd>{f.pedido ? <Link href={`/pedidos/${f.pedido.id}`} className="text-marca-texto hover:underline">{numeroPedido(f.pedido.numero)}</Link> : "—"}</dd></div>
           <div><dt className="text-gris-500">Emitida por</dt><dd>{f.creadoPorNombre ?? "—"} · {formatoFechaHora(f.creadoEn)}</dd></div>
@@ -76,6 +77,7 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
           <div className="flex justify-between"><dt className="text-gris-600">Subtotal</dt><dd className="tabular-nums">{formatoUsd(Number(f.subtotal))}</dd></div>
           <div className="flex justify-between"><dt className="text-gris-600">IVA</dt><dd className="tabular-nums">{formatoUsd(Number(f.iva))}</dd></div>
           <div className="flex justify-between border-t border-linea pt-1 text-[15px] font-semibold"><dt>Total USD</dt><dd className="tabular-nums">{formatoUsd(Number(f.total))}</dd></div>
+          {f.estado === "EMITIDA" ? <div className="flex justify-between font-semibold"><dt>Saldo por cobrar USD</dt><dd className="tabular-nums">{formatoUsd(Number(f.saldo))}</dd></div> : null}
           <div className="flex justify-between text-gris-700"><dt>Total Bs.</dt><dd className="tabular-nums">{formatoUsd(Number(f.totalBs))}</dd></div>
         </dl>
       </Tarjeta>

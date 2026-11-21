@@ -26,6 +26,11 @@ model Factura {
   tasaUsd          Decimal        @map("tasa_usd") @db.Decimal(18, 8)
   /// Total en bolívares con la tasa congelada, redondeado a 2 decimales.
   totalBs          Decimal        @map("total_bs") @db.Decimal(18, 2)
+  /// Días de crédito que se dieron (0 = contado).
+  diasCredito      Int            @default(0) @map("dias_credito")
+  fechaVencimiento DateTime       @map("fecha_vencimiento") @db.Date
+  /// Lo que falta por cobrar, en USD. Solo lo mueven los cobros (Cuentas por cobrar) y la anulación.
+  saldo            Decimal        @default(0) @db.Decimal(18, 4)
   creadoPorId      String?        @map("creado_por_id") @db.Uuid
   creadoPorNombre  String?        @map("creado_por_nombre")
   creadoEn         DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
@@ -33,6 +38,7 @@ model Factura {
   anuladaPorNombre String?        @map("anulada_por_nombre")
   motivoAnulacion  String?        @map("motivo_anulacion")
   lineas           FacturaLinea[]
+  aplicaciones     CobroAplicacion[]
 
   @@index([clienteId])
   @@index([pedidoId])
