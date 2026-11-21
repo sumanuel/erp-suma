@@ -17,6 +17,7 @@ model Cliente {
   cotizaciones  Cotizacion[]
   facturas      Factura[]
   cobros        Cobro[]
+  notasVenta    NotaVenta[]
 
   @@index([razonSocial])
   @@map("cliente")
@@ -42,6 +43,7 @@ model Proveedor {
   ordenesCompra   OrdenCompra[]
   facturasCompra  FacturaCompra[]
   pagos           PagoProveedor[]
+  notasCompra     NotaCompra[]
 
   @@index([razonSocial])
   @@map("proveedor")

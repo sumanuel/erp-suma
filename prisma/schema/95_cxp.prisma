@@ -25,6 +25,8 @@ model FacturaCompra {
   total            Decimal             @db.Decimal(18, 4)
   /// Lo que falta por pagar, en USD. Solo lo mueven los pagos y la anulación.
   saldo            Decimal             @default(0) @db.Decimal(18, 4)
+  /// Suma de las notas de débito (+) y de crédito (−) vigentes, en USD. El total que se debe es total + ajuste.
+  ajuste           Decimal             @default(0) @db.Decimal(18, 4)
   /// REGISTRADA, ANULADA
   estado           String              @default("REGISTRADA")
   observaciones    String?
@@ -35,6 +37,7 @@ model FacturaCompra {
   anuladaPorNombre String?             @map("anulada_por_nombre")
   motivoAnulacion  String?             @map("motivo_anulacion")
   aplicaciones     PagoAplicacion[]
+  notas            NotaCompra[]
 
   /// El mismo proveedor no puede repetir un número de factura (evita cargarla dos veces).
   @@unique([proveedorId, documento])

@@ -33,6 +33,8 @@ model Factura {
   fechaVencimiento DateTime       @map("fecha_vencimiento") @db.Date
   /// Lo que falta por cobrar, en USD. Solo lo mueven los cobros (Cuentas por cobrar) y la anulación.
   saldo            Decimal        @default(0) @db.Decimal(18, 4)
+  /// Suma de las notas de débito (+) y de crédito (−) vigentes, en USD. El total que se debe es total + ajuste.
+  ajuste           Decimal        @default(0) @db.Decimal(18, 4)
   creadoPorId      String?        @map("creado_por_id") @db.Uuid
   creadoPorNombre  String?        @map("creado_por_nombre")
   creadoEn         DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
@@ -41,6 +43,7 @@ model Factura {
   motivoAnulacion  String?        @map("motivo_anulacion")
   lineas           FacturaLinea[]
   aplicaciones     CobroAplicacion[]
+  notas            NotaVenta[]
 
   @@index([clienteId])
   @@index([pedidoId])
@@ -64,6 +67,7 @@ model FacturaLinea {
   total          Decimal  @default(0) @db.Decimal(18, 4)
   /// Costo promedio unitario (USD) al vender: base para el margen.
   costoUnitario  Decimal  @default(0) @map("costo_unitario") @db.Decimal(18, 4)
+  notaLineas     NotaVentaLinea[]
 
   @@unique([facturaId, linea])
   @@index([productoCodigo])

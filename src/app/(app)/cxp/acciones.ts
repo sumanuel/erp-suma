@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
+import { anularNotaCompra, crearNotaCompra } from "@/lib/notas/servicio";
 import { anularFacturaCompra, anularPago, registrarFacturaCompra, registrarPago } from "@/lib/cxp/servicio";
 
 export type EstadoPagoForm = { error?: string };
@@ -70,5 +71,33 @@ export async function anularFacturaProveedor(id: string, motivo: string): Promis
   revalidatePath("/cxp");
   revalidatePath("/cxp/facturas");
   revalidatePath(`/cxp/facturas/${id}`);
+  return r.ok ? null : r.error;
+}
+
+const NotaCompra = z.object({
+  tipo: z.enum(["CREDITO", "DEBITO"]),
+  facturaId: z.string().uuid(),
+  documento: z.string().trim().min(1, "Indica el número de la nota del proveedor").max(60),
+  numeroControl: z.string().trim().max(60).transform((v) => v || null),
+  fecha: Fecha,
+  motivo: z.string().trim().min(3, "Escribe el motivo de la nota").max(300),
+  subtotal: z.number().finite("Base inválida"),
+  iva: z.number().finite("IVA inválido"),
+});
+
+export async function registrarNotaProveedor(datos: unknown): Promise<{ error?: string }> {
+  const ctx = await requerirPermisoAccion("cxp", "crear");
+  const r = NotaCompra.safeParse(datos);
+  if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
+  const res = await crearNotaCompra(ctx.db, ctx.usuario, r.data);
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/cxp", "layout");
+  redirect(`/cxp/notas/${res.id}`);
+}
+
+export async function anularNotaProveedor(id: string, motivo: string): Promise<string | null> {
+  const ctx = await requerirPermisoAccion("cxp", "eliminar");
+  const r = await anularNotaCompra(ctx.db, ctx.usuario, id, motivo);
+  revalidatePath("/cxp", "layout");
   return r.ok ? null : r.error;
 }

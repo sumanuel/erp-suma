@@ -85,6 +85,7 @@ export async function anularFacturaCompra(db: Db, actor: Actor, id: string, moti
       if (u.count === 0) throw new CxpError("La factura ya está anulada o no existe. Recarga la página.");
       // Con pagos vigentes no se anula: primero se anula el pago (así el saldo y la caja siempre cuadran).
       if ((await tx.pagoAplicacion.count({ where: { facturaId: id, pago: { estado: "REGISTRADO" } } })) > 0) throw new CxpError("La factura tiene pagos registrados: anula primero esos pagos.");
+      if ((await tx.notaCompra.count({ where: { facturaId: id, estado: "ACTIVA" } })) > 0) throw new CxpError("La factura tiene notas del proveedor vigentes: anúlalas primero.");
       const n = (await tx.facturaCompra.findUniqueOrThrow({ where: { id }, select: { numero: true } })).numero;
       await revertirFacturaCompra(tx, actor, n);
       return n;

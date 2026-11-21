@@ -1,0 +1,101 @@
+// Notas de crédito y de débito. Corrigen una factura ya emitida sin tocarla: la factura conserva su total y acumula un `ajuste` (débitos − créditos); lo que se debe
+// es total + ajuste. Una nota de crédito nunca puede dejar el saldo por debajo de cero (si la factura ya se cobró, primero se anula el cobro). La nota usa la tasa de la
+// factura original para que la cuenta por cobrar/pagar se reduzca o aumente exactamente en los mismos bolívares. Una nota no se edita: se anula (revierte todo).
+
+/// Nota de crédito (reduce lo que el cliente debe) o de débito (lo aumenta) sobre una factura de venta.
+model NotaVenta {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo compartido por créditos y débitos (se muestra NC-000001 o ND-000001 según el tipo).
+  numero          Int              @unique @default(autoincrement())
+  /// CREDITO o DEBITO
+  tipo            String
+  /// DEVOLUCION (crédito con mercancía que regresa al almacén), AJUSTE (crédito por monto: descuento, error de precio) o CARGO (débito por monto).
+  modo            String
+  facturaId       String           @map("factura_id") @db.Uuid
+  factura         Factura          @relation(fields: [facturaId], references: [id])
+  clienteId       String           @map("cliente_id") @db.Uuid
+  cliente         Cliente          @relation(fields: [clienteId], references: [id])
+  /// Almacén al que regresa la mercancía (solo DEVOLUCION).
+  almacenId       String?          @map("almacen_id") @db.Uuid
+  almacen         Almacen?         @relation(fields: [almacenId], references: [id])
+  fecha           DateTime         @db.Date
+  /// ACTIVA o ANULADA
+  estado          String           @default("ACTIVA")
+  motivo          String
+  subtotal        Decimal          @db.Decimal(18, 4)
+  iva             Decimal          @default(0) @db.Decimal(18, 4)
+  total           Decimal          @db.Decimal(18, 4)
+  /// Alícuota de IVA de las notas por monto (AJUSTE y CARGO); en DEVOLUCION cada línea trae la suya.
+  ivaPorcentaje   Decimal?         @map("iva_porcentaje") @db.Decimal(7, 4)
+  /// Bolívares por 1 USD: la misma de la factura original.
+  tasaUsd         Decimal          @map("tasa_usd") @db.Decimal(18, 8)
+  numeroFiscal    String?          @unique @map("numero_fiscal")
+  numeroControl   String?          @unique @map("numero_control")
+  creadoPorId     String?          @map("creado_por_id") @db.Uuid
+  creadoPorNombre String?          @map("creado_por_nombre")
+  creadoEn        DateTime         @default(now()) @map("creado_en") @db.Timestamptz(6)
+  anuladaEn       DateTime?        @map("anulada_en") @db.Timestamptz(6)
+  anuladaPorNombre String?         @map("anulada_por_nombre")
+  motivoAnulacion String?          @map("motivo_anulacion")
+  lineas          NotaVentaLinea[]
+
+  @@index([facturaId])
+  @@index([clienteId])
+  @@index([estado, fecha(sort: Desc)])
+  @@map("nota_venta")
+}
+
+/// Línea de una devolución: qué se devuelve de qué línea de la factura, al mismo precio, descuento e IVA con que se vendió.
+model NotaVentaLinea {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  notaId         String       @map("nota_id") @db.Uuid
+  nota           NotaVenta    @relation(fields: [notaId], references: [id], onDelete: Cascade)
+  linea          Int
+  facturaLineaId String       @map("factura_linea_id") @db.Uuid
+  facturaLinea   FacturaLinea @relation(fields: [facturaLineaId], references: [id])
+  productoCodigo String       @map("producto_codigo")
+  descripcion    String
+  cantidad       Decimal      @db.Decimal(18, 4)
+  precioUnitario Decimal      @map("precio_unitario") @db.Decimal(18, 4)
+  descuento      Decimal      @default(0) @db.Decimal(7, 4)
+  ivaPorcentaje  Decimal      @default(0) @map("iva_porcentaje") @db.Decimal(7, 4)
+  total          Decimal      @default(0) @db.Decimal(18, 4)
+  /// Costo unitario con que salió al venderse: con él regresa al inventario sin alterar el costo promedio.
+  costoUnitario  Decimal      @default(0) @map("costo_unitario") @db.Decimal(18, 4)
+
+  @@unique([notaId, linea])
+  @@index([facturaLineaId])
+  @@map("nota_venta_linea")
+}
+
+/// Nota de crédito o de débito que el proveedor emite sobre una de sus facturas. Se registra por montos (no mueve inventario).
+model NotaCompra {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  numero          Int           @unique @default(autoincrement())
+  tipo            String
+  facturaId       String        @map("factura_id") @db.Uuid
+  factura         FacturaCompra @relation(fields: [facturaId], references: [id])
+  proveedorId     String        @map("proveedor_id") @db.Uuid
+  proveedor       Proveedor     @relation(fields: [proveedorId], references: [id])
+  /// Número de la nota del proveedor.
+  documento       String
+  numeroControl   String?       @map("numero_control")
+  fecha           DateTime      @db.Date
+  estado          String        @default("ACTIVA")
+  motivo          String
+  subtotal        Decimal       @db.Decimal(18, 4)
+  iva             Decimal       @default(0) @db.Decimal(18, 4)
+  total           Decimal       @db.Decimal(18, 4)
+  /// Bolívares por 1 USD: la misma de la factura del proveedor.
+  tasaUsd         Decimal       @map("tasa_usd") @db.Decimal(18, 8)
+  creadoPorId     String?       @map("creado_por_id") @db.Uuid
+  creadoPorNombre String?       @map("creado_por_nombre")
+  creadoEn        DateTime      @default(now()) @map("creado_en") @db.Timestamptz(6)
+  anuladaEn       DateTime?     @map("anulada_en") @db.Timestamptz(6)
+  anuladaPorNombre String?      @map("anulada_por_nombre")
+  motivoAnulacion String?       @map("motivo_anulacion")
+
+  @@unique([proveedorId, documento])
+  @@index([facturaId])
+  @@map("nota_compra")
+}

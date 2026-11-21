@@ -2,6 +2,7 @@ import "server-only";
 import type { Db } from "@/lib/tenant";
 import { calcularLinea } from "@/lib/pedidos/calculos";
 import { numeroFactura } from "@/lib/facturacion/estados";
+import { numeroNotaVenta } from "@/lib/notas/estados";
 import { aFecha } from "./ayudas";
 import type { Columna, Fila, Resultado } from "./tipos";
 
@@ -23,63 +24,89 @@ function ajustar(partes: Map<number, number>, objetivo: number) {
   partes.set(mayor, (partes.get(mayor) ?? 0) + (objetivo - suma));
 }
 
+/** Reparte un documento de venta por alícuota en centavos, de modo que las bases suman round(subtotal × tasa) y el IVA suma (total − base): igual que el asiento. */
+function desglosarVenta(neto: Map<number, number>, subtotalUsd: number, totalBs: number, tasa: number) {
+  const bases = new Map([...neto].map(([r, n]) => [r, c(n * tasa)]));
+  ajustar(bases, c(subtotalUsd * tasa));
+  const total = c(totalBs);
+  const ivaTotal = total - [...bases.values()].reduce((s, x) => s + x, 0);
+  const ivas = new Map<number, number>();
+  for (const [r, b] of bases) if (r > 0) ivas.set(r, Math.round((b * r) / 100));
+  ajustar(ivas, ivaTotal);
+  const out: Asiento & { total: number } = { exenta: 0, porAlicuota: new Map(), total };
+  for (const [r, b] of bases) {
+    if (r === 0) out.exenta += b;
+    else out.porAlicuota.set(r, { base: b, iva: ivas.get(r) ?? 0 });
+  }
+  return out;
+}
+const multiplicar = (d: Asiento & { total: number }, signo: 1 | -1): Asiento & { total: number } => ({
+  exenta: signo * d.exenta, total: signo * d.total, porAlicuota: new Map([...d.porAlicuota].map(([r, x]) => [r, { base: signo * x.base, iva: signo * x.iva }])),
+});
+
 async function registrosVentas(db: Db, desde: Date, hasta: Date): Promise<Registro[]> {
-  const facturas = await db.factura.findMany({
-    where: { fecha: { gte: desde, lte: hasta } },
-    include: { cliente: { select: { documento: true, razonSocial: true } }, lineas: true },
-    orderBy: [{ fecha: "asc" }, { numero: "asc" }],
-  });
-  return facturas.map((f) => {
+  const [facturas, notas] = await Promise.all([
+    db.factura.findMany({ where: { fecha: { gte: desde, lte: hasta } }, include: { cliente: { select: { documento: true, razonSocial: true } }, lineas: true }, orderBy: [{ fecha: "asc" }, { numero: "asc" }] }),
+    db.notaVenta.findMany({ where: { fecha: { gte: desde, lte: hasta } }, include: { cliente: { select: { documento: true, razonSocial: true } }, lineas: true, factura: { select: { numero: true, numeroFiscal: true } } }, orderBy: [{ fecha: "asc" }, { numero: "asc" }] }),
+  ]);
+  const deFacturas: Registro[] = facturas.map((f) => {
     const anulada = f.estado === "ANULADA";
     const base: Registro = { fecha: f.fecha, rif: f.cliente.documento, nombre: f.cliente.razonSocial, numero: f.numeroFiscal ?? numeroFactura(f.numero), control: f.numeroControl ?? "", total: 0, anulada, sinNumeroFiscal: !f.numeroFiscal, obs: anulada ? "ANULADA" : "", exenta: 0, porAlicuota: new Map() };
     if (anulada) return base;
-    const tasa = Number(f.tasaUsd);
     const neto = new Map<number, number>();
     for (const l of f.lineas) {
       const r = Number(l.ivaPorcentaje);
       neto.set(r, (neto.get(r) ?? 0) + calcularLinea({ cantidad: Number(l.cantidad), costoUnitario: Number(l.precioUnitario), descuento: Number(l.descuento), ivaPorcentaje: r }).neto);
     }
-    const bases = new Map([...neto].map(([r, n]) => [r, c(n * tasa)]));
-    ajustar(bases, c(Number(f.subtotal) * tasa));
-    const total = c(Number(f.totalBs));
-    const ivaTotal = total - [...bases.values()].reduce((s, x) => s + x, 0);
-    const ivas = new Map<number, number>();
-    for (const [r, b] of bases) if (r > 0) ivas.set(r, Math.round((b * r) / 100));
-    ajustar(ivas, ivaTotal);
-    for (const [r, b] of bases) {
-      if (r === 0) base.exenta += b;
-      else base.porAlicuota.set(r, { base: b, iva: ivas.get(r) ?? 0 });
-    }
-    base.total = total;
-    return base;
+    return { ...base, ...desglosarVenta(neto, Number(f.subtotal), Number(f.totalBs), Number(f.tasaUsd)) };
   });
+  // Las notas de crédito restan (montos negativos); las de débito suman. Las anuladas figuran en cero.
+  const deNotas: Registro[] = notas.map((n) => {
+    const anulada = n.estado === "ANULADA";
+    const nombre = n.tipo === "CREDITO" ? "Nota de crédito" : "Nota de débito";
+    const base: Registro = { fecha: n.fecha, rif: n.cliente.documento, nombre: n.cliente.razonSocial, numero: n.numeroFiscal ?? numeroNotaVenta(n.tipo, n.numero), control: n.numeroControl ?? "", total: 0, anulada, sinNumeroFiscal: false, obs: `${nombre} sobre ${n.factura.numeroFiscal ?? numeroFactura(n.factura.numero)}${anulada ? " · ANULADA" : ""}`, exenta: 0, porAlicuota: new Map() };
+    if (anulada) return base;
+    const neto = new Map<number, number>();
+    if (n.modo === "DEVOLUCION") for (const l of n.lineas) { const r = Number(l.ivaPorcentaje); neto.set(r, (neto.get(r) ?? 0) + calcularLinea({ cantidad: Number(l.cantidad), costoUnitario: Number(l.precioUnitario), descuento: Number(l.descuento), ivaPorcentaje: r }).neto); }
+    else neto.set(Number(n.ivaPorcentaje ?? 0), Number(n.subtotal));
+    const tasa = Number(n.tasaUsd);
+    return { ...base, ...multiplicar(desglosarVenta(neto, Number(n.subtotal), Math.round(Number(n.total) * tasa * 100) / 100, tasa), n.tipo === "CREDITO" ? -1 : 1) };
+  });
+  return [...deFacturas, ...deNotas].sort((x, y) => x.fecha.getTime() - y.fecha.getTime() || (x.obs.includes("Nota") ? 1 : 0) - (y.obs.includes("Nota") ? 1 : 0));
 }
 
 async function registrosCompras(db: Db, desde: Date, hasta: Date): Promise<Registro[]> {
-  const [facturas, alicuotas] = await Promise.all([
+  const [facturas, notas, alicuotas] = await Promise.all([
     db.facturaCompra.findMany({ where: { fecha: { gte: desde, lte: hasta } }, include: { proveedor: { select: { documento: true, razonSocial: true } } }, orderBy: [{ fecha: "asc" }, { numero: "asc" }] }),
+    db.notaCompra.findMany({ where: { fecha: { gte: desde, lte: hasta } }, include: { proveedor: { select: { documento: true, razonSocial: true } }, factura: { select: { documento: true } } }, orderBy: [{ fecha: "asc" }, { numero: "asc" }] }),
     db.alicuotaIva.findMany({ where: { activo: true, porcentajeCompra: { gt: 0 } }, select: { porcentajeCompra: true } }),
   ]);
   const tasas = [...new Set(alicuotas.map((a) => Number(a.porcentajeCompra)))];
-  return facturas.map((f) => {
-    const anulada = f.estado === "ANULADA";
-    const base: Registro = { fecha: f.fecha, rif: f.proveedor.documento, nombre: f.proveedor.razonSocial, numero: f.documento, control: f.numeroControl ?? "", total: 0, anulada, sinNumeroFiscal: false, obs: anulada ? "ANULADA" : "", exenta: 0, porAlicuota: new Map() };
-    if (anulada) return base;
-    const tasa = Number(f.tasaUsd);
-    const baseBs = c(Number(f.subtotal) * tasa);
-    const total = c(Number(f.total) * tasa);
-    const iva = total - baseBs;
-    base.total = total;
-    if (iva === 0) base.exenta = baseBs;
+  /** Un documento del proveedor trae un solo IVA: la alícuota se deduce de la proporción IVA/base. */
+  const desglosar = (subtotal: number, iva: number, total: number, tasa: number, base: Registro, signo: 1 | -1): Registro => {
+    const baseBs = c(subtotal * tasa), totalBs = c(total * tasa), ivaBs = totalBs - baseBs;
+    base.total = signo * totalBs;
+    if (ivaBs === 0) base.exenta = signo * baseBs;
     else {
-      // Se deduce la alícuota por la proporción IVA/base y se toma la más cercana de las configuradas.
-      const prop = (Number(f.iva) / Number(f.subtotal)) * 100;
+      const prop = (iva / subtotal) * 100;
       const r = tasas.length ? tasas.reduce((m, x) => (Math.abs(x - prop) < Math.abs(m - prop) ? x : m)) : Math.round(prop);
-      if (Math.abs(r - prop) > 0.5) base.obs = `IVA ${prop.toFixed(2)} % no coincide con una alícuota`;
-      base.porAlicuota.set(r, { base: baseBs, iva });
+      if (Math.abs(r - prop) > 0.5) base.obs = `${base.obs ? `${base.obs} · ` : ""}IVA ${prop.toFixed(2)} % no coincide con una alícuota`;
+      base.porAlicuota.set(r, { base: signo * baseBs, iva: signo * ivaBs });
     }
     return base;
+  };
+  const deFacturas = facturas.map((f) => {
+    const anulada = f.estado === "ANULADA";
+    const base: Registro = { fecha: f.fecha, rif: f.proveedor.documento, nombre: f.proveedor.razonSocial, numero: f.documento, control: f.numeroControl ?? "", total: 0, anulada, sinNumeroFiscal: false, obs: anulada ? "ANULADA" : "", exenta: 0, porAlicuota: new Map() };
+    return anulada ? base : desglosar(Number(f.subtotal), Number(f.iva), Number(f.total), Number(f.tasaUsd), base, 1);
   });
+  const deNotas = notas.map((n) => {
+    const anulada = n.estado === "ANULADA";
+    const nombre = n.tipo === "CREDITO" ? "Nota de crédito" : "Nota de débito";
+    const base: Registro = { fecha: n.fecha, rif: n.proveedor.documento, nombre: n.proveedor.razonSocial, numero: n.documento, control: n.numeroControl ?? "", total: 0, anulada, sinNumeroFiscal: false, obs: `${nombre} sobre ${n.factura.documento}${anulada ? " · ANULADA" : ""}`, exenta: 0, porAlicuota: new Map() };
+    return anulada ? base : desglosar(Number(n.subtotal), Number(n.iva), Number(n.total), Number(n.tasaUsd), base, n.tipo === "CREDITO" ? -1 : 1);
+  });
+  return [...deFacturas, ...deNotas].sort((x, y) => x.fecha.getTime() - y.fecha.getTime() || (x.obs.includes("Nota") ? 1 : 0) - (y.obs.includes("Nota") ? 1 : 0));
 }
 
 function columnasLibro(registros: Registro[], terceroEtiqueta: string, numeroEtiqueta: string): { columnas: Columna[]; alicuotas: number[] } {

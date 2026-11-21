@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
 import { anularFactura, emitirFactura, emitirFacturaDePedido, registrarNumerosFiscales } from "@/lib/facturacion/servicio";
+import { anularNotaVenta, crearNotaVenta } from "@/lib/notas/servicio";
 import { buscarProductosVenta, type ProductoVenta } from "@/lib/pedidos/servicio";
 
 export type EstadoFacturaForm = { error?: string };
@@ -68,4 +69,31 @@ export async function registrarNumerosFiscalesFactura(id: string, datos: unknown
   revalidatePath(`/facturacion/${id}`);
   revalidatePath("/facturacion");
   return res.ok ? null : res.error;
+}
+
+const NotaVenta = z.discriminatedUnion("modo", [
+  z.object({ modo: z.literal("DEVOLUCION"), tipo: z.literal("CREDITO"), facturaId: z.string().uuid(), motivo: z.string().trim().min(3, "Escribe el motivo de la nota").max(300), almacenId: z.string().uuid("Elige el almacén al que regresa la mercancía"), lineas: z.array(z.object({ facturaLineaId: z.string().uuid(), cantidad: z.number().finite() })).max(500) }),
+  z.object({ modo: z.literal("AJUSTE"), tipo: z.literal("CREDITO"), facturaId: z.string().uuid(), motivo: z.string().trim().min(3, "Escribe el motivo de la nota").max(300), base: z.number().finite("Monto inválido"), ivaPorcentaje: z.number().finite("Alícuota inválida") }),
+  z.object({ modo: z.literal("CARGO"), tipo: z.literal("DEBITO"), facturaId: z.string().uuid(), motivo: z.string().trim().min(3, "Escribe el motivo de la nota").max(300), base: z.number().finite("Monto inválido"), ivaPorcentaje: z.number().finite("Alícuota inválida") }),
+]);
+
+export async function emitirNotaVenta(datos: unknown): Promise<{ error?: string }> {
+  const ctx = await requerirPermisoAccion("facturacion", "crear");
+  const r = NotaVenta.safeParse(datos);
+  if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
+  const res = await crearNotaVenta(ctx.db, ctx.usuario, r.data);
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/facturacion", "layout");
+  revalidatePath("/cxc", "layout");
+  revalidatePath("/existencias", "layout");
+  redirect(`/facturacion/notas/${res.id}`);
+}
+
+export async function anularNotaDeVenta(id: string, motivo: string): Promise<string | null> {
+  const ctx = await requerirPermisoAccion("facturacion", "eliminar");
+  const r = await anularNotaVenta(ctx.db, ctx.usuario, id, motivo);
+  revalidatePath("/facturacion", "layout");
+  revalidatePath("/cxc", "layout");
+  revalidatePath("/existencias", "layout");
+  return r.ok ? null : r.error;
 }

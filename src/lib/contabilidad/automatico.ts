@@ -3,6 +3,7 @@ import type { Actor, Tx } from "@/lib/inventario/movimientos";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { numeroCobro } from "@/lib/cxc/estados";
 import { numeroFacturaCompra, numeroPago } from "@/lib/cxp/estados";
+import { numeroNotaCompra, numeroNotaVenta } from "@/lib/notas/estados";
 import { hoyCaracas, tasaVigente } from "@/lib/tasas";
 import type { Db } from "@/lib/tenant";
 import { CONCEPTOS, type Concepto } from "./conceptos";
@@ -143,3 +144,39 @@ async function bolivaresDelPago(tx: Tx, moneda: string, monto: number, fecha: Da
   return bs(monto, t.valor);
 }
 
+
+// ---------- Notas de crédito y débito ----------
+/** Venta: el crédito revierte ventas e IVA contra cuentas por cobrar (y, si devuelve mercancía, el costo contra el inventario); el débito suma ventas e IVA a cuentas por cobrar. */
+export async function contabilizarNotaVenta(tx: Tx, actor: Actor, id: string) {
+  const n = await tx.notaVenta.findUniqueOrThrow({ where: { id }, include: { lineas: true, cliente: { select: { razonSocial: true } }, factura: { select: { numero: true } } } });
+  const tasa = Number(n.tasaUsd);
+  const baseBs = bs(Number(n.subtotal), tasa);
+  const totalBs = bs(Number(n.total), tasa);
+  const ivaBs = redondear2(totalBs - baseBs);
+  const ref = numeroNotaVenta(n.tipo, n.numero);
+  const nombre = n.tipo === "CREDITO" ? "Nota de crédito" : "Nota de débito";
+  const descripcion = `${nombre} ${ref} sobre ${numeroFactura(n.factura.numero)} · ${n.cliente.razonSocial}`;
+  if (n.tipo === "CREDITO") {
+    const costoBs = bs(n.lineas.reduce((s, l) => s + Number(l.cantidad) * Number(l.costoUnitario), 0), tasa);
+    await publicar(tx, actor, { origen: "NOTA_VENTA", referencia: ref, fecha: n.fecha, descripcion, lineas: [{ concepto: "VENTAS", debe: baseBs }, { concepto: "IVA_DEBITO", debe: ivaBs }, { concepto: "CXC", haber: totalBs }, { concepto: "INVENTARIO", debe: costoBs }, { concepto: "COSTO_VENTAS", haber: costoBs }] });
+  } else {
+    await publicar(tx, actor, { origen: "NOTA_VENTA", referencia: ref, fecha: n.fecha, descripcion, lineas: [{ concepto: "CXC", debe: totalBs }, { concepto: "VENTAS", haber: baseBs }, { concepto: "IVA_DEBITO", haber: ivaBs }] });
+  }
+}
+export const revertirNotaVenta = (tx: Tx, actor: Actor, tipo: string, numero: number) => revertir(tx, actor, "NOTA_VENTA", "ANULACION_NOTA_VENTA", numeroNotaVenta(tipo, numero), `Anulación de ${numeroNotaVenta(tipo, numero)}`);
+
+/** Compra: el crédito del proveedor revierte compras e IVA crédito contra cuentas por pagar; el débito los suma. */
+export async function contabilizarNotaCompra(tx: Tx, actor: Actor, id: string) {
+  const n = await tx.notaCompra.findUniqueOrThrow({ where: { id }, include: { proveedor: { select: { razonSocial: true } }, factura: { select: { numero: true } } } });
+  const tasa = Number(n.tasaUsd);
+  const baseBs = bs(Number(n.subtotal), tasa);
+  const totalBs = bs(Number(n.total), tasa);
+  const ivaBs = redondear2(totalBs - baseBs);
+  const ref = numeroNotaCompra(n.tipo, n.numero);
+  const descripcion = `${n.tipo === "CREDITO" ? "Nota de crédito" : "Nota de débito"} del proveedor ${ref} (${n.documento}) sobre ${numeroFacturaCompra(n.factura.numero)} · ${n.proveedor.razonSocial}`;
+  const lineas: Linea[] = n.tipo === "CREDITO"
+    ? [{ concepto: "CXP", debe: totalBs }, { concepto: "COMPRAS", haber: baseBs }, { concepto: "IVA_CREDITO", haber: ivaBs }]
+    : [{ concepto: "COMPRAS", debe: baseBs }, { concepto: "IVA_CREDITO", debe: ivaBs }, { concepto: "CXP", haber: totalBs }];
+  await publicar(tx, actor, { origen: "NOTA_COMPRA", referencia: ref, fecha: n.fecha, descripcion, lineas });
+}
+export const revertirNotaCompra = (tx: Tx, actor: Actor, tipo: string, numero: number) => revertir(tx, actor, "NOTA_COMPRA", "ANULACION_NOTA_COMPRA", numeroNotaCompra(tipo, numero), `Anulación de ${numeroNotaCompra(tipo, numero)}`);

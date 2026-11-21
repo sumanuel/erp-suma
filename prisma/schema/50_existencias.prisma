@@ -14,6 +14,7 @@ model Almacen {
   movimientos   MovimientoInventario[]
   recepciones   Recepcion[]
   facturas      Factura[]
+  notasVenta    NotaVenta[]
 
   @@map("almacen")
 }

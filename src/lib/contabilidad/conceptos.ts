@@ -23,4 +23,8 @@ export const ORIGENES_ASIENTO: Record<string, string> = {
   ANULACION_FACTURA_COMPRA: "Anulación de factura de proveedor",
   PAGO: "Pago a proveedor",
   ANULACION_PAGO: "Anulación de pago",
+  NOTA_VENTA: "Nota de crédito o débito de venta",
+  ANULACION_NOTA_VENTA: "Anulación de nota de venta",
+  NOTA_COMPRA: "Nota del proveedor",
+  ANULACION_NOTA_COMPRA: "Anulación de nota del proveedor",
 };

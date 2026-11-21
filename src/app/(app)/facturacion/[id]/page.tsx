@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Etiqueta, Tarjeta } from "@/components/ui";
+import { Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { ESTADOS_FACTURA, numeroFactura, type EstadoFactura } from "@/lib/facturacion/estados";
 import { numeroPedido } from "@/lib/pedidos/calculos";
 import { textoTasa } from "@/lib/tasas";
 import { formatoCantidad, formatoFecha, formatoFechaHora, formatoUsd } from "../formato";
+import { ESTADOS_NOTA, TIPOS_NOTA, numeroNotaVenta, type EstadoNota } from "@/lib/notas/estados";
 import { BotonAnular } from "./boton-anular";
 import { NumerosFiscales } from "./numeros-fiscales";
 
@@ -19,7 +20,7 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
     where: { id },
     include: {
       cliente: { select: { razonSocial: true, documento: true } }, almacen: { select: { nombre: true } },
-      pedido: { select: { id: true, numero: true } }, lineas: { orderBy: { linea: "asc" } },
+      pedido: { select: { id: true, numero: true } }, lineas: { orderBy: { linea: "asc" } }, notas: { orderBy: { numero: "asc" } },
     },
   });
   if (!f) notFound();
@@ -37,7 +38,15 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
             </div>
             <p className="text-sm text-gris-600">{f.cliente.razonSocial} ({f.cliente.documento})</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">{puedeAnular ? <BotonAnular id={id} /> : null}</div>
+          <div className="flex flex-wrap items-center gap-2">
+            {f.estado === "EMITIDA" && tienePermiso(ctx, "facturacion", "crear") ? (
+              <>
+                <Link href={`/facturacion/notas/nueva?factura=${id}&tipo=CREDITO`} className={clasesBoton("secundario")}>Nota de crédito</Link>
+                <Link href={`/facturacion/notas/nueva?factura=${id}&tipo=DEBITO`} className={clasesBoton("secundario")}>Nota de débito</Link>
+              </>
+            ) : null}
+            {puedeAnular ? <BotonAnular id={id} /> : null}
+          </div>
         </div>
         <dl className="mt-4 grid gap-3 text-[13.5px] sm:grid-cols-2 xl:grid-cols-4">
           <div><dt className="text-gris-500">Fecha</dt><dd>{formatoFecha(f.fecha)}</dd></div>
@@ -81,10 +90,27 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
           <div className="flex justify-between"><dt className="text-gris-600">Subtotal</dt><dd className="tabular-nums">{formatoUsd(Number(f.subtotal))}</dd></div>
           <div className="flex justify-between"><dt className="text-gris-600">IVA</dt><dd className="tabular-nums">{formatoUsd(Number(f.iva))}</dd></div>
           <div className="flex justify-between border-t border-linea pt-1 text-[15px] font-semibold"><dt>Total USD</dt><dd className="tabular-nums">{formatoUsd(Number(f.total))}</dd></div>
+          {Number(f.ajuste) !== 0 ? <div className="flex justify-between"><dt className="text-gris-600">Ajuste por notas</dt><dd className="tabular-nums">{formatoUsd(Number(f.ajuste))}</dd></div> : null}
           {f.estado === "EMITIDA" ? <div className="flex justify-between font-semibold"><dt>Saldo por cobrar USD</dt><dd className="tabular-nums">{formatoUsd(Number(f.saldo))}</dd></div> : null}
           <div className="flex justify-between text-gris-700"><dt>Total Bs.</dt><dd className="tabular-nums">{formatoUsd(Number(f.totalBs))}</dd></div>
         </dl>
       </Tarjeta>
+      {f.notas.length > 0 ? (
+        <Tarjeta className="p-6">
+          <h3 className="mb-3 text-base font-semibold">Notas de crédito y débito</h3>
+          <ul className="flex flex-col gap-2 text-[13.5px]">
+            {f.notas.map((n) => {
+              const en = ESTADOS_NOTA[n.estado as EstadoNota];
+              return (
+                <li key={n.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-linea p-3">
+                  <span><Link href={`/facturacion/notas/${n.id}`} className="font-semibold hover:underline">{numeroNotaVenta(n.tipo, n.numero)}</Link> · {TIPOS_NOTA[n.tipo as keyof typeof TIPOS_NOTA]} · {n.motivo}</span>
+                  <span className="flex items-center gap-2">{en ? <Etiqueta tono={en.tono}>{en.etiqueta}</Etiqueta> : null}<span className="tabular-nums">{n.tipo === "CREDITO" ? "−" : ""}{formatoUsd(Number(n.total))}</span></span>
+                </li>
+              );
+            })}
+          </ul>
+        </Tarjeta>
+      ) : null}
     </div>
   );
 }
