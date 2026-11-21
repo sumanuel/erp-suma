@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
 import { guardarConfiguracion } from "@/lib/contabilidad/configuracion";
+import { guardarEmpresa } from "@/lib/contabilidad/empresa";
 import { anularAsiento, cambiarEstadoPeriodo, crearCuentaContable, editarCuentaContable, eliminarCuentaContable, registrarAsiento } from "@/lib/contabilidad/servicio";
 
 export type EstadoContaForm = { error?: string };
@@ -84,6 +85,19 @@ export async function guardarConfiguracionContable(datos: unknown): Promise<Esta
   const r = Configuracion.safeParse(datos);
   if (!r.success) return { error: "Datos inválidos" };
   const res = await guardarConfiguracion(ctx.db, ctx.usuario, r.data);
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/contabilidad", "layout");
+  return {};
+}
+
+const Texto = (max: number) => z.string().trim().max(max).transform((v) => v || null);
+const Empresa = z.object({ rif: Texto(20), razonSocial: Texto(150), nombreComercial: Texto(150), direccion: Texto(300), telefono: Texto(40), email: Texto(120), agenteRetencion: z.boolean() });
+
+export async function guardarDatosEmpresa(datos: unknown): Promise<EstadoContaForm> {
+  const ctx = await requerirPermisoAccion("contabilidad", "editar");
+  const r = Empresa.safeParse(datos);
+  if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
+  const res = await guardarEmpresa(ctx.db, ctx.usuario, r.data);
   if (!res.ok) return { error: res.error };
   revalidatePath("/contabilidad", "layout");
   return {};

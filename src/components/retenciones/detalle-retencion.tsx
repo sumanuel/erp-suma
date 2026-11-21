@@ -4,7 +4,7 @@ import { Etiqueta, Tarjeta } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { numeroFacturaCompra } from "@/lib/cxp/estados";
-import { ESTADOS_RETENCION, SENTIDOS_RETENCION, numeroRetencion, type EstadoRetencion } from "@/lib/retenciones/estados";
+import { ESTADOS_RETENCION, SENTIDOS_RETENCION, numeroEntero, numeroRetencion, type EstadoRetencion } from "@/lib/retenciones/estados";
 import { textoTasa } from "@/lib/tasas";
 import { AccionesRetencion } from "./acciones-retencion";
 
@@ -17,9 +17,10 @@ const monto = (n: number) => n.toLocaleString("es-VE", { minimumFractionDigits: 
 export async function DetalleRetencion({ id, modulo, anular }: { id: string; modulo: "cxc" | "cxp"; anular: (id: string, motivo: string) => Promise<string | null> }) {
   if (!UUID.test(id)) notFound();
   const ctx = await requerirSesion();
+  const empresa = await ctx.db.empresa.findUnique({ where: { id: 1 } });
   const r = await ctx.db.retencion.findUnique({
     where: { id },
-    include: { proveedor: { select: { id: true, razonSocial: true, documento: true } }, cliente: { select: { id: true, razonSocial: true, documento: true } }, facturaCompra: { select: { id: true, numero: true, documento: true } }, factura: { select: { id: true, numero: true, numeroFiscal: true } } },
+    include: { entero: { select: { id: true, numero: true, estado: true } }, proveedor: { select: { id: true, razonSocial: true, documento: true } }, cliente: { select: { id: true, razonSocial: true, documento: true } }, facturaCompra: { select: { id: true, numero: true, documento: true } }, factura: { select: { id: true, numero: true, numeroFiscal: true } } },
   });
   if (!r) notFound();
   const practicada = r.sentido === "PRACTICADA";
@@ -28,6 +29,13 @@ export async function DetalleRetencion({ id, modulo, anular }: { id: string; mod
   const t = practicada ? r.proveedor : r.cliente;
   return (
     <div className="flex flex-col gap-6">
+      {practicada ? (
+        <Tarjeta className="hidden p-6 print:block">
+          <p className="text-[13px] text-gris-500">Comprobante de retención de {r.tipo} · Agente de retención</p>
+          <p className="text-lg font-semibold">{empresa?.razonSocial ?? "(sin razón social)"}</p>
+          <p className="text-sm">RIF {empresa?.rif ?? "(sin RIF)"}{empresa?.direccion ? ` · ${empresa.direccion}` : ""}{empresa?.telefono ? ` · Tel. ${empresa.telefono}` : ""}</p>
+        </Tarjeta>
+      ) : null}
       <Tarjeta className="p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
@@ -45,6 +53,7 @@ export async function DetalleRetencion({ id, modulo, anular }: { id: string; mod
           <div><dt className="text-gris-500">Porcentaje</dt><dd className="tabular-nums">{monto(Number(r.porcentaje))} %</dd></div>
           <div><dt className="text-gris-500">Retenido USD</dt><dd className="font-semibold tabular-nums">{monto(Number(r.montoUsd))}</dd></div>
           <div><dt className="text-gris-500">Retenido Bs. (tasa {textoTasa(Number(r.tasaUsd))})</dt><dd className="font-semibold tabular-nums">{monto(Number(r.montoBs))}</dd></div>
+          {practicada ? <div><dt className="text-gris-500">Enterada al fisco</dt><dd>{r.entero ? <Link href={`/cxp/enteros/${r.entero.id}`} className="text-marca-texto hover:underline">{numeroEntero(r.entero.numero)}</Link> : "Pendiente"}</dd></div> : null}
           <div className="sm:col-span-2"><dt className="text-gris-500">Registrada por</dt><dd>{r.creadoPorNombre ?? "—"} · {fechaHora.format(r.creadoEn)}</dd></div>
           {r.estado === "ANULADA" ? <div className="sm:col-span-2 xl:col-span-4"><dt className="text-gris-500">Anulada</dt><dd>{r.anuladaPorNombre ?? "—"} · {r.anuladaEn ? fechaHora.format(r.anuladaEn) : ""} · {r.motivoAnulacion}</dd></div> : null}
         </dl>

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
-import { anularRetencion, registrarRetencionPracticada } from "@/lib/retenciones/servicio";
+import { anularEntero, anularRetencion, enterarRetenciones, registrarRetencionPracticada } from "@/lib/retenciones/servicio";
 import { anularNotaCompra, crearNotaCompra } from "@/lib/notas/servicio";
 import { anularFacturaCompra, anularPago, registrarFacturaCompra, registrarPago } from "@/lib/cxp/servicio";
 
@@ -125,5 +125,27 @@ export async function anularRetencionProveedor(id: string, motivo: string): Prom
   const ctx = await requerirPermisoAccion("cxp", "eliminar");
   const r = await anularRetencion(ctx.db, ctx.usuario, id, motivo);
   revalidatePath("/cxp", "layout");
+  return r.ok ? null : r.error;
+}
+
+const Entero = z.object({ tipo: z.enum(["IVA", "ISLR"]), retencionIds: z.array(z.string().uuid()).max(500), cuentaId: z.string().uuid("Elige la cuenta desde la que se paga"), referencia: z.string().trim().max(100).transform((v) => v || null) });
+
+/** Paga al fisco las retenciones practicadas elegidas (salida de tesorería en Bs., asiento y marca de enterada). */
+export async function enterarRetencionesFisco(datos: unknown): Promise<{ error?: string }> {
+  const ctx = await requerirPermisoAccion("cxp", "crear");
+  const r = Entero.safeParse(datos);
+  if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
+  const res = await enterarRetenciones(ctx.db, ctx.usuario, r.data);
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/cxp", "layout");
+  revalidatePath("/tesoreria", "layout");
+  redirect(`/cxp/enteros/${res.id}`);
+}
+
+export async function anularEnteroFisco(id: string, motivo: string): Promise<string | null> {
+  const ctx = await requerirPermisoAccion("cxp", "eliminar");
+  const r = await anularEntero(ctx.db, ctx.usuario, id, motivo);
+  revalidatePath("/cxp", "layout");
+  revalidatePath("/tesoreria", "layout");
   return r.ok ? null : r.error;
 }

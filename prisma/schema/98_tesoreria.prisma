@@ -25,6 +25,7 @@ model CuentaTesoreria {
   movimientos      MovimientoTesoreria[]
   cobros           Cobro[]
   pagos            PagoProveedor[]
+  enteros          EnteroRetencion[]
 
   @@map("cuenta_tesoreria")
 }

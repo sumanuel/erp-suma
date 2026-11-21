@@ -34,6 +34,9 @@ model Retencion {
   montoBs          Decimal        @map("monto_bs") @db.Decimal(18, 2)
   /// ACTIVA o ANULADA
   estado           String         @default("ACTIVA")
+  /// Entero al fisco en que se pagó lo retenido (solo las practicadas); nulo si aún está por enterar.
+  enteroId         String?          @map("entero_id") @db.Uuid
+  entero           EnteroRetencion? @relation(fields: [enteroId], references: [id])
   creadoPorId      String?        @map("creado_por_id") @db.Uuid
   creadoPorNombre  String?        @map("creado_por_nombre")
   creadoEn         DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
@@ -41,8 +44,52 @@ model Retencion {
   anuladaPorNombre String?        @map("anulada_por_nombre")
   motivoAnulacion  String?        @map("motivo_anulacion")
 
+  @@index([enteroId])
   @@index([facturaCompraId])
   @@index([facturaId])
   @@index([estado, fecha(sort: Desc)])
   @@map("retencion")
+}
+
+/// Pago al fisco de retenciones practicadas (del mismo impuesto): sale de una cuenta de tesorería en bolívares y cancela lo retenido por pagar.
+model EnteroRetencion {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo (se muestra ENT-000123).
+  numero           Int             @unique @default(autoincrement())
+  /// IVA o ISLR
+  tipo             String
+  fecha            DateTime        @db.Date
+  cuentaId         String          @map("cuenta_id") @db.Uuid
+  cuenta           CuentaTesoreria @relation(fields: [cuentaId], references: [id])
+  /// Total enterado en bolívares (suma de lo retenido en cada comprobante).
+  montoBs          Decimal         @map("monto_bs") @db.Decimal(18, 2)
+  /// Planilla, referencia bancaria o número de pago.
+  referencia       String?
+  /// ACTIVO o ANULADO
+  estado           String          @default("ACTIVO")
+  creadoPorId      String?         @map("creado_por_id") @db.Uuid
+  creadoPorNombre  String?         @map("creado_por_nombre")
+  creadoEn         DateTime        @default(now()) @map("creado_en") @db.Timestamptz(6)
+  anuladoEn        DateTime?       @map("anulado_en") @db.Timestamptz(6)
+  anuladoPorNombre String?         @map("anulado_por_nombre")
+  motivoAnulacion  String?         @map("motivo_anulacion")
+  retenciones      Retencion[]
+
+  @@index([estado, fecha(sort: Desc)])
+  @@map("entero_retencion")
+}
+
+/// Datos de la empresa del cliente (una sola fila, id = 1): salen en los comprobantes de retención y en los documentos fiscales.
+model Empresa {
+  id              Int     @id @default(1)
+  rif             String?
+  razonSocial     String? @map("razon_social")
+  nombreComercial String? @map("nombre_comercial")
+  direccion       String?
+  telefono        String?
+  email           String?
+  /// Si la empresa es agente de retención (contribuyente especial): habilita retener a proveedores.
+  agenteRetencion Boolean @default(false) @map("agente_retencion")
+
+  @@map("empresa")
 }

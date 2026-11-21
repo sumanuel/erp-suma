@@ -4,7 +4,7 @@ import { numeroFactura } from "@/lib/facturacion/estados";
 import { numeroCobro } from "@/lib/cxc/estados";
 import { numeroFacturaCompra, numeroPago } from "@/lib/cxp/estados";
 import { numeroNotaCompra, numeroNotaVenta } from "@/lib/notas/estados";
-import { numeroRetencion } from "@/lib/retenciones/estados";
+import { numeroEntero, numeroRetencion } from "@/lib/retenciones/estados";
 import { hoyCaracas, tasaVigente } from "@/lib/tasas";
 import type { Db } from "@/lib/tenant";
 import { CONCEPTOS, type Concepto } from "./conceptos";
@@ -196,3 +196,19 @@ export async function contabilizarRetencion(tx: Tx, actor: Actor, id: string) {
   }
 }
 export const revertirRetencion = (tx: Tx, actor: Actor, numero: number) => revertir(tx, actor, "RETENCION", "ANULACION_RETENCION", numeroRetencion(numero), `Anulación de retención ${numeroRetencion(numero)}`);
+
+/** Pago al fisco de lo retenido: baja la retención por pagar y sale de la caja o banco de donde se pagó. */
+export async function contabilizarEntero(tx: Tx, actor: Actor, id: string) {
+  const e = await tx.enteroRetencion.findUniqueOrThrow({ where: { id }, include: { cuenta: true, _count: { select: { retenciones: true } } } });
+  if (!e.cuenta.cuentaContableId) {
+    if (!(await configuracion(tx)).automatica) return;
+    throw new ContaError(`La cuenta de tesorería ${e.cuenta.codigo} no tiene cuenta contable asignada (Contabilidad → Configuración).`);
+  }
+  const monto = Number(e.montoBs);
+  const ref = numeroEntero(e.numero);
+  await publicar(tx, actor, {
+    origen: "ENTERO_RETENCION", referencia: ref, fecha: e.fecha, descripcion: `Pago de retenciones de ${e.tipo} al fisco ${ref}${e.referencia ? ` · ref. ${e.referencia}` : ""} (${e._count.retenciones} comprobante${e._count.retenciones === 1 ? "" : "s"})`,
+    lineas: [{ concepto: e.tipo === "IVA" ? "RET_IVA_PAGAR" : "RET_ISLR_PAGAR", debe: monto }, { cuentaId: e.cuenta.cuentaContableId, haber: monto }],
+  });
+}
+export const revertirEntero = (tx: Tx, actor: Actor, numero: number) => revertir(tx, actor, "ENTERO_RETENCION", "ANULACION_ENTERO_RETENCION", numeroEntero(numero), `Anulación del pago de retenciones ${numeroEntero(numero)}`);

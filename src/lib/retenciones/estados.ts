@@ -7,3 +7,10 @@ export const ESTADOS_RETENCION = {
   ANULADA: { etiqueta: "Anulada", tono: "error" },
 } as const;
 export type EstadoRetencion = keyof typeof ESTADOS_RETENCION;
+
+export const numeroEntero = (n: number) => `ENT-${String(n).padStart(6, "0")}`;
+export const ESTADOS_ENTERO = {
+  ACTIVO: { etiqueta: "Vigente", tono: "exito" },
+  ANULADO: { etiqueta: "Anulado", tono: "error" },
+} as const;
+export type EstadoEntero = keyof typeof ESTADOS_ENTERO;

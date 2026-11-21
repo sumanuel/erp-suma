@@ -9,6 +9,8 @@ export const TIPOS_MOVIMIENTO_TESORERIA = {
   EGRESO: { etiqueta: "Egreso", signo: -1, anulacion: false },
   TRANSFERENCIA_ENTRADA: { etiqueta: "Transferencia (entrada)", signo: 1, anulacion: false },
   TRANSFERENCIA_SALIDA: { etiqueta: "Transferencia (salida)", signo: -1, anulacion: false },
+  ENTERO_IMPUESTO: { etiqueta: "Pago de impuestos retenidos", signo: -1, anulacion: false },
+  ANULACION_ENTERO: { etiqueta: "Anulación de pago de impuestos", signo: 1, anulacion: true },
 } as const;
 export type TipoMovimientoTesoreria = keyof typeof TIPOS_MOVIMIENTO_TESORERIA;
 

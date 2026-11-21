@@ -33,4 +33,6 @@ export const ORIGENES_ASIENTO: Record<string, string> = {
   ANULACION_NOTA_COMPRA: "Anulación de nota del proveedor",
   RETENCION: "Retención de IVA o ISLR",
   ANULACION_RETENCION: "Anulación de retención",
+  ENTERO_RETENCION: "Pago de retenciones al fisco",
+  ANULACION_ENTERO_RETENCION: "Anulación de pago de retenciones",
 };
