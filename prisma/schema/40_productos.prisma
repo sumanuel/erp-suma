@@ -114,6 +114,7 @@ model Producto {
   existencias         Existencia[]
   movimientos         MovimientoInventario[]
   lineasCompra        OrdenCompraLinea[]
+  lineasPedido        PedidoVentaLinea[]
 
   @@index([descripcion])
   @@index([categoriaId])

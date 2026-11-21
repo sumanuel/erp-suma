@@ -13,6 +13,8 @@ model Cliente {
   creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
 
+  pedidos       PedidoVenta[]
+
   @@index([razonSocial])
   @@map("cliente")
 }

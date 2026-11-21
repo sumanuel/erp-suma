@@ -1,0 +1,51 @@
+// Pedidos de venta. Un pedido CONFIRMADO reserva mercancía: la cantidad reservada de un producto es la suma de sus líneas en pedidos
+// confirmados (no se toca `existencia`, que solo mueve el inventario real). Al facturarse, la factura lo pasa a FACTURADO y libera la reserva.
+// Precios en USD; la tasa se congela al confirmar para poder mostrar y facturar en bolívares con la misma tasa.
+
+model PedidoVenta {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo (se muestra como PED-000123).
+  numero          Int               @unique @default(autoincrement())
+  clienteId       String            @map("cliente_id") @db.Uuid
+  cliente         Cliente           @relation(fields: [clienteId], references: [id])
+  fecha           DateTime          @db.Date
+  /// BORRADOR, CONFIRMADO, FACTURADO, ANULADO
+  estado          String            @default("BORRADOR")
+  observaciones   String?
+  subtotal        Decimal           @default(0) @db.Decimal(18, 4)
+  descuento       Decimal           @default(0) @db.Decimal(18, 4)
+  iva             Decimal           @default(0) @db.Decimal(18, 4)
+  total           Decimal           @default(0) @db.Decimal(18, 4)
+  /// Bolívares por 1 USD al confirmar (8 decimales). Nulo mientras es borrador.
+  tasaUsd         Decimal?          @map("tasa_usd") @db.Decimal(18, 8)
+  creadoPorId     String?           @map("creado_por_id") @db.Uuid
+  creadoPorNombre String?           @map("creado_por_nombre")
+  creadoEn        DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn   DateTime          @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  lineas          PedidoVentaLinea[]
+
+  @@index([clienteId])
+  @@index([estado, fecha(sort: Desc)])
+  @@map("pedido_venta")
+}
+
+model PedidoVentaLinea {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pedidoId       String      @map("pedido_id") @db.Uuid
+  pedido         PedidoVenta @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  linea          Int
+  productoCodigo String      @map("producto_codigo")
+  producto       Producto    @relation(fields: [productoCodigo], references: [codigo])
+  descripcion    String
+  cantidad       Decimal     @db.Decimal(18, 4)
+  /// Precio unitario en USD, antes de descuento.
+  precioUnitario Decimal     @map("precio_unitario") @db.Decimal(18, 4)
+  descuento      Decimal     @default(0) @db.Decimal(7, 4)
+  /// Alícuota de IVA de venta del producto al momento del pedido.
+  ivaPorcentaje  Decimal     @default(0) @map("iva_porcentaje") @db.Decimal(7, 4)
+  total          Decimal     @default(0) @db.Decimal(18, 4)
+
+  @@unique([pedidoId, linea])
+  @@index([productoCodigo])
+  @@map("pedido_venta_linea")
+}
