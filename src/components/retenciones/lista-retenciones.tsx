@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Eye } from "lucide-react";
 import { Etiqueta, Tarjeta, claseControl, clasesBoton } from "@/components/ui";
-import { requerirSesion } from "@/lib/dal";
+import { requerirPermiso } from "@/lib/dal";
 import { ESTADOS_RETENCION, numeroRetencion, type EstadoRetencion } from "@/lib/retenciones/estados";
 
 const fecha = new Intl.DateTimeFormat("es-VE", { dateStyle: "short", timeZone: "UTC" });
@@ -9,7 +9,7 @@ const monto = (n: number) => n.toLocaleString("es-VE", { minimumFractionDigits: 
 
 /** Lista de retenciones practicadas (a proveedores, en CxP) o sufridas (de clientes, en CxC). */
 export async function ListaRetenciones({ sentido, base, searchParams }: { sentido: "PRACTICADA" | "SUFRIDA"; base: string; searchParams: { q?: string; tipo?: string; estado?: string } }) {
-  const ctx = await requerirSesion();
+  const ctx = await requerirPermiso(sentido === "PRACTICADA" ? "cxp" : "cxc", "ver");
   const { q = "", tipo = "", estado = "" } = searchParams;
   const texto = q.trim().slice(0, 60);
   const numero = /^(RET-?)?0*(\d{1,9})$/i.exec(texto)?.[2];

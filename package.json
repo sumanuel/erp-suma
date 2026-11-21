@@ -18,6 +18,7 @@
     "plataforma:admin": "tsx scripts/clientes/admin-plataforma.ts",
     "cliente:demo": "tsx scripts/clientes/demo-clientes.ts",
     "db:migrar:todos": "tsx scripts/clientes/migrar-todos.ts",
+    "test": "tsx scripts/pruebas.ts",
     "probar:aislamiento": "tsx scripts/clientes/probar-aislamiento.ts"
   },
   "dependencies": {

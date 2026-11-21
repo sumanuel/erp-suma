@@ -3,7 +3,8 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { leerSesion } from "./sesion";
 import { dbParaClienteId } from "./tenant";
-import { permiso as armarPermiso, type Accion } from "./modulos";
+import type { Accion } from "./modulos";
+import { tienePermiso } from "./permisos";
 
 // Valida la sesión contra la base en cada página y acción: usuario activo, perfil activo y contraseña no cambiada después del inicio.
 export type UsuarioActual = {
@@ -24,13 +25,7 @@ export const requerirSesion = cache(async () => {
   return { db, cliente, usuario, sesion };
 });
 
-type Contexto = Awaited<ReturnType<typeof requerirSesion>>;
-
-export function tienePermiso(ctx: Pick<Contexto, "usuario" | "cliente">, modulo: string, accion: Accion): boolean {
-  // Un módulo apagado para el cliente (modulos.<id> = false) no se ve ni con permiso.
-  if (ctx.cliente.modulos[modulo] === false) return false;
-  return ctx.usuario.esAdministrador || ctx.usuario.permisos.has(armarPermiso(modulo, accion));
-}
+export { tienePermiso };
 
 export async function requerirPermiso(modulo: string, accion: Accion = "ver") {
   const ctx = await requerirSesion();

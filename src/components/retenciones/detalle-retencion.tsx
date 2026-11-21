@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Etiqueta, Tarjeta } from "@/components/ui";
-import { requerirSesion, tienePermiso } from "@/lib/dal";
+import { requerirPermiso, tienePermiso } from "@/lib/dal";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { numeroFacturaCompra } from "@/lib/cxp/estados";
 import { ESTADOS_RETENCION, SENTIDOS_RETENCION, numeroEntero, numeroRetencion, type EstadoRetencion } from "@/lib/retenciones/estados";
@@ -16,7 +16,7 @@ const monto = (n: number) => n.toLocaleString("es-VE", { minimumFractionDigits: 
 /** Detalle (e impresión) de una retención. `modulo` define el permiso y a dónde se enlaza la factura. */
 export async function DetalleRetencion({ id, modulo, anular }: { id: string; modulo: "cxc" | "cxp"; anular: (id: string, motivo: string) => Promise<string | null> }) {
   if (!UUID.test(id)) notFound();
-  const ctx = await requerirSesion();
+  const ctx = await requerirPermiso(modulo, "ver");
   const empresa = await ctx.db.empresa.findUnique({ where: { id: 1 } });
   const r = await ctx.db.retencion.findUnique({
     where: { id },
