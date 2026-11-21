@@ -14,5 +14,11 @@ export default async function NuevoMovimiento({ searchParams }: { searchParams: 
   const c = await db.cuentaTesoreria.findUnique({ where: { id } });
   if (!c) notFound();
   if (!c.activo) redirect(`/tesoreria/cuentas/${id}`);
-  return <FormularioMovimiento cuentaId={id} cuenta={`${c.codigo} · ${c.nombre} (${MONEDAS_CUENTA[c.moneda as "USD" | "VES"].etiqueta})`} tipoInicial={tipo === "EGRESO" ? "EGRESO" : "INGRESO"} />;
+  const [contables, cfg] = await Promise.all([
+    db.cuentaContable.findMany({ where: { posteable: true, activo: true }, select: { id: true, codigo: true, nombre: true } }),
+    db.configContable.findUnique({ where: { id: 1 } }),
+  ]);
+  const clave = (x: string) => x.split(".").map((n) => n.padStart(6, "0")).join(".");
+  contables.sort((a, b) => clave(a.codigo).localeCompare(clave(b.codigo)));
+  return <FormularioMovimiento cuentasContables={contables.map((x) => ({ valor: x.id, etiqueta: `${x.codigo} ${x.nombre}` }))} automatica={cfg?.automatica ?? false} cuentaId={id} cuenta={`${c.codigo} · ${c.nombre} (${MONEDAS_CUENTA[c.moneda as "USD" | "VES"].etiqueta})`} tipoInicial={tipo === "EGRESO" ? "EGRESO" : "INGRESO"} />;
 }

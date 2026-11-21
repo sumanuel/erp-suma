@@ -212,3 +212,40 @@ export async function contabilizarEntero(tx: Tx, actor: Actor, id: string) {
   });
 }
 export const revertirEntero = (tx: Tx, actor: Actor, numero: number) => revertir(tx, actor, "ENTERO_RETENCION", "ANULACION_ENTERO_RETENCION", numeroEntero(numero), `Anulación del pago de retenciones ${numeroEntero(numero)}`);
+
+// ---------- Movimientos manuales de tesorería ----------
+/** Ingreso, egreso o saldo inicial de una caja o banco: se contabiliza contra la cuenta contable de contrapartida que elija quien lo registra. */
+export async function contabilizarMovimientoTesoreria(
+  tx: Tx, actor: Actor,
+  m: { movimientoId: bigint; cuentaId: string; tipo: "INGRESO" | "EGRESO" | "SALDO_INICIAL"; monto: number; contrapartidaId: string | null; descripcion: string },
+) {
+  if (!(await configuracion(tx)).automatica) return;
+  const cuenta = await tx.cuentaTesoreria.findUniqueOrThrow({ where: { id: m.cuentaId }, select: { codigo: true, moneda: true, cuentaContableId: true } });
+  if (!cuenta.cuentaContableId) throw new ContaError(`La cuenta de tesorería ${cuenta.codigo} no tiene cuenta contable asignada (Contabilidad → Configuración).`);
+  if (!m.contrapartidaId) throw new ContaError("Elige la cuenta contable de contrapartida del movimiento.");
+  if (m.contrapartidaId === cuenta.cuentaContableId) throw new ContaError("La contrapartida no puede ser la misma cuenta contable de la caja o banco.");
+  const hoy = hoyCaracas();
+  const bolivares = await bolivaresDelPago(tx, cuenta.moneda, m.monto, hoy);
+  const entra = m.tipo !== "EGRESO";
+  await publicar(tx, actor, {
+    origen: "TESORERIA", referencia: `TES-${m.movimientoId}`, fecha: hoy, descripcion: `${m.tipo === "SALDO_INICIAL" ? "Saldo inicial" : m.tipo === "INGRESO" ? "Ingreso" : "Egreso"} en ${cuenta.codigo}: ${m.descripcion}`,
+    lineas: entra ? [{ cuentaId: cuenta.cuentaContableId, debe: bolivares }, { cuentaId: m.contrapartidaId, haber: bolivares }] : [{ cuentaId: m.contrapartidaId, debe: bolivares }, { cuentaId: cuenta.cuentaContableId, haber: bolivares }],
+  });
+}
+
+/** Transferencia entre cajas o bancos (misma moneda): pasa el monto de la cuenta contable de origen a la de destino; si ambas usan la misma cuenta contable no hay asiento. */
+export async function contabilizarTransferencia(tx: Tx, actor: Actor, t: { movimientoId: bigint; origenId: string; destinoId: string; monto: number }) {
+  if (!(await configuracion(tx)).automatica) return;
+  const [o, d] = await Promise.all([
+    tx.cuentaTesoreria.findUniqueOrThrow({ where: { id: t.origenId }, select: { codigo: true, moneda: true, cuentaContableId: true } }),
+    tx.cuentaTesoreria.findUniqueOrThrow({ where: { id: t.destinoId }, select: { codigo: true, cuentaContableId: true } }),
+  ]);
+  for (const c of [o, d]) if (!c.cuentaContableId) throw new ContaError(`La cuenta de tesorería ${c.codigo} no tiene cuenta contable asignada (Contabilidad → Configuración).`);
+  if (o.cuentaContableId === d.cuentaContableId) return;
+  const hoy = hoyCaracas();
+  const bolivares = await bolivaresDelPago(tx, o.moneda, t.monto, hoy);
+  await publicar(tx, actor, {
+    origen: "TESORERIA", referencia: `TES-${t.movimientoId}`, fecha: hoy, descripcion: `Transferencia de ${o.codigo} a ${d.codigo}`,
+    lineas: [{ cuentaId: d.cuentaContableId as string, debe: bolivares }, { cuentaId: o.cuentaContableId as string, haber: bolivares }],
+  });
+}

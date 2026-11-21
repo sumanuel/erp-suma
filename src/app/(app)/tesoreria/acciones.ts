@@ -17,6 +17,8 @@ const Cuenta = z.object({
   banco: Texto(80),
   numeroCuenta: Texto(40),
   saldoInicial: z.number().finite("Saldo inicial inválido"),
+  cuentaContableId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null),
+  contrapartidaId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null),
   permiteSobregiro: z.boolean(),
   activo: z.boolean(),
 });
@@ -33,7 +35,7 @@ export async function crearCuentaTesoreria(datos: unknown): Promise<EstadoTesore
 
 export async function editarCuentaTesoreria(id: string, datos: unknown): Promise<EstadoTesoreriaForm> {
   const ctx = await requerirPermisoAccion("tesoreria", "editar");
-  const r = Cuenta.pick({ nombre: true, banco: true, numeroCuenta: true, permiteSobregiro: true, activo: true }).safeParse(datos);
+  const r = Cuenta.pick({ nombre: true, banco: true, numeroCuenta: true, permiteSobregiro: true, activo: true, cuentaContableId: true }).safeParse(datos);
   if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
   const res = await editarCuenta(ctx.db, ctx.usuario, id, r.data);
   if (!res.ok) return { error: res.error };
@@ -47,6 +49,7 @@ const Manual = z.object({
   monto: z.number().finite("Monto inválido"),
   descripcion: z.string().trim().min(3, "Indica el concepto").max(200),
   documento: Texto(60),
+  contrapartidaId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null),
 });
 
 export async function registrarMovimientoCuenta(datos: unknown): Promise<EstadoTesoreriaForm> {

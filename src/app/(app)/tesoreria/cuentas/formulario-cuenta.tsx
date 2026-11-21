@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { crearCuentaTesoreria, editarCuentaTesoreria } from "../acciones";
 
-export type InicialCuenta = { codigo: string; nombre: string; tipo: string; moneda: string; banco: string; numeroCuenta: string; saldoInicial: string; permiteSobregiro: boolean; activo: boolean };
+export type InicialCuenta = { cuentaContableId: string; contrapartidaId: string; codigo: string; nombre: string; tipo: string; moneda: string; banco: string; numeroCuenta: string; saldoInicial: string; permiteSobregiro: boolean; activo: boolean };
 
 const num = (s: string) => {
   const n = Number(s.replace(",", "."));
@@ -13,7 +13,7 @@ const num = (s: string) => {
 };
 
 /** Alta (con moneda, tipo y saldo inicial) o edición (solo datos descriptivos: la moneda y el saldo no se editan). */
-export function FormularioCuenta({ id, inicial }: { id: string | null; inicial: InicialCuenta }) {
+export function FormularioCuenta({ id, inicial, cuentasContables, automatica }: { id: string | null; inicial: InicialCuenta; cuentasContables: { valor: string; etiqueta: string }[]; automatica: boolean }) {
   const [v, setV] = useState(inicial);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
@@ -68,6 +68,20 @@ export function FormularioCuenta({ id, inicial }: { id: string | null; inicial: 
             <label htmlFor="numeroCuenta" className="text-[13px] font-medium">Número de cuenta</label>
             <input id="numeroCuenta" value={v.numeroCuenta} onChange={(e) => set("numeroCuenta", e.target.value)} maxLength={40} className={claseControl} />
           </div>
+          <div className="flex flex-col gap-1.5 md:col-span-2">
+            <label htmlFor="cuentaContableId" className="text-[13px] font-medium">Cuenta contable (caja o banco){automatica ? "" : " — opcional"}</label>
+            <select id="cuentaContableId" value={v.cuentaContableId} onChange={(e) => set("cuentaContableId", e.target.value)} required={automatica} className={`${claseControl} pr-9`}>
+              <option value="">Sin asignar</option>{cuentasContables.map((c) => <option key={c.valor} value={c.valor}>{c.etiqueta}</option>)}
+            </select>
+          </div>
+          {edicion || num(v.saldoInicial) <= 0 ? null : (
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <label htmlFor="contrapartidaId" className="text-[13px] font-medium">Contrapartida del saldo inicial (por ejemplo, Capital social){automatica ? "" : " — opcional"}</label>
+              <select id="contrapartidaId" value={v.contrapartidaId} onChange={(e) => set("contrapartidaId", e.target.value)} required={automatica} className={`${claseControl} pr-9`}>
+                <option value="">Sin asignar</option>{cuentasContables.map((c) => <option key={c.valor} value={c.valor}>{c.etiqueta}</option>)}
+              </select>
+            </div>
+          )}
         </div>
         <div className="mt-4 flex flex-wrap gap-6">
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.permiteSobregiro} onChange={(e) => set("permiteSobregiro", e.target.checked)} className="size-4 accent-marca-fuerte" /> Permite sobregiro (saldo negativo)</label>
