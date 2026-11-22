@@ -1,0 +1,4361 @@
+{
+ "parametrosContables.Designer.cs": {
+  "titulo": "Lebrun -  Parametros Contables",
+  "etiquetas": [
+   "CÃ³digo Ã³ DescripciÃ³n",
+   "CÃ³digo de CompaÃ±ia",
+   "Siglas",
+   "DescripciÃ³n:",
+   "1ra. Cuenta de Ingresos G. y P.",
+   "Ult. Cuenta de Ingresos G. y P.",
+   "1ra. Cuenta de Ingresos G. y P.",
+   "DescripciÃ³n:",
+   "Siglas",
+   "CÃ³digo de CompaÃ±ia",
+   "Id del Sistema",
+   "1ra. Cuenta de Ingresos G. y P.",
+   "DescripciÃ³n:",
+   "Siglas",
+   "CÃ³digo de CompaÃ±ia",
+   "Id del Sistema",
+   "Cuenta  SuperAvit  del Cierre",
+   "Ultimo Cierre Mensual",
+   "Ultimo Cierre Anual",
+   "Mascara de ImpresiÃ³n",
+   "Nro. Digitos Cuenta",
+   "Clave ComprobaciÃ³n",
+   "Correlativo Sistema",
+   "Los campos en Rojo son Obligatorios",
+   "Ultimo Cierre Diario"
+  ],
+  "entradas": [
+   "TextBox:txtBuscar",
+   "TextBox:txtSiglas",
+   "TextBox:txtDescripcion",
+   "TextBox:txt1CuentaGP",
+   "TextBox:txtUltCuentaGP",
+   "TextBox:textBox3",
+   "TextBox:textBox4",
+   "TextBox:textBox5",
+   "TextBox:textBox6",
+   "ComboBox:comboBox1",
+   "TextBox:textBox7",
+   "TextBox:textBox8",
+   "TextBox:textBox9",
+   "TextBox:textBox10",
+   "ComboBox:comboBox2",
+   "TextBox:txtCuentaSuperAvit",
+   "DateTimePicker:timePickUltimoCierreMensual",
+   "DateTimePicker:TimePickerCierreAnual",
+   "TextBox:txtMascaraImpresion",
+   "CheckBox:chckConsolidaContabilidad=\"Consolida Contabilidad\"",
+   "CheckBox:chkParametroGlobal=\"Es Parametro Global\"",
+   "TextBox:txtClaveCompro",
+   "MaskedTextBox:txtNroDigitosCta",
+   "MaskedTextBox:txtCodigoSiglas",
+   "CheckBox:chkComprobantesDescuadrados=\"Cerrar Comprobantes Descuadrados\"",
+   "DateTimePicker:dateTimePickerDiario"
+  ],
+  "botones": [
+   "Buscar",
+   "Eliminar",
+   "Agregar",
+   "Salir",
+   "Limpiar",
+   "Agregar",
+   "Limpiar",
+   "Modificar",
+   "Modificar",
+   "Ver"
+  ],
+  "columnas": []
+ },
+ "Principal.Designer.cs": {
+  "titulo": "Lebrun",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "frmLogin.designer.cs": {
+  "titulo": "Login - Lebrun",
+  "etiquetas": [
+   "ContraseÃ±a",
+   "Usuario",
+   "CompaÃ±ia"
+  ],
+  "entradas": [
+   "TextBox:textBox2",
+   "TextBox:textBox1",
+   "ComboBox:cboCompanias"
+  ],
+  "botones": [
+   "Aceptar",
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/administracion/lbxUsuarios.designer.cs": {
+  "titulo": "Lebrun - lbxUsuarios",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:txtBuscar",
+   "RadioButton:descripcion=\"Nombre\"",
+   "RadioButton:codigo=\"Codigo\""
+  ],
+  "botones": [
+   "Agregar",
+   "Modificar",
+   "Salir",
+   "cmdBuscar",
+   "Limpiar"
+  ],
+  "columnas": []
+ },
+ "formularios/bancos/frmBancos.Designer.cs": {
+  "titulo": "Bancos",
+  "etiquetas": [
+   "Casillero Postal",
+   "Clave",
+   "Login",
+   "Web",
+   "Estatus",
+   "Telefono 2",
+   "Telefono",
+   "Direccion",
+   "Nombre",
+   "Codigo"
+  ],
+  "entradas": [
+   "TextBox:txtObservacion",
+   "TextBox:txtCasillero",
+   "TextBox:txtClave",
+   "TextBox:txtLogin",
+   "TextBox:txtWeb",
+   "TextBox:txtTelf1",
+   "TextBox:txtTelf2",
+   "TextBox:txtDireccion",
+   "TextBox:txtCodigo",
+   "ComboBox:cmbEstatus"
+  ],
+  "botones": [
+   "    Cancelar",
+   " Aceptar"
+  ],
+  "columnas": []
+ },
+ "formularios/bancos/frmCuentasBanc.Designer.cs": {
+  "titulo": "Cuentas Bancarias",
+  "etiquetas": [
+   "Porc IDB",
+   "Desde IDB",
+   "Auxiliar",
+   "Mayor",
+   "Sucursal",
+   "Divisa",
+   "Numero",
+   "Tipo Cuenta",
+   "Descripcion",
+   "Titular",
+   "Banco",
+   "Desde",
+   "Hasta",
+   "Hasta",
+   "Desde",
+   "Hasta",
+   "Desde",
+   "Bolivares",
+   "Principal",
+   "Ultimo Cheque",
+   "Chequera Activa",
+   "Cantidad",
+   "Cantidad",
+   "Cantidad",
+   "Ultimo Cheque",
+   "Ultimo Cheque",
+   "Ultimo Cheque",
+   "Hasta IDB"
+  ],
+  "entradas": [
+   "ComboBox:cmbTipCuenta",
+   "TextBox:txtChe1Cant=\"0\"",
+   "TextBox:txtChe1Hasta=\"0\"",
+   "TextBox:txtChe1Desde=\"0\"",
+   "TextBox:txtChe3Cant=\"0\"",
+   "TextBox:txtChe3Hasta=\"0\"",
+   "TextBox:txtChe3Desde=\"0\"",
+   "TextBox:txtChe2Cant=\"0\"",
+   "TextBox:txtChe2Hasta=\"0\"",
+   "TextBox:txtChe2Desde=\"0\"",
+   "TextBox:txtDivisa=\"Bs\"",
+   "TextBox:txtNumeroCuentaBan",
+   "TextBox:txtDescripcion",
+   "TextBox:txtTitular",
+   "TextBox:txtSucursal=\"000001\"",
+   "TextBox:txtPorcIDB=\"0\"",
+   "TextBox:txtIDBdesde=\"0\"",
+   "CheckedListBox:checkedListBox1",
+   "TextBox:textBox2",
+   "ComboBox:cmbChequeraAct",
+   "TextBox:txtUltiChe3=\"0\"",
+   "TextBox:txtUltiChe2=\"0\"",
+   "TextBox:txtUltiChe1=\"0\"",
+   "TextBox:txtIDBHasta=\"0\"",
+   "TextBox:txtIDB"
+  ],
+  "botones": [
+   "    Cancelar",
+   "     Aceptar",
+   "button4",
+   "button3",
+   "btnAuxiliar",
+   "btnCuenta",
+   "button5"
+  ],
+  "columnas": []
+ },
+ "formularios/bancos/lbxBancos.designer.cs": {
+  "titulo": "Lebrun - lbxBancos",
+  "etiquetas": [
+   "CÃ³digo,Nombre"
+  ],
+  "entradas": [
+   "TextBox:txtBuscar"
+  ],
+  "botones": [
+   "Limpiar",
+   "Salir",
+   "Imprimir",
+   "Opciones",
+   "Modificar",
+   "Agregar",
+   "cmdBuscar"
+  ],
+  "columnas": []
+ },
+ "formularios/bancos/lbxCuentasBanc.Designer.cs": {
+  "titulo": "Cuentas Bancos",
+  "etiquetas": [],
+  "entradas": [
+   "RadioButton:radioButton2=\"Numero Cuenta\"",
+   "RadioButton:radioButton1=\"Banco\"",
+   "TextBox:txtBusqueda"
+  ],
+  "botones": [
+   "     Eliminar",
+   "     Modificar",
+   "     Agregar",
+   "     Buscar",
+   "     Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/bultos/lbxBulto2.Designer.cs": {
+  "titulo": "lbxBulto2",
+  "etiquetas": [
+   "Fecha Hasta",
+   "Fecha Desde",
+   "NÃºmero, Cliente"
+  ],
+  "entradas": [
+   "CheckBox:chkFecha=\"Por Fecha\"",
+   "DateTimePicker:dateTimePicker2",
+   "DateTimePicker:dateTimePicker1",
+   "TextBox:txtBuscar"
+  ],
+  "botones": [
+   "Limpiar",
+   "Salir",
+   "Imprimir",
+   "Bulto",
+   "cmdBuscar"
+  ],
+  "columnas": []
+ },
+ "formularios/bultos/lbxBultos.Designer.cs": {
+  "titulo": "lbxBultos",
+  "etiquetas": [
+   "Num Pre. Fact.",
+   "Nombre",
+   "Cliente",
+   "Cantidad de Bultos",
+   ".",
+   "Bulto Nro:",
+   "Peso:",
+   "Items PreFactura",
+   "de ",
+   "Peso Total:"
+  ],
+  "entradas": [],
+  "botones": [
+   "Agregar Bulto",
+   "Salir",
+   "Eliminar Bulto"
+  ],
+  "columnas": [
+   "Producto",
+   "Codigo",
+   "Producto",
+   "Bulto",
+   "Peso",
+   "item",
+   "codigoProd"
+  ]
+ },
+ "formularios/clientesMayor/frmClientesMayor.Designer.cs": {
+  "titulo": "Lebrun -  FrmClientes",
+  "etiquetas": [
+   "Fax:",
+   "Tipo Persona:",
+   "Vendedor:",
+   "DirecciÃ³n:",
+   "CÃ³digo:",
+   "RazÃ³n Social:",
+   "RIF:",
+   "DirecciÃ³n 2:",
+   "DirecciÃ³n Envio:",
+   "Estado:",
+   "Tipo Negocio:",
+   "Zona Postal:",
+   "TelÃ©fono:",
+   "E-mail:",
+   "Transporte:",
+   "% Comision V:",
+   "% Comision C:",
+   "Cobrador:",
+   "NIF:",
+   "Tipo Lista:",
+   "Dia Cobro:",
+   "Representante:",
+   "Auxiliar",
+   "Plan C",
+   "Fecha Fin Vacaciones",
+   "Fecha inicio Vacaciones",
+   "Observaciones",
+   "Condicion Pago:",
+   "Situacion:",
+   "Contribuyente Especial:",
+   "Dscto.vtas.3:",
+   "Dscto.vtas.2:",
+   "Dscto.vtas.1:",
+   "Lim Credi:",
+   "C.P. FERLE"
+  ],
+  "entradas": [
+   "TextBox:txtTelefono",
+   "TextBox:txtFax",
+   "TextBox:txtDireccion",
+   "TextBox:txtRazonSocial",
+   "TextBox:txtDireccion2",
+   "TextBox:txtDireccion3",
+   "ComboBox:cboGeografica",
+   "ComboBox:cboTipoNegocio",
+   "TextBox:txtZonaPostal",
+   "TextBox:txtEmail",
+   "ComboBox:cboTransporte",
+   "ComboBox:cboLista",
+   "TextBox:txtNif",
+   "TextBox:txtRepresentante",
+   "DateTimePicker:dateTimePicker2",
+   "DateTimePicker:dateTimePicker1",
+   "TextBox:txtObservaciones",
+   "ComboBox:cboCondicionPago",
+   "ComboBox:cboSituacion",
+   "ComboBox:cboTipoPersona",
+   "ComboBox:comboBox1",
+   "ComboBox:cboCPFerle"
+  ],
+  "botones": [
+   "Salir",
+   "Agregar",
+   "cmdBuscarVendedor",
+   "Modificar",
+   "cmdBuscarCobrador",
+   "btn_auxiliar",
+   "btn_plan_cuenta"
+  ],
+  "columnas": []
+ },
+ "formularios/clientesMayor/lbxClientesMayor.designer.cs": {
+  "titulo": "Lebrun - Lbx Clientes",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:txtBuscar",
+   "RadioButton:grupo=\"Rif\"",
+   "RadioButton:descripcion=\"Nombre\"",
+   "RadioButton:codigo=\"Codigo\""
+  ],
+  "botones": [
+   "cmdBuscar",
+   "Agregar",
+   "Modificar",
+   "Eliminar",
+   "Imprimir",
+   "Salir",
+   "Limpiar"
+  ],
+  "columnas": []
+ },
+ "formularios/clientes/frmTipoNegocio.Designer.cs": {
+  "titulo": "frm  TipoNegocio",
+  "etiquetas": [
+   "Tipos Negocios Parametros",
+   "Topes Descuentos 1,2,3",
+   "Dias",
+   "Primera Leyenda",
+   "Porcentaje",
+   "Descripcion",
+   "CÃ³digo",
+   "Porcentaje",
+   "Dias",
+   "Segunda Leyenda",
+   "Observaciones"
+  ],
+  "entradas": [
+   "TextBox:txtCodigo",
+   "TextBox:txtDescripcion",
+   "TextBox:txtDes3",
+   "TextBox:txtDes2",
+   "TextBox:txtDes1",
+   "TextBox:txtDial1",
+   "TextBox:txtPorcen1",
+   "TextBox:txtPorce2",
+   "TextBox:txtDial2",
+   "TextBox:txtObservaciones",
+   "CheckBox:chechActivo=\"Activo\""
+  ],
+  "botones": [
+   "Salir",
+   "Agregar"
+  ],
+  "columnas": []
+ },
+ "formularios/clientes/lbxTipoNegocio.Designer.cs": {
+  "titulo": "lbx TipoNegocio",
+  "etiquetas": [
+   "Tipos Negocios"
+  ],
+  "entradas": [],
+  "botones": [
+   "Modificar",
+   "Agregar",
+   "Salir"
+  ],
+  "columnas": [
+   "CÃ³digo",
+   "DescripciÃ³n",
+   "descuento1",
+   "descuento2",
+   "descuento3",
+   "primeraLeyendaDias",
+   "segundaLeyendaDias",
+   "activo",
+   "observaciones",
+   "Pocentaje P. Leyenda",
+   "Porcentaje S. Leyenda"
+  ]
+ },
+ "formularios/complementos/frmCalculoPrecio.Designer.cs": {
+  "titulo": "Algoritmo Costo",
+  "etiquetas": [
+   "Codigo Articulo:",
+   "...",
+   "...",
+   "Precio:",
+   "...",
+   "label3:",
+   "...",
+   "Iva %:",
+   "..."
+  ],
+  "entradas": [],
+  "botones": [
+   "    Cerrar"
+  ],
+  "columnas": []
+ },
+ "formularios/complementos/frmClasificacionEconomica.designer.cs": {
+  "titulo": "Editor Clasificacion Economica",
+  "etiquetas": [
+   "Descripcion Moneda:",
+   "Codigo Moneda:",
+   "Descripcion Moneda:"
+  ],
+  "entradas": [
+   "TextBox:textBox2",
+   "TextBox:textBox1",
+   "TextBox:textBox3"
+  ],
+  "botones": [
+   "BtnRegistra",
+   "btnActulizar",
+   "btnCancelar"
+  ],
+  "columnas": []
+ },
+ "formularios/complementos/frmConsultaArticulos2.Designer.cs": {
+  "titulo": "Productos",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:textBox1",
+   "RadioButton:grupo=\"Grupo\"",
+   "RadioButton:descripcion=\"Descripcion\"",
+   "RadioButton:codigo=\"Codigo\""
+  ],
+  "botones": [
+   "button1",
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/complementos/frmEditorMoneda.Designer.cs": {
+  "titulo": "Editor Moneda",
+  "etiquetas": [
+   "Descripcion Moneda:",
+   "Codigo Moneda:"
+  ],
+  "entradas": [],
+  "botones": [
+   "BtnRegistra",
+   "btnCancelar"
+  ],
+  "columnas": []
+ },
+ "formularios/complementos/frmProveedores.Designer.cs": {
+  "titulo": "Editor De Proveedores",
+  "etiquetas": [
+   "Codigo:",
+   "Divisa:",
+   "RIF:",
+   "Razon Social:",
+   "Actividad Economica:",
+   "Residente:",
+   "Situacion:",
+   " % Retencion IVA:",
+   "Tipo Cuentas:",
+   "Banco:",
+   " % Retencion IVA:",
+   "Residente:",
+   "Situacion:",
+   "Actividad Economica:",
+   "Divisa:",
+   "RIF:",
+   "Razon Social:",
+   "Codigo:",
+   "C x P Moneda Extrajera:",
+   "Codiciones De Pago:",
+   "Dias De Plazo:",
+   "Limite De Credito:",
+   "Codigo Cuenta Proveedor:",
+   "Zona Libre:",
+   "Clasificacion:",
+   "Ordenes de Compra de Moneda Extrajera:",
+   "Descuento 1:",
+   "Descuento 3:",
+   "Descuento 2:",
+   "%",
+   "%",
+   "%",
+   "Observaciones:",
+   "Contribuyente De IVA:",
+   "Tipo Persona:",
+   " Fecha:",
+   " Otro Celular:",
+   "Fax:",
+   "Pagina Web:",
+   "Telefono:",
+   "Correo Electronico:",
+   "Telefono Master:",
+   "Celular:",
+   "Dirrecion:",
+   "Codigo Area:",
+   "Parroquia",
+   "Municipio",
+   "Estado",
+   "Region",
+   "Pais"
+  ],
+  "entradas": [
+   "TextBox:textBox14",
+   "ComboBox:comboBox10",
+   "ComboBox:comboBox11",
+   "TextBox:textBox17",
+   "TextBox:textBox20",
+   "TextBox:textBox25",
+   "TextBox:textBox26",
+   "TextBox:textBox27",
+   "TextBox:textBox28",
+   "ComboBox:cmbEstado"
+  ],
+  "botones": [
+   "btnLimpiar",
+   "BtnRegistra",
+   "btnActulizar",
+   "btnCancelar",
+   "btnDivisa",
+   "btnBancos"
+  ],
+  "columnas": []
+ },
+ "formularios/complementos/lbxClasificacionEconomica.Designer.cs": {
+  "titulo": "Clasificacion Economica",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [
+   "btnSubCategoria",
+   "btnSalir",
+   "btnEliminar",
+   "btnAgregar",
+   "btnModificar"
+  ],
+  "columnas": []
+ },
+ "formularios/complementos/lbxMonedad.Designer.cs": {
+  "titulo": "Moneda",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [
+   "btnSubCategoria",
+   "btnSalir",
+   "btnAgregar",
+   "btnModificar",
+   "btnImprimir"
+  ],
+  "columnas": []
+ },
+ "formularios/complementos/lbxTarifaRetenc.Designer.cs": {
+  "titulo": "Tarifa Retencion",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "formularios/complementos/lbxTrabjadores.Designer.cs": {
+  "titulo": "Trabajadores",
+  "etiquetas": [
+   "Nombre del trabajador"
+  ],
+  "entradas": [
+   "TextBox:textBox1"
+  ],
+  "botones": [
+   "Buscar"
+  ],
+  "columnas": []
+ },
+ "formularios/compras/frmOpcionesServicios.Designer.cs": {
+  "titulo": "Opciones de Servicios",
+  "etiquetas": [
+   "Nombre:",
+   "Codigo:",
+   "Documento:",
+   "Tipo Doc:"
+  ],
+  "entradas": [
+   "TextBox:txtNombre",
+   "TextBox:txtCodigo",
+   "TextBox:txtSufijo",
+   "TextBox:txtDocumento",
+   "TextBox:txtTipoDoc"
+  ],
+  "botones": [
+   "Generar Retencion Iva",
+   "Generar Retencion ISLR",
+   "Comprobante Contable",
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/compras/frmRif.Designer.cs": {
+  "titulo": "Rif ",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [
+   "Aceptar"
+  ],
+  "columnas": []
+ },
+ "formularios/compras/frmServicios.Designer.cs": {
+  "titulo": "Carga Documento",
+  "etiquetas": [
+   "Auxiliar",
+   "Cuenta",
+   "Monto",
+   "Descripcion",
+   "Cambio",
+   "Divisa",
+   "Recibido por",
+   "Planilla de Importacion",
+   "Transporte",
+   "Centro Costo",
+   "...",
+   "...",
+   "CERRAR DOCUMENTO",
+   "Libro C.",
+   "Retencion",
+   "Total EX",
+   "IVA RD",
+   "Total RD",
+   "IVA GN",
+   "Total GN",
+   "Sub-Total",
+   "IVA Total",
+   "Monto Total",
+   "Vencimiento",
+   "Recepcion",
+   "Emision",
+   "Descripcion",
+   "Condicion",
+   "Control A",
+   "Fac Aplica",
+   "Control",
+   "Proveedor",
+   "Devolucion",
+   "Tipo",
+   "Dif",
+   "Credito",
+   "Debito",
+   "...",
+   "..."
+  ],
+  "entradas": [
+   "RadioButton:rDebito=\"Debito\"",
+   "TextBox:txtMontoMov=\"0\"",
+   "TextBox:txtDescripcionMov",
+   "RadioButton:rCredito=\"Credito\"",
+   "TextBox:txtCambio",
+   "TextBox:txtDivisa=\"Bs\"",
+   "TextBox:txtRecibidor",
+   "TextBox:txtPlanilla",
+   "TextBox:txtTransporte",
+   "TextBox:txtCentroCosto=\"0000000001\"",
+   "DateTimePicker:fechaLibro",
+   "DateTimePicker:fechaRetencion",
+   "TextBox:txtEX=\"0\"",
+   "TextBox:txtIvaRD=\"0\"",
+   "TextBox:txtRD=\"0\"",
+   "TextBox:txtIvaGN=\"0\"",
+   "TextBox:txtGN=\"0\"",
+   "TextBox:txtSubTotal=\"0\"",
+   "TextBox:txtIvaTotal=\"0\"",
+   "TextBox:txtMontoTotal=\"0\"",
+   "DateTimePicker:fechaVenc",
+   "DateTimePicker:fechaRecepcion",
+   "DateTimePicker:fechaEmision",
+   "TextBox:txtDescripcion",
+   "ComboBox:cmbCodicionPago",
+   "TextBox:txtControlFCOM",
+   "TextBox:txtSufFCOM=\"0\"",
+   "TextBox:txtFCOM",
+   "TextBox:txtControlDCOM",
+   "TextBox:txtSufDCOM=\"0\"",
+   "TextBox:txtDCOM",
+   "TextBox:txtDiferencia=\"0\"",
+   "TextBox:txtCredito=\"0\"",
+   "TextBox:txtDebito=\"0\""
+  ],
+  "botones": [
+   "Agregar",
+   "Aceptar",
+   "Salir",
+   "btnAuxiliar",
+   "btnBuscarCuenta",
+   "Eliminar",
+   "btnTransporte",
+   "btnCentroCosto",
+   "Cancelar",
+   "Temporal",
+   "Definitivo",
+   "button2",
+   "button1"
+  ],
+  "columnas": [
+   "Item",
+   "Descripcion",
+   "Cuenta",
+   "Tipo",
+   "Monto-D",
+   "Monto-C",
+   "Base",
+   "TipoNumero",
+   "Accion",
+   "movAut",
+   "ISLR",
+   "Auxiliar"
+  ]
+ },
+ "formularios/compras/lbxServicios.Designer.cs": {
+  "titulo": "Servicios",
+  "etiquetas": [
+   "Hasta",
+   "Desde"
+  ],
+  "entradas": [
+   "CheckBox:checkAnuladas=\"Anuladas\"",
+   "CheckBox:checkLiquidada=\"Liquidada\"",
+   "CheckBox:checkTransito=\"En Transito\"",
+   "CheckBox:checkCarga=\"En Carga\"",
+   "RadioButton:radioButton3=\"Fecha\"",
+   "RadioButton:radioButton2=\"Proveedor\"",
+   "RadioButton:radioButton1=\"Numero\"",
+   "TextBox:txtBusqueda",
+   "DateTimePicker:dateTimeHasta",
+   "DateTimePicker:dateTimeDesde"
+  ],
+  "botones": [
+   "   Opciones",
+   "   Islr",
+   "   Modificar",
+   "   Cargar",
+   "   Salir",
+   "   Buscar"
+  ],
+  "columnas": []
+ },
+ "formularios/contabilidad/frmEstructuraCostos.Designer.cs": {
+  "titulo": " Estructura Costos",
+  "etiquetas": [
+   "Fecha Hasta",
+   "Estructura de Costos"
+  ],
+  "entradas": [
+   "DateTimePicker:dateTimePicker1"
+  ],
+  "botones": [
+   "Salir",
+   "Aceptar"
+  ],
+  "columnas": []
+ },
+ "formularios/contabilidad/frmVisorEstructura.Designer.cs": {
+  "titulo": "frmVisorEstructura",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "formularios/cotizacion/frmPreFac.designer.cs": {
+  "titulo": "Lebrun - Pedido",
+  "etiquetas": [
+   "Cliente",
+   "Nombre",
+   "Nombre",
+   "Vend",
+   "Num Fac",
+   "Num Contr",
+   "Des G",
+   "Plazo Dias",
+   "Fecha",
+   "Nombre",
+   "Producto",
+   "Cantidad",
+   "Almacen",
+   "Precio",
+   "Condicion",
+   "Modo Pago",
+   "Monto Abonar",
+   "Sub - Total",
+   "Des - Items",
+   "Base",
+   "Total Prod.",
+   "Iva",
+   "Neto",
+   "Unidad",
+   "Divisa",
+   "Pagado",
+   "Tarjetas",
+   "Contado",
+   "Efectivo",
+   "Cambio",
+   "Cheques",
+   "NÂº",
+   "Banco",
+   "Z",
+   "RIF",
+   "MOSTRAR PRECIO",
+   "Dir.Entrega"
+  ],
+  "entradas": [
+   "DateTimePicker:dateTimePicker1",
+   "ComboBox:comboBox2",
+   "ComboBox:cboCondicionPago",
+   "ComboBox:cboModoPago",
+   "ComboBox:cboUnidad",
+   "ComboBox:cboDivisa",
+   "CheckBox:chkCambioPrecio=\"Cambiar Precio\""
+  ],
+  "botones": [
+   "cmdBuscarVendedor",
+   "cmdBuscarProducto",
+   "Eliminar",
+   "Agregar",
+   "Cancelar Documento",
+   "Confirmar Documento",
+   "Eliminar",
+   "Agregar",
+   "cmdlbxBancos",
+   "cmdConfirmarDocumento",
+   "cmdSalir",
+   "button1",
+   "Regresar"
+  ],
+  "columnas": [
+   "procedencia",
+   "tipoIva",
+   "Producto",
+   "Med",
+   "Cod Num",
+   "Cod Tipo",
+   "Detalle Tipo"
+  ]
+ },
+ "formularios/cotizacion/lbxPrefacturaCtz.designer.cs": {
+  "titulo": "Lebrun - ",
+  "etiquetas": [
+   "NÃºmero, Cliente, Num. Fiscal",
+   "Fecha Hasta",
+   "Fecha Desde"
+  ],
+  "entradas": [
+   "TextBox:txtBuscar",
+   "CheckBox:chkFecha=\"Por Fecha\"",
+   "DateTimePicker:dateTimePicker2",
+   "DateTimePicker:dateTimePicker1"
+  ],
+  "botones": [
+   "Limpiar",
+   "Salir",
+   "Imprimir",
+   "Ver",
+   "Devolucion",
+   "Agregar",
+   "cmdBuscar"
+  ],
+  "columnas": []
+ },
+ "formularios/facturacionMisionVivienda/frmFacturaVivienda.Designer.cs": {
+  "titulo": "Lebrun - Facturacion",
+  "etiquetas": [
+   "Cliente",
+   "Nombre",
+   "Nombre",
+   "Vend",
+   "Num Cer",
+   "Des G",
+   "Plazo Dias",
+   "Fecha",
+   "Nombre",
+   "Producto",
+   "Cantidad",
+   "Almacen",
+   "Precio",
+   "Condicion",
+   "Modo Pago",
+   "Monto Abonar",
+   "Sub - Total",
+   "Des - Items",
+   "Base",
+   "Total Prod.",
+   "Iva",
+   "Neto",
+   "Unidad",
+   "Divisa",
+   "Pagado",
+   "Tarjetas",
+   "Contado",
+   "Efectivo",
+   "Cambio",
+   "Cheques",
+   "NÂº",
+   "Banco",
+   "Z",
+   "RIF",
+   "MOSTRAR PRECIO",
+   "Origen",
+   "Num Cer",
+   "Num Fac"
+  ],
+  "entradas": [
+   "DateTimePicker:dateTimePicker1",
+   "ComboBox:comboBox2",
+   "ComboBox:cboCondicionPago",
+   "ComboBox:cboModoPago",
+   "ComboBox:cboUnidad",
+   "ComboBox:cboDivisa",
+   "CheckBox:chkCambioPrecio=\"Cambiar Precio\"",
+   "ComboBox:cboOrigenVenta"
+  ],
+  "botones": [
+   "cmdBuscarVendedor",
+   "cmdBuscarProducto",
+   "Eliminar",
+   "Agregar",
+   "Cancelar Documento",
+   "Confirmar Documento",
+   "Eliminar",
+   "Agregar",
+   "cmdlbxBancos",
+   "cmdConfirmarDocumento",
+   "cmdSalir",
+   "button1",
+   "Regresar"
+  ],
+  "columnas": [
+   "procedencia",
+   "tipoIva",
+   "Producto",
+   "Med",
+   "Cod Num",
+   "Cod Tipo",
+   "Detalle Tipo"
+  ]
+ },
+ "formularios/facturacion/cierreCaja.Designer.cs": {
+  "titulo": "Cierre Caja",
+  "etiquetas": [
+   "Caja",
+   "Usuario",
+   "Cierre de Caja",
+   "Facturas",
+   "Devoluciones",
+   "Sub.T Punto de V",
+   "Cheque",
+   "Efectivo",
+   "Total Cont. Esp",
+   "Otros Pagos",
+   "Total Cuadre Caja",
+   "Total Iva",
+   "Tarjeta C",
+   "Tarjeta D"
+  ],
+  "entradas": [
+   "ComboBox:comboBox1"
+  ],
+  "botones": [
+   "Cancelar",
+   "Aceptar",
+   "Salir",
+   "Reporte",
+   "Cerrar Caja",
+   "cmdlbxBancos"
+  ],
+  "columnas": []
+ },
+ "formularios/facturacion/frmClaveConfirmacion.designer.cs": {
+  "titulo": "frmClaveSupervision",
+  "etiquetas": [
+   "Clave SupervisiÃ³n"
+  ],
+  "entradas": [
+   "TextBox:txtClave"
+  ],
+  "botones": [
+   "Aceptar",
+   "Cancelar"
+  ],
+  "columnas": []
+ },
+ "formularios/facturacion/frmClaveConfirmacion2.Designer.cs": {
+  "titulo": "Clave SupervisiÃ³n",
+  "etiquetas": [
+   "Clave SupervisiÃ³n",
+   "Usuario",
+   "ContraseÃ±a"
+  ],
+  "entradas": [
+   "TextBox:textBox2"
+  ],
+  "botones": [
+   "Cancelar",
+   "Aceptar"
+  ],
+  "columnas": []
+ },
+ "formularios/facturacion/frmDocumentosNoImpresos.Designer.cs": {
+  "titulo": "Documentos No Impresos",
+  "etiquetas": [
+   "Numero Interno Factura"
+  ],
+  "entradas": [
+   "TextBox:txtFactura"
+  ],
+  "botones": [
+   "Cambiar",
+   "Salir",
+   "Buscar"
+  ],
+  "columnas": []
+ },
+ "formularios/facturacion/frmImportarDev.Designer.cs": {
+  "titulo": "Lebrun - Exportar Factura",
+  "etiquetas": [
+   "Items Factura",
+   "Num Fac",
+   "Nombre",
+   "Cliente",
+   "Tipo Devolucion",
+   "Unidad",
+   "Cantidad",
+   "Producto",
+   "Items Reversados"
+  ],
+  "entradas": [
+   "ComboBox:cboTipoDevolucion",
+   "ComboBox:cboUnidad"
+  ],
+  "botones": [
+   "Aceptar",
+   "Aceptar",
+   "Eliminar Seleccion",
+   "Cancelar",
+   "Aceptar Devolucion",
+   "Cancelar Devolucion"
+  ],
+  "columnas": [
+   "Item",
+   "Alm",
+   "CÃ³digo",
+   "Producto",
+   "Und",
+   "Cant",
+   "Precio",
+   "%Desc",
+   "Total",
+   "Producto",
+   "Und",
+   "Exportado",
+   "Saldo"
+  ]
+ },
+ "formularios/facturacion/frmNetoMonedaExt.Designer.cs": {
+  "titulo": "Neto Moneda Ext",
+  "etiquetas": [
+   "Valor Dolar",
+   "Valor Euro",
+   "0",
+   "0"
+  ],
+  "entradas": [
+   "TextBox:txt_netoDolar=\"0\"",
+   "TextBox:txt_netoEuro=\"0\""
+  ],
+  "botones": [
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/facturacion/frmSerieFiscal.Designer.cs": {
+  "titulo": "frmSerieFiscal",
+  "etiquetas": [
+   "Serie",
+   "Serial:",
+   "Ip:",
+   "Documento:",
+   "Punto Activo:",
+   "Los Campos en Rojo son obligatorios",
+   "Caja:"
+  ],
+  "entradas": [
+   "ComboBox:cboPuntoActivo"
+  ],
+  "botones": [
+   "Salir",
+   "Guardar"
+  ],
+  "columnas": []
+ },
+ "formularios/facturacion/LbxSerieFiscal.Designer.cs": {
+  "titulo": "Lebrun - LbxSerieFiscal",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:txtBuscar",
+   "RadioButton:seri_impresora=\"Impresora\"",
+   "RadioButton:seri_ip=\"Ip\""
+  ],
+  "botones": [
+   "Modificar",
+   "Agregar",
+   "cmdBuscar",
+   "Salir",
+   "Limpiar"
+  ],
+  "columnas": []
+ },
+ "formularios/facturacion/ReportesZ_X.Designer.cs": {
+  "titulo": "Lebrun -",
+  "etiquetas": [
+   "Realizar "
+  ],
+  "entradas": [],
+  "botones": [
+   "Salir",
+   "Aceptar"
+  ],
+  "columnas": []
+ },
+ "formularios/gerencial/lbxConsultaGerencial.Designer.cs": {
+  "titulo": "lbxConsultaGerencial",
+  "etiquetas": [
+   "Esperado Codigo",
+   "Codigo Producto:",
+   "Ult Ajuste:",
+   "Cantidad:",
+   "Documento:",
+   "Cliente:",
+   "U.Vent:",
+   "Cantidad:",
+   "Docum:",
+   "U.Comp:",
+   "Cantidad:",
+   "Provee:",
+   "Docum:",
+   "Oferta:",
+   "Estado:",
+   "Sub-Categ:",
+   "Precios:",
+   "U. Medida:",
+   "Categoria:",
+   "Existecia:",
+   "Prefac:",
+   "Pedidas:",
+   "Disponible:",
+   "U.Costo:",
+   "Proveedor:",
+   "Pais:",
+   "%:",
+   "ENT:",
+   "Tip/Cam:",
+   "Moneda:",
+   "Cod Arance:",
+   "CIF:",
+   "Otro Gas:",
+   "GAS:",
+   "FIN:",
+   "12 Meses:",
+   "6 Meses:",
+   "3 Meses:",
+   "% Desc:",
+   "C.Pro:",
+   "Pre Lista:",
+   "C.Rep 1:",
+   "C.Rep 2:",
+   "C.Rep 3:",
+   "C.Rep 4:",
+   "% Util:",
+   "% Util:",
+   "% Util:",
+   "Unis Vendi :",
+   "Unis Vendi :",
+   "Unis Vendi :",
+   "%UT:",
+   "Vent Bs:",
+   "Unds:",
+   "Filial:",
+   "Comp Bs:",
+   "Unds:",
+   "Origen:"
+  ],
+  "entradas": [
+   "TextBox:txtUltAjus",
+   "TextBox:txtDocum",
+   "TextBox:txtCantidad",
+   "TextBox:txtDocumVent",
+   "TextBox:txtCantVent",
+   "TextBox:txtClient",
+   "TextBox:txtUltVent",
+   "TextBox:txtUltCompra",
+   "TextBox:txtDocComp",
+   "TextBox:txtProve",
+   "TextBox:txtCantComp",
+   "TextBox:txtEstado",
+   "TextBox:txtUCost",
+   "TextBox:txtDispon",
+   "TextBox:txtPedid",
+   "TextBox:txtPrefa",
+   "TextBox:txtExist",
+   "TextBox:txtUniM",
+   "TextBox:txtSubCat",
+   "TextBox:txtCateg",
+   "TextBox:txtOferta",
+   "TextBox:txttipCam",
+   "TextBox:txtD3",
+   "TextBox:txtD2",
+   "TextBox:txtSigMon",
+   "TextBox:txtPXT",
+   "TextBox:txtEnt",
+   "TextBox:txtDesMon",
+   "TextBox:txtCodAran",
+   "TextBox:txtPais",
+   "TextBox:txtProvee",
+   "TextBox:txtD1",
+   "TextBox:txtCif",
+   "TextBox:txtOtGas",
+   "TextBox:txtGas",
+   "TextBox:txtFin",
+   "TextBox:txtProU12",
+   "TextBox:txt6Meses",
+   "TextBox:txtUniVen12",
+   "TextBox:txtProU6",
+   "TextBox:txt12Meses",
+   "TextBox:txtUniVen6",
+   "TextBox:txtProU3",
+   "TextBox:txt3Meses",
+   "TextBox:txtUniVen3",
+   "TextBox:txtDes2",
+   "TextBox:txtDes1",
+   "TextBox:txtCosProm",
+   "TextBox:txtCostVentAnoAC",
+   "TextBox:txtCantCompra",
+   "TextBox:txtCostoCompra",
+   "TextBox:txtVenFilAnoAC",
+   "TextBox:txtCanVenAnoAC",
+   "TextBox:txtMontoVenAnoAC",
+   "TextBox:txtOrigen",
+   "ComboBox:cmbPrecios",
+   "TextBox:txtDes3",
+   "TextBox:txtCosRes4",
+   "TextBox:txtCosRes3",
+   "TextBox:txtCosRes2",
+   "TextBox:txtCosRes1",
+   "TextBox:txtPreList"
+  ],
+  "botones": [
+   "button3"
+  ],
+  "columnas": []
+ },
+ "formularios/gerencial/lbxConsultaGerente.Designer.cs": {
+  "titulo": "lbxConsultaGerente",
+  "etiquetas": [
+   "Codigo Producto:",
+   "Esperado Codigo",
+   "Ult Ajuste:",
+   "Cantidad:",
+   "Documento:",
+   "Cliente:",
+   "Ult Venta:",
+   "Cantidad:",
+   "Documento:",
+   "Ult Compra:",
+   "Cantidad:",
+   "Proveedor:",
+   "Documento:",
+   "Oferta:",
+   "Oferta:",
+   "Estado:",
+   "Sub-Categoria:",
+   "Precios:",
+   "Unidad Medida:",
+   "Categoria:",
+   "Existecia:",
+   "Prefac:",
+   "Pedidas:",
+   "Disponible:",
+   "U.Costo:",
+   "Estado:",
+   "Sub-Categoria:",
+   "Precios:",
+   "Unidad Medida:",
+   "Categoria:",
+   "Existecia:",
+   "Prefac:",
+   "Pedidas:",
+   "Disponible:",
+   "U.Costo:"
+  ],
+  "entradas": [
+   "TextBox:txtUltAjus",
+   "TextBox:txtDocum",
+   "TextBox:txtCantidad",
+   "TextBox:txtDocumVent",
+   "TextBox:txtCantVent",
+   "TextBox:txtClient",
+   "TextBox:txtUltVent",
+   "TextBox:txtUltCompra",
+   "TextBox:txtDocComp",
+   "TextBox:txtProve",
+   "TextBox:txtCantComp",
+   "TextBox:txtEstado",
+   "TextBox:txtOferta",
+   "TextBox:txtUCost",
+   "TextBox:txtDisp",
+   "TextBox:txtPedid",
+   "TextBox:txtPrefa",
+   "TextBox:txtExist",
+   "TextBox:txtPreci",
+   "TextBox:txtUniM",
+   "TextBox:txtSubCat",
+   "TextBox:txtCateg",
+   "TextBox:textBox1",
+   "TextBox:textBox2",
+   "TextBox:txtCategoria",
+   "TextBox:txtDispon",
+   "TextBox:txtUltCost",
+   "TextBox:txtSubCategoria",
+   "TextBox:txtUniMed",
+   "TextBox:txtPrecio",
+   "TextBox:txtExitecia",
+   "TextBox:txtPrefac",
+   "TextBox:txtPedidas"
+  ],
+  "botones": [
+   "button3"
+  ],
+  "columnas": []
+ },
+ "formularios/gerencial/lbxCosultaVentaXVendedor.Designer.cs": {
+  "titulo": "lbxCosultaVentaXVendedor",
+  "etiquetas": [
+   "% Costo",
+   "Total 12 Meses",
+   "% Costo",
+   "Total 9 Meses",
+   "% Costo",
+   "% Costo",
+   "Total 6 Meses",
+   "Total 3 Meses",
+   "% Costo",
+   "Total AÃ±o",
+   "% Costo",
+   "Total Mes",
+   "% Costo",
+   "Total Semana",
+   "% Costo",
+   "Total Dia",
+   "% Costo",
+   "Total 12 Meses",
+   "% Costo",
+   "Total 9 Meses",
+   "% Costo",
+   "% Costo",
+   "Total 6 Meses",
+   "Total 3 Meses",
+   "% Costo",
+   "Total AÃ±o",
+   "% Costo",
+   "Total Mes",
+   "% Costo",
+   "Total Semana",
+   "% Costo",
+   "Total Dia",
+   "% Costo",
+   "Total 12 Meses",
+   "% Costo",
+   "Total 9 Meses",
+   "% Costo",
+   "% Costo",
+   "Total 6 Meses",
+   "Total 3 Meses",
+   "% Costo",
+   "Total AÃ±o",
+   "% Costo",
+   "Total Mes",
+   "% Costo",
+   "Total Semana",
+   "% Costo",
+   "Total Dia",
+   "% Costo",
+   "Total 12 Meses",
+   "% Costo",
+   "Total 9 Meses",
+   "% Costo",
+   "% Costo",
+   "Total 6 Meses",
+   "Total 3 Meses",
+   "% Costo",
+   "Total AÃ±o",
+   "% Costo",
+   "Total Mes",
+   "% Costo",
+   "Total Semana",
+   "% Costo",
+   "Total Dia"
+  ],
+  "entradas": [
+   "TextBox:txtM6XC",
+   "TextBox:txtM12XC",
+   "TextBox:txtT6M",
+   "TextBox:txtT12M",
+   "TextBox:txtM3XC",
+   "TextBox:txtM9XC",
+   "TextBox:txtT3M",
+   "TextBox:txtT9M",
+   "TextBox:txtAXC",
+   "TextBox:txtMXC",
+   "TextBox:txtTotalMes",
+   "TextBox:txtSXC",
+   "TextBox:txtTotalSemana",
+   "TextBox:txtDXC",
+   "TextBox:txtTotalDia",
+   "DateTimePicker:dateTimePicker1",
+   "DateTimePicker:dateTimePicker2",
+   "TextBox:txtM6XCF",
+   "TextBox:txtM12XCF",
+   "TextBox:txtT6MF",
+   "TextBox:txtT12MF",
+   "TextBox:txtM3XCF",
+   "TextBox:txtM9XCF",
+   "TextBox:txtT3MF",
+   "TextBox:txtT9MF",
+   "TextBox:txtAXCF",
+   "TextBox:txtMXCF",
+   "TextBox:txtTotalMesF",
+   "TextBox:txtSXCF",
+   "TextBox:txtTotalSemanaF",
+   "TextBox:txtDXCF",
+   "TextBox:txtTotalDiaF",
+   "TextBox:txtM6XCV",
+   "TextBox:txtM12XCV",
+   "TextBox:txtT6MV",
+   "TextBox:txtT12MV",
+   "TextBox:txtM3XCV",
+   "TextBox:txtM9XCV",
+   "TextBox:txtT3MV",
+   "TextBox:txtT9MV",
+   "TextBox:txtAXCV",
+   "TextBox:txtMXCV",
+   "TextBox:txtTotalMesV",
+   "TextBox:txtSXCV",
+   "TextBox:txtTotalSemanaVV",
+   "TextBox:txtDXCV",
+   "TextBox:txtTotalDiaV",
+   "TextBox:textBox16",
+   "TextBox:textBox17",
+   "TextBox:textBox18",
+   "TextBox:textBox19",
+   "TextBox:textBox20",
+   "TextBox:textBox21",
+   "TextBox:textBox22",
+   "TextBox:textBox23",
+   "TextBox:textBox24",
+   "TextBox:textBox25",
+   "TextBox:textBox26",
+   "TextBox:textBox27",
+   "TextBox:textBox28",
+   "TextBox:textBox29",
+   "TextBox:textBox30",
+   "TextBox:textBox31",
+   "DateTimePicker:dateTimePicker5",
+   "DateTimePicker:dateTimePicker6",
+   "DateTimePicker:dateTimePicker8",
+   "DateTimePicker:dateTimePicker9",
+   "ComboBox:comboBox3=\"2016\"",
+   "ComboBox:comboBox2=\"2016\"",
+   "ComboBox:comboBox1=\"2016\""
+  ],
+  "botones": [
+   "btnBuscar",
+   "btnCancelar",
+   "button1",
+   "button2",
+   "button3",
+   "button4",
+   "btnBuscar3",
+   "btnBuscar2",
+   "btnBuscar1",
+   "btnBuscar6",
+   "btnBuscar5",
+   "btnBuscar4",
+   "btnBuscar9",
+   "btnBuscar8",
+   "btnBuscar7"
+  ],
+  "columnas": [
+   "Codigo",
+   "Vendedor",
+   "Vta Dia",
+   "    %",
+   "Vta Semana",
+   "    %",
+   "Vta Meses",
+   "    %",
+   "Vta AÃ±os",
+   "    %",
+   "Vta 3 Meses",
+   "Vta 6 Meses",
+   "Vta 9 Meses",
+   "Vta 12 Meses"
+  ]
+ },
+ "formularios/importaciones/frmFacturaImportacion.Designer.cs": {
+  "titulo": "Factura Origen",
+  "etiquetas": [
+   "Difere. Aranc.",
+   "FechaEmision",
+   "Cambio para liquidar",
+   "Cambio en la O/C",
+   "Documento",
+   "Costo material POP",
+   "Seguro Transp. Marit",
+   "Flete mari/aereo/terr",
+   "Valor factura neto(FOB)",
+   "Factor CIF",
+   "Costo del CIF",
+   "Total CIF",
+   "Cambio Productos",
+   "Iva Importacion",
+   "# Control",
+   "Saldo Proveedor"
+  ],
+  "entradas": [],
+  "botones": [
+   "..."
+  ],
+  "columnas": []
+ },
+ "formularios/importaciones/frmFacturaNacionalImportacion.Designer.cs": {
+  "titulo": "Factura Nacional",
+  "etiquetas": [
+   "Derechos Import",
+   "Tasa Serv Aduana",
+   "Tasa Seniat",
+   "Servicio Aduanal",
+   "Otros Gastos",
+   "Costos Operativos",
+   "Timbre Fiscal",
+   "Manejo",
+   "Obreros y precintos",
+   "Costo Almacen",
+   "Ayudantes",
+   "Multa de Aduana",
+   "Flete y peaje",
+   "Intereses x Financ",
+   "Depos. garantia",
+   "Seguro",
+   "Uso de superficie",
+   "Comision CH Cia",
+   "Otros Gastos",
+   "Proveedor",
+   "Total",
+   "Monto Exento",
+   "Monto Base",
+   "# control",
+   "# Factura:",
+   "Iva Nacional",
+   "F.Venci.",
+   "F. Emis."
+  ],
+  "entradas": [
+   "CheckBox:chkcalIva"
+  ],
+  "botones": [
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "...",
+   "..."
+  ],
+  "columnas": []
+ },
+ "formularios/importaciones/frmOtrosDatos.Designer.cs": {
+  "titulo": "Otros Datos",
+  "etiquetas": [
+   "F. Factura",
+   "Num.Factura",
+   "Num. Expediente",
+   "Consignatario",
+   "F. Llegada",
+   "Cant Bultos:",
+   "Forma de Embalaje",
+   "Agente",
+   "Transportista:",
+   "Fecha:",
+   "B/L Num:",
+   "Vapor:",
+   "Ciudad:",
+   "Moneda:",
+   "Monto Autorizado:",
+   "Fecha Venc AAD:",
+   "Fecha AAD:",
+   "Fecha Autorizacion:",
+   "Fecha Solicitud:",
+   "Numero IMP:",
+   "Fecha Vencimiento:",
+   "Fecha Autorizacion:",
+   "Fecha Solicitud:",
+   "Expediente #:",
+   "F. Acta Cadivi",
+   "F. T Bancaria Pago",
+   "F. Otorga. ALD",
+   "F. Entrega ALD",
+   "F. Embarque",
+   "Tasa Cambio",
+   "Fecha Ven Cadivi"
+  ],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "formularios/importaciones/frmOtrosGastos.Designer.cs": {
+  "titulo": "Totales",
+  "etiquetas": [
+   "Gastos Adu + Otros",
+   "Otros Gastos",
+   "Gastos seguro Mercancia",
+   "Gastos Tramite. CADIVI",
+   "Honoriarios",
+   "Verifi. Mercancia",
+   "Total gastos Generales",
+   "Factor gastos de Impor.",
+   "FactorBaseDifArancel/ValCif",
+   "Factor Gastos",
+   "Total valor Importacion"
+  ],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "formularios/importaciones/frmProductosImportacion.Designer.cs": {
+  "titulo": "Articulos",
+  "etiquetas": [
+   "Total Monto Bs",
+   "Costo",
+   "Cant",
+   "Codigo",
+   "Total Articulos",
+   "Total Monto"
+  ],
+  "entradas": [
+   "TextBox:txtPrecio",
+   "TextBox:txtCantidad",
+   "TextBox:txtMonedaExtr"
+  ],
+  "botones": [],
+  "columnas": [
+   "Codigo",
+   "Descripcion",
+   "Unidad",
+   "Cantidad",
+   "PrecioFOB",
+   "MontoFOB",
+   "Arancel",
+   "E",
+   "F",
+   "G",
+   "H",
+   "I",
+   "J",
+   "K",
+   "L",
+   "codigoArancel"
+  ]
+ },
+ "formularios/pagos/frmCruceDeSaldo.Designer.cs": {
+  "titulo": "Cruce de Saldo",
+  "etiquetas": [
+   "Debito",
+   "Credito",
+   "Monto",
+   "Descripcion",
+   "Auxiliar",
+   "Cuenta",
+   "Monto Documento",
+   "Monto a Cancelar",
+   "Total"
+  ],
+  "entradas": [
+   "TextBox:txtDebito=\"0,00\"",
+   "TextBox:txtCredito=\"0,00\"",
+   "TextBox:txtMontoMC",
+   "TextBox:txtDescripcion",
+   "RadioButton:rbCredito=\"Credito\"",
+   "RadioButton:rbDebito=\"Debito\"",
+   "TextBox:txtMontoDocP=\"0\"",
+   "TextBox:txtMontoCanDocP=\"0\"",
+   "TextBox:txtMontoTotal=\"0\"",
+   "TextBox:txtNumeroComprobante"
+  ],
+  "botones": [
+   "btnBuscarPro",
+   "...",
+   "...",
+   "Eliminar",
+   "Agregar",
+   "    Aceptar",
+   "    Cancelar",
+   "Cancelar",
+   "Aceptar",
+   "Eliminar",
+   "    Reimprimir"
+  ],
+  "columnas": [
+   "Item",
+   "Documento",
+   "Sufijo",
+   "Tipo",
+   "Saldo",
+   "Fecha",
+   "Correlativo",
+   "Fecha Vencimiento",
+   "item",
+   "Documento",
+   "Sufijo",
+   "Tipo",
+   "Saldo",
+   "Rebajar",
+   "Fecha",
+   "Correlativo",
+   "Fecha Vencimiento",
+   "Fecha2",
+   "FechaVencimiento2",
+   "indice",
+   "restante",
+   "status",
+   "Item",
+   "Descripcion",
+   "Cuenta",
+   "Tipo",
+   "Monto D",
+   "Monto C",
+   "TipoNumero",
+   "Auxiliar",
+   "Monto"
+  ]
+ },
+ "formularios/pagos/frmPagosLebrun.Designer.cs": {
+  "titulo": "Documentos a pagar",
+  "etiquetas": [
+   "Hasta",
+   "Desde"
+  ],
+  "entradas": [
+   "RadioButton:FechaVencimiento=\"Fecha Vecimiento\"",
+   "RadioButton:FechaEmision=\"Fecha Emision\"",
+   "RadioButton:IdProveedor=\"Codigo Proveedor\"",
+   "RadioButton:NroControlSeniat=\"Num Control\"",
+   "RadioButton:NroDocum=\"Num Documento\"",
+   "TextBox:txtBuscar",
+   "DateTimePicker:fechaDesde",
+   "DateTimePicker:fechaHasta"
+  ],
+  "botones": [
+   "    Buscar",
+   "   Salir",
+   "   Procesar",
+   "   Limpiar Temp",
+   "button1",
+   "button2"
+  ],
+  "columnas": [
+   "Tipo",
+   "Descripcion",
+   "Documento",
+   "Sufijo",
+   "Nombre Porveedor",
+   "Doc Afectado",
+   "Control Seniat",
+   "Fecha Emision",
+   "Fecha Venc",
+   "Nro Comprobante",
+   "Codigo",
+   "Monto Docum",
+   "Saldo Docum",
+   "Status",
+   "Fecha Pago",
+   "Id Banco",
+   "Correlativo",
+   "Pago",
+   "Fecha Pago"
+  ]
+ },
+ "formularios/pagos/frmProcesoPago.Designer.cs": {
+  "titulo": "Proceso de pago",
+  "etiquetas": [
+   "Nombre",
+   "Banco",
+   "Tipo de Cuenta",
+   "Monto Cheque",
+   "Cuenta Numero",
+   "Cheque Numero",
+   "Monto Cheque",
+   "Monto Documentos",
+   "Monto Documento",
+   "Monto a Cancelar"
+  ],
+  "entradas": [
+   "ComboBox:cmbTipoCuenta",
+   "TextBox:txtNumeroCheque",
+   "TextBox:txtMontoCheque=\"0\"",
+   "TextBox:txtTotalDocum=\"0\"",
+   "TextBox:txtTotalCheque=\"0\"",
+   "TextBox:txtMontoDocP",
+   "TextBox:txtMontoCanDocP"
+  ],
+  "botones": [
+   "    Aceptar",
+   "    Salir",
+   "    Eliminar",
+   "btnBuscarbanco",
+   "Cancelar",
+   "Aceptar"
+  ],
+  "columnas": [
+   "fechaVenc",
+   "Descripcion",
+   "Numero Documento",
+   "Sufijo",
+   "Tipo",
+   "Monto Documento",
+   "fechaCarga",
+   "correlativo",
+   "MontoPago",
+   "fila",
+   "restante",
+   "status",
+   "codigoProveedor",
+   "NombreProveedor"
+  ]
+ },
+ "formularios/pagos/frmProcesoPagoManual.Designer.cs": {
+  "titulo": "Proceso Pago Manual",
+  "etiquetas": [
+   "Codigo",
+   "Cheque Numero",
+   "Monto Cheque",
+   "Cuenta Numero",
+   "Tipo de Cuenta",
+   "Nombre",
+   "Banco",
+   "Debito",
+   "Credito",
+   "Monto",
+   "Descripcion",
+   "Auxiliar",
+   "Cuenta",
+   "Monto Documento",
+   "Monto a Cancelar",
+   "Tipo Doc",
+   "Numero Doc"
+  ],
+  "entradas": [
+   "TextBox:txtMontoCheque=\"0\"",
+   "TextBox:txtNumeroCheque",
+   "ComboBox:cmbTipoCuenta",
+   "TextBox:txtDebito=\"0,00\"",
+   "TextBox:txtCredito=\"0,00\"",
+   "TextBox:txtMontoMC",
+   "TextBox:txtDescripcion",
+   "RadioButton:rbCredito=\"Credito\"",
+   "RadioButton:rbDebito=\"Debito\"",
+   "TextBox:txtMontoDocP=\"0\"",
+   "TextBox:txtMontoCanDocP=\"0\"",
+   "TextBox:txtNumDoc",
+   "TextBox:txtSufiDoc=\"0\""
+  ],
+  "botones": [
+   "btnBuscar",
+   "    Cancelar",
+   "    Aceptar",
+   "    Eliminar",
+   "btnBuscarbanco",
+   "...",
+   "...",
+   "Eliminar",
+   "Agregar",
+   "Cancelar",
+   "Aceptar",
+   "Cancelar",
+   "Aceptar",
+   "button5"
+  ],
+  "columnas": [
+   "item",
+   "Documento",
+   "Sufijo",
+   "Tipo",
+   "Monto Documento",
+   "Monto Cancelar",
+   "Documento",
+   "Sufijo",
+   "Tipo",
+   "Monto",
+   "Item",
+   "Descripcion",
+   "Cuenta",
+   "Tipo",
+   "Monto D",
+   "Monto C",
+   "TipoNumero",
+   "Auxiliar",
+   "Monto"
+  ]
+ },
+ "formularios/pagos/lbxProveedoresPago.Designer.cs": {
+  "titulo": "Pago a Proveedores",
+  "etiquetas": [],
+  "entradas": [
+   "RadioButton:radioButton2=\"Nombre proveedor\"",
+   "RadioButton:radioButton1=\"Codigo proveedor\"",
+   "TextBox:textBox1",
+   "TextBox:txtNumeroComprobante"
+  ],
+  "botones": [
+   "    Buscar",
+   "    Salir",
+   "      Reimpresion"
+  ],
+  "columnas": []
+ },
+ "formularios/pedidos/frmAprobacionGerencial.designer.cs": {
+  "titulo": "frmAprobacionGerencial",
+  "etiquetas": [
+   "AprobaciÃ³n Gerencial Parametros",
+   "Descripcion",
+   "Monto"
+  ],
+  "entradas": [
+   "TextBox:txtDescripcion",
+   "TextBox:txtMonto",
+   "CheckBox:checkBox2=\"Activo\""
+  ],
+  "botones": [
+   "Salir",
+   "Modificar",
+   "Agregar"
+  ],
+  "columnas": []
+ },
+ "formularios/pedidos/frmPedido.Designer.cs": {
+  "titulo": "Lebrun - Pedido",
+  "etiquetas": [
+   "Cliente",
+   "Nombre",
+   "Nombre",
+   "Vend",
+   "Num. Correlativo",
+   "Num Ped",
+   "Dscto.vtas.1:",
+   "Plazo Dias",
+   "Fecha",
+   "Nombre",
+   "Producto",
+   "Cantidad",
+   "Almacen",
+   "Precio",
+   "Condicion",
+   "Modo Pago",
+   "Monto Abonar",
+   "Sub - Total",
+   "Des - Items",
+   "Base",
+   "Total Prod.",
+   "Iva",
+   "Neto",
+   "Unidad",
+   "Transporte",
+   "NÂº",
+   "Banco",
+   "Z",
+   "RIF",
+   "MOSTRAR PRECIO",
+   "Dir.Entrega",
+   "Dscto.vtas.2:",
+   "Dscto.vtas.3:",
+   "Dscto. G:",
+   "Pagado",
+   "Tarjetas",
+   "Contado",
+   "Efectivo",
+   "Cambio",
+   "Cheques"
+  ],
+  "entradas": [
+   "DateTimePicker:dateTimePicker1",
+   "ComboBox:comboBox2",
+   "ComboBox:cboCondicionPago",
+   "ComboBox:cboModoPago",
+   "ComboBox:cboUnidad",
+   "ComboBox:cboTransporte",
+   "CheckBox:chkCambioPrecio=\"Cambiar Precio\""
+  ],
+  "botones": [
+   "cmdBuscarVendedor",
+   "cmdBuscarProducto",
+   "Eliminar",
+   "Agregar",
+   "Eliminar",
+   "Agregar",
+   "cmdlbxBancos",
+   "cmdConfirmarDocumento",
+   "cmdSalir",
+   "button1"
+  ],
+  "columnas": [
+   "procedencia",
+   "tipoIva",
+   "Producto",
+   "Med",
+   "Cod Num",
+   "Cod Tipo",
+   "Detalle Tipo"
+  ]
+ },
+ "formularios/pedidos/lbxAprobacionGerencial.designer.cs": {
+  "titulo": "lbxAprobacionGerencial",
+  "etiquetas": [
+   "AprobaciÃ³n Gerencial"
+  ],
+  "entradas": [],
+  "botones": [
+   "Salir",
+   "Modificar",
+   "Agregar"
+  ],
+  "columnas": []
+ },
+ "formularios/pedidos/lbxPedido.designer.cs": {
+  "titulo": "Lebrun - ",
+  "etiquetas": [
+   "NÃºmero, Cliente, Num. Fiscal",
+   "Fecha Hasta",
+   "Fecha Desde"
+  ],
+  "entradas": [
+   "TextBox:txtBuscar",
+   "CheckBox:chkFecha=\"Por Fecha\"",
+   "DateTimePicker:dateTimePicker2",
+   "DateTimePicker:dateTimePicker1"
+  ],
+  "botones": [
+   "Limpiar",
+   "Salir",
+   "Imprimir",
+   "Ver",
+   "Modificar",
+   "Agregar",
+   "cmdBuscar"
+  ],
+  "columnas": []
+ },
+ "formularios/pedidos/lbxPedidoS5.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [
+   "Fecha Hasta",
+   "Fecha Desde",
+   "NÃºmero, Cliente, Num. Fiscal"
+  ],
+  "entradas": [
+   "CheckBox:chkFecha=\"Por Fecha\"",
+   "DateTimePicker:dateTimePicker2",
+   "DateTimePicker:dateTimePicker1",
+   "TextBox:txtBuscar"
+  ],
+  "botones": [
+   "cmdBuscar",
+   "Limpiar",
+   "Salir",
+   "Ver"
+  ],
+  "columnas": []
+ },
+ "formularios/prefactura/frmPrefactura.Designer.cs": {
+  "titulo": "Lebrun - Pedido",
+  "etiquetas": [
+   "Cliente",
+   "Nombre",
+   "Nombre",
+   "Vend",
+   "Num. Correlativo",
+   "Num Pre",
+   "Des G",
+   "Plazo Dias",
+   "Fecha",
+   "Nombre",
+   "Producto",
+   "Cantidad",
+   "Almacen",
+   "Precio",
+   "Condicion",
+   "Modo Pago",
+   "Monto Abonar",
+   "Sub - Total",
+   "Des - Items",
+   "Base",
+   "Total Prod.",
+   "Iva",
+   "Neto",
+   "Unidad",
+   "Transporte",
+   "Pagado",
+   "Tarjetas",
+   "Contado",
+   "Efectivo",
+   "Cambio",
+   "Cheques",
+   "NÂº",
+   "Banco",
+   "Z",
+   "RIF",
+   "MOSTRAR PRECIO",
+   "Dir.Entrega",
+   "Dias PP2",
+   "Dias PP1",
+   "Porcentaje PP1",
+   "Porcentaje PP2"
+  ],
+  "entradas": [
+   "DateTimePicker:dateTimePicker1",
+   "ComboBox:comboBox2",
+   "ComboBox:cboModoPago",
+   "ComboBox:cboUnidad",
+   "CheckBox:chkCambioPrecio=\"Cambiar Precio\"",
+   "TextBox:txtPorcenPP2",
+   "TextBox:txtPorcenPP1",
+   "TextBox:txtDiaspp2",
+   "TextBox:txtDiaspp1"
+  ],
+  "botones": [
+   "cmdBuscarProducto",
+   "Eliminar",
+   "Agregar",
+   "Cancelar Documento",
+   "Eliminar",
+   "Agregar",
+   "cmdlbxBancos",
+   "cmdConfirmarDocumento",
+   "cmdSalir",
+   "button1",
+   "Modificar",
+   "Salir",
+   "Aceptar"
+  ],
+  "columnas": [
+   "procedencia",
+   "tipoIva",
+   "Producto",
+   "Med",
+   "Cod Num",
+   "Cod Tipo",
+   "Detalle Tipo"
+  ]
+ },
+ "formularios/prefactura/lbxPrefactura.Designer.cs": {
+  "titulo": "lbxPrefactura",
+  "etiquetas": [
+   "Fecha Hasta",
+   "Fecha Desde",
+   "NÃºmero, Cliente"
+  ],
+  "entradas": [
+   "CheckBox:chkFecha=\"Por Fecha\"",
+   "DateTimePicker:dateTimePicker2",
+   "DateTimePicker:dateTimePicker1",
+   "TextBox:txtBuscar"
+  ],
+  "botones": [
+   "Limpiar",
+   "Salir",
+   "Listado Almacen",
+   "Ver",
+   "Abrir",
+   "cmdBuscar",
+   "Listado Ventas"
+  ],
+  "columnas": []
+ },
+ "formularios/prefactura/lbxprefacturaS12.Designer.cs": {
+  "titulo": "lbxPrefactura Status 1 y 2 ",
+  "etiquetas": [
+   "Fecha Hasta",
+   "Fecha Desde",
+   "NÃºmero, Cliente"
+  ],
+  "entradas": [
+   "CheckBox:chkFecha=\"Por Fecha\"",
+   "DateTimePicker:dateTimePicker2",
+   "DateTimePicker:dateTimePicker1",
+   "TextBox:txtBuscar"
+  ],
+  "botones": [
+   "Limpiar",
+   "Salir",
+   "Listado Almacen",
+   "Ver",
+   "Abrir",
+   "cmdBuscar",
+   "Listado Ventas"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/Form1.Designer.cs": {
+  "titulo": "Etiqueta",
+  "etiquetas": [
+   "GENERADOR DE ETIQUETAS DE PRECIOS",
+   "Item",
+   "ArtÃ­culo",
+   "Unidad",
+   "Contenido",
+   "label31",
+   "label22",
+   "label20",
+   "label19",
+   "label14",
+   "label12",
+   "label11",
+   "Item: 2",
+   "label18",
+   "label16",
+   "label15",
+   "label26",
+   "label24",
+   "label23",
+   "label30",
+   "label28",
+   "label27",
+   "Item: 5",
+   "Item: 1",
+   "Item: 4",
+   "Item: 3",
+   "V.3.0"
+  ],
+  "entradas": [
+   "TextBox:textBox1=\"1\"",
+   "TextBox:textBox2",
+   "TextBox:textBox3=\"1\"",
+   "ComboBox:comboBox1"
+  ],
+  "botones": [
+   "Imprimir",
+   "Salir",
+   "Limpiar"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmAsignarProveedor.Designer.cs": {
+  "titulo": "Asignado Proveedor",
+  "etiquetas": [
+   "Moneda:",
+   "Pais De Origen:",
+   "Proveedor Principal:",
+   "Producto:",
+   "Codigo Producto:"
+  ],
+  "entradas": [
+   "ComboBox:cmdMoneda",
+   "ComboBox:cmdPdO"
+  ],
+  "botones": [
+   "button5",
+   "btnLimpiar",
+   "BtnRegistra"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmCambioPrecio.Designer.cs": {
+  "titulo": "Cambio Precio",
+  "etiquetas": [
+   "Vencimiento",
+   "Lista",
+   "Articulo",
+   "Utilidad",
+   "Descuento Maximo",
+   "Descuento",
+   "Precio",
+   "...",
+   "...",
+   "TIENE OFERTA",
+   "Precio A",
+   "Precio Dolar"
+  ],
+  "entradas": [
+   "DateTimePicker:fechaVencimiento",
+   "ComboBox:cmbTipoPrecio",
+   "TextBox:txtUtilidad=\"0\"",
+   "TextBox:txtDescMax=\"0\"",
+   "TextBox:txtDescuento=\"0\"",
+   "TextBox:txtPrecio=\"0\"",
+   "TextBox:txt_precioA=\"0\"",
+   "TextBox:txt_precioDolar=\"0\"",
+   "CheckBox:checkBox1=\"Solo precio dolar\""
+  ],
+  "botones": [
+   "Agregar",
+   "Cancelar",
+   "...",
+   "Aceptar",
+   "Eliminar",
+   "ActualizaciÃ³n Masiva"
+  ],
+  "columnas": [
+   "item",
+   "Tipo",
+   "Codigo",
+   "Descripcion",
+   "Unidad",
+   "PrecioAnterior",
+   "PrecioNuevo",
+   "Utilidad",
+   "Desc",
+   "DescMax",
+   "Fecha",
+   "FechaVenc",
+   "usuario",
+   "PrecioDolar",
+   "PrecioA"
+  ]
+ },
+ "formularios/productos/frmConsultaArticulos.designer.cs": {
+  "titulo": "Productos 2",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:textBox1",
+   "RadioButton:grupo=\"Grupo\"",
+   "RadioButton:descripcion=\"Descripcion\"",
+   "RadioButton:codigo=\"Codigo\""
+  ],
+  "botones": [
+   "button1",
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmEdicionALICU_IVA.Designer.cs": {
+  "titulo": "Editor De Iva",
+  "etiquetas": [
+   "Tipo De IVA",
+   "% De Venta",
+   "% Zona Libre",
+   "% Compra"
+  ],
+  "entradas": [],
+  "botones": [
+   "BtnRegistra",
+   "btnCancelar",
+   "btnActulizar"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmEdicionArancel.Designer.cs": {
+  "titulo": "Agregar Arancel",
+  "etiquetas": [
+   "Descripcion",
+   "Codigo",
+   "Porcentaje",
+   "Kg",
+   "Impuesto"
+  ],
+  "entradas": [],
+  "botones": [
+   "btnActulizar",
+   "btnCancelar",
+   "BtnRegistra"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmEditorCategoria.Designer.cs": {
+  "titulo": "Editor Categoria",
+  "etiquetas": [
+   "Descripcion",
+   "Codigo",
+   "Comision Compra",
+   "Comision Venta"
+  ],
+  "entradas": [],
+  "botones": [
+   "BtnRegistra",
+   "btnCancelar",
+   "btnActulizar"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmEditorSubCategoria.Designer.cs": {
+  "titulo": "Editor Sub-Categoria",
+  "etiquetas": [
+   "Descripcion",
+   "Codigo",
+   "Comision Compra",
+   "Comision Venta",
+   "Descripcion Sub-Categoria",
+   "Codigo Sub-Categoria"
+  ],
+  "entradas": [],
+  "botones": [
+   "BtnRegistra",
+   "btnActulizar",
+   "btnCancelar"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmEtiqGran.Designer.cs": {
+  "titulo": "frmEtiqGran",
+  "etiquetas": [
+   "Etiqueta 1",
+   "Etiqueta 2",
+   "Etiqueta:",
+   "Codigo:",
+   "Unidad:",
+   "label11",
+   "label10",
+   "label9",
+   "label8",
+   "label7",
+   "label6",
+   "label16",
+   "label15",
+   "label14",
+   "label13",
+   "label12",
+   "label17",
+   "label18",
+   "GENERADOR DE ETIQUETAS DE PRECIOS",
+   "V.2.0"
+  ],
+  "entradas": [
+   "TextBox:textBox1=\"1\"",
+   "TextBox:textBox2",
+   "ComboBox:comboBox1"
+  ],
+  "botones": [
+   "Limpiar",
+   "Imprimir",
+   "Salir",
+   "Imprimir $"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmEtiqMed.Designer.cs": {
+  "titulo": "Etiquetas Medianas",
+  "etiquetas": [
+   "Etiqueta1",
+   "Etiqueta2",
+   "Etiqueta3",
+   "Etiqueta4",
+   "Etiqueta:",
+   "Codigo:",
+   "Unidad:",
+   "label12",
+   "label11",
+   "label17",
+   "label16",
+   "label14",
+   "label13",
+   "label22",
+   "label21",
+   "label20",
+   "label19",
+   "label18",
+   "label27",
+   "label26",
+   "label25",
+   "label24",
+   "label23",
+   "label28",
+   "label29",
+   "label9",
+   "label8",
+   "label15",
+   "label10",
+   "label30",
+   "label31",
+   "label32",
+   "label33",
+   "GENERADOR DE ETIQUETAS DE PRECIOS",
+   "V.2.0"
+  ],
+  "entradas": [
+   "TextBox:textBox1=\"1\"",
+   "TextBox:textBox2",
+   "ComboBox:comboBox1",
+   "TextBox:textBox3"
+  ],
+  "botones": [
+   "Limpiar",
+   "Imprimir",
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmEtiqPeqCodg.Designer.cs": {
+  "titulo": "Etiqueta De Codigo",
+  "etiquetas": [
+   "label31",
+   "V.3.0",
+   "label19",
+   "label11",
+   "Item: 2",
+   "label15",
+   "label23",
+   "label27",
+   "Item: 5",
+   "Item: 1",
+   "Item: 4",
+   "Item: 3",
+   "GENERADOR DE ETIQUETAS DE PRECIOS",
+   "Item",
+   "ArtÃ­culo",
+   "Contenido"
+  ],
+  "entradas": [
+   "TextBox:textBox3=\"1\"",
+   "TextBox:textBox1=\"1\"",
+   "TextBox:textBox2"
+  ],
+  "botones": [
+   "Imprimir",
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmEtiqPeqDesg.Designer.cs": {
+  "titulo": "Etiqueta",
+  "etiquetas": [
+   "label31",
+   "V.3.0",
+   "label22",
+   "label20",
+   "label19",
+   "label14",
+   "label12",
+   "label11",
+   "Item: 2",
+   "label18",
+   "label16",
+   "label15",
+   "label26",
+   "label24",
+   "label23",
+   "label30",
+   "label28",
+   "label27",
+   "Item: 5",
+   "Item: 1",
+   "Item: 4",
+   "Item: 3",
+   "GENERADOR DE ETIQUETAS DE PRECIOS",
+   "Unidad",
+   "Item",
+   "ArtÃ­culo",
+   "Contenido",
+   "label34",
+   "label33",
+   "label37",
+   "label38",
+   "label35",
+   "label36",
+   "label39",
+   "label40",
+   "label41",
+   "label42",
+   "Tipo Precios"
+  ],
+  "entradas": [
+   "TextBox:textBox3=\"1\"",
+   "TextBox:textBox1=\"1\"",
+   "TextBox:textBox2",
+   "ComboBox:comboBox1"
+  ],
+  "botones": [
+   "Limpiar",
+   "Imprimir",
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmMantProductos.Designer.cs": {
+  "titulo": " Editor Productos",
+  "etiquetas": [
+   "SubCategoria:",
+   "Categoria:",
+   "Arancel:",
+   "Porcetaje De Descuento:",
+   "Iva:",
+   "Descripcion Editable:",
+   "Procedencia:",
+   "Estado:",
+   "Fabricante:",
+   "Descripcion:",
+   "Codigo:",
+   "Comision Venta:",
+   "Capacidad:",
+   "Volume:",
+   "Ancho:",
+   "Alto:",
+   "Garantia Por Dias:",
+   "Contenido:",
+   "Ex Minima:",
+   "Ex Maxima:",
+   "Comision Cobranza:"
+  ],
+  "entradas": [],
+  "botones": [
+   "button4",
+   "button3",
+   "BtnRegistra",
+   "btnActulizar",
+   "btnCancelar",
+   "btnLimpiar",
+   "button1",
+   "button2"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmOff.Designer.cs": {
+  "titulo": "Lebrun - frmOff",
+  "etiquetas": [
+   "Articulo:",
+   "Off",
+   "label1",
+   "label2",
+   "DescripciÃ³n:"
+  ],
+  "entradas": [],
+  "botones": [
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmPromociones.Designer.cs": {
+  "titulo": "Promociones",
+  "etiquetas": [
+   "...",
+   "...",
+   "Articulo",
+   "%%",
+   "Precio",
+   "Fecha Fin",
+   "Lista",
+   "Fecha Inicio",
+   "Cant Otorgada",
+   "Cant Requerida",
+   "...",
+   "Multiplo"
+  ],
+  "entradas": [
+   "TextBox:txtDescuento=\"0\"",
+   "TextBox:txtPrecio=\"0\"",
+   "DateTimePicker:fechaFin",
+   "ComboBox:cmbTipoPrecio",
+   "DateTimePicker:fechaInicio",
+   "TextBox:txtCantOtorgada=\"0\"",
+   "TextBox:txtCantRequerida=\"0\"",
+   "TextBox:txtMultiplo=\"0\""
+  ],
+  "botones": [
+   "Eliminar",
+   "...",
+   "Agregar",
+   "Cancelar",
+   "Aceptar",
+   "Eliminar"
+  ],
+  "columnas": [
+   "Item",
+   "Tipo",
+   "Codigo",
+   "Descripcion",
+   "Unidad",
+   "FechaDesde",
+   "FechaFin",
+   "FechaFin1",
+   "FechaDesde1",
+   "Precio",
+   "CantRequerida",
+   "CantOtorgada",
+   "usuario",
+   "Unidad",
+   "Precio",
+   "Tipo",
+   "FechaDesde",
+   "FechaFin",
+   "CantRequerida",
+   "CantOtorgada"
+  ]
+ },
+ "formularios/productos/frmUnidaXProducto.Designer.cs": {
+  "titulo": "Unidad Por Productos",
+  "etiquetas": [
+   "Producto",
+   "Codigo De Producto",
+   "Volumen",
+   "Peso",
+   "Signo",
+   "Presentacion:",
+   "Cantidad Por Unidad:",
+   "Unidad:"
+  ],
+  "entradas": [
+   "TextBox:txtPresentecion=\"PIEZA\"",
+   "TextBox:txtCantXUnidad=\"1.00\"",
+   "CheckBox:chUniPrin=\"Unidad Principal\"",
+   "CheckBox:chVisVentas=\"Visible Ventas\"",
+   "CheckBox:chbVisCompras=\"Visible Compras\"",
+   "ComboBox:cmdSigno=\"*\"",
+   "ComboBox:cmbUnidad=\"PZA\"",
+   "TextBox:txtVolumen=\"0.00\"",
+   "TextBox:txtPeso=\"0.00\""
+  ],
+  "botones": [
+   "btnSalir",
+   "btnModificar",
+   "btnAgregar",
+   "btnEliminar",
+   "btnAgreUnidad",
+   "btnCancelar"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/frmValidacionUserTimer.Designer.cs": {
+  "titulo": "frmValidacionUserTimer",
+  "etiquetas": [
+   "10",
+   "Usuaro Se Encuentra Conectado En Otra Estacion"
+  ],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "formularios/productos/frmVisor2.Designer.cs": {
+  "titulo": "Productos 3",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:textBox1",
+   "RadioButton:grupo=\"Grupo\"",
+   "RadioButton:descripcion=\"Descripcion\"",
+   "RadioButton:codigo=\"Codigo\""
+  ],
+  "botones": [
+   "button1",
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/lbxALICU_IVA.Designer.cs": {
+  "titulo": "lbxALICU_IVA",
+  "etiquetas": [
+   "Codigo"
+  ],
+  "entradas": [
+   "TextBox:txtCodigo=\"0001\""
+  ],
+  "botones": [
+   "btnModificar",
+   "btnAgregar",
+   "btnSalir",
+   "btnLimpiar",
+   "btnVisor"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/lbxArancel.Designer.cs": {
+  "titulo": "Arancel",
+  "etiquetas": [],
+  "entradas": [
+   "CheckBox:chbPalContentiva=\"Palabra Contentiva\"",
+   "RadioButton:rdbCodigo=\"Codigo\"",
+   "RadioButton:rdbDescripcion=\"Descripcion\"",
+   "TextBox:txtBuscar"
+  ],
+  "botones": [
+   "btnBuscar",
+   "btnImprimir",
+   "btnEliminar",
+   "btnModificar",
+   "btnAgregar",
+   "btnSalir",
+   "btnLimpiar",
+   "btnVisor",
+   "btnSelcArancel"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/lbxCategoria.Designer.cs": {
+  "titulo": "Categoria",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:txtBuscador",
+   "CheckBox:chbPalContentiva=\"Palabra Contentiva\"",
+   "RadioButton:rdbCodigo=\"Codigo\"",
+   "RadioButton:rdbDescripcion=\"Descripcion\""
+  ],
+  "botones": [
+   "btnEliminar",
+   "btnAgregar",
+   "btnModificar",
+   "btnImprimir",
+   "btnBuscar",
+   "btnSalir",
+   "btnLimpiar",
+   "btnSubCategoria",
+   "btnVisor"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/lbxElimiPrecios.Designer.cs": {
+  "titulo": "Eliminacion De Precios",
+  "etiquetas": [
+   "Producto",
+   "Codigo",
+   "Codigo"
+  ],
+  "entradas": [],
+  "botones": [
+   "btnSalir",
+   "btnEliminar",
+   "btnCancelar",
+   "btnAgreUnidad"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/lbxElimiPromo.Designer.cs": {
+  "titulo": "lbxElimiPromo",
+  "etiquetas": [
+   "Producto",
+   "Codigo",
+   "Codigo"
+  ],
+  "entradas": [],
+  "botones": [
+   "btnSalir",
+   "btnEliminar",
+   "btnCancelar",
+   "btnAgreUnidad"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/lbxMantProductos.Designer.cs": {
+  "titulo": " Productos",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:txtBusqueda",
+   "RadioButton:rbtProcedincia=\"Procedencia\"",
+   "RadioButton:rbtFabricante=\"Fabricante\"",
+   "RadioButton:rbtAlicuota=\"Alicuota\"",
+   "RadioButton:rbtSubCategoria=\"Sub-Categoria\"",
+   "RadioButton:rbtCategoria=\"Categoria\"",
+   "RadioButton:rbtDescripcion=\"DescripciÃ³n\"",
+   "RadioButton:rbtCodigo=\"CÃ³digo\"",
+   "CheckBox:chbPalContentiva=\"Palabra Contentiva\""
+  ],
+  "botones": [
+   "btnVisor",
+   "btnSalir",
+   "btnLimpiar",
+   "btnImprimir",
+   "btnEliminar",
+   "btnAgregar",
+   "btnModificar",
+   "btnBuscar",
+   "btnUnidMed",
+   "button1",
+   "button2",
+   "button3"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/lbxOpcionesAdicionales.Designer.cs": {
+  "titulo": "Opciones Adcionales",
+  "etiquetas": [
+   "Producto",
+   "Codigo De Producto"
+  ],
+  "entradas": [],
+  "botones": [
+   "Ubicacion Fisica",
+   "Promociones",
+   "Precios De Venta",
+   "Unidad De Medida"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/lbxSeleccionEtiqPeq.Designer.cs": {
+  "titulo": "            Seleccion ",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [
+   "Detal",
+   "Mayor",
+   "Salir",
+   "Codigo"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/lbxSubCategoria.Designer.cs": {
+  "titulo": "Sub-Categoria",
+  "etiquetas": [],
+  "entradas": [
+   "RadioButton:rdbCodigo=\"Codigo Categoria\"",
+   "RadioButton:rdbDescripcion=\"Descripcion\"",
+   "CheckBox:chbPalContentiva=\"Palabra Contentiva\"",
+   "TextBox:txtBuscador",
+   "RadioButton:rdbSubCodigo=\"Codigo Sub-Categoria\""
+  ],
+  "botones": [
+   "btnBuscar",
+   "btnSalir",
+   "btnLimpiar",
+   "btnImprimir",
+   "btnEliminar",
+   "btnAgregar",
+   "btnModificar",
+   "btnVisor",
+   "button1"
+  ],
+  "columnas": []
+ },
+ "formularios/productos/lbxVisor3.designer.cs": {
+  "titulo": "Visor Compras",
+  "etiquetas": [],
+  "entradas": [
+   "RadioButton:grupo=\"Grupo\"",
+   "RadioButton:descripcion=\"Descripcion\"",
+   "RadioButton:codigo=\"Codigo\"",
+   "TextBox:textBox1"
+  ],
+  "botones": [
+   "button1",
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/reportes/frmEmisionARC.Designer.cs": {
+  "titulo": "Emision ARC",
+  "etiquetas": [
+   "Hasta",
+   "Desde"
+  ],
+  "entradas": [
+   "DateTimePicker:dateTimePicker2",
+   "DateTimePicker:dateTimePicker1",
+   "RadioButton:radioButton2=\"Un Proveedor\"",
+   "RadioButton:radioButton1=\"Un Trabajador\"",
+   "RadioButton:radioButton5=\"Todos\"",
+   "RadioButton:radioButton4=\"Todos los Proveedores\"",
+   "RadioButton:radioButton3=\"Todos los Trabajadores\""
+  ],
+  "botones": [
+   "Cancelar",
+   "Aceptar",
+   "..."
+  ],
+  "columnas": []
+ },
+ "formularios/reportes/frmReporteProductos.Designer.cs": {
+  "titulo": "frmReporteProductos",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [
+   "button1"
+  ],
+  "columnas": []
+ },
+ "formularios/tesoreria/frmRecibodeIngreso.Designer.cs": {
+  "titulo": "Recibo de Ingreso",
+  "etiquetas": [
+   "Fecha",
+   "Cliente",
+   "Tipo",
+   "Fecha",
+   "Forma de Pago",
+   "Monto",
+   "Numero",
+   "Cuenta",
+   "Banco",
+   "Auxiliar",
+   "Cuenta",
+   "Monto",
+   "Descripcion",
+   "Monto Restante",
+   "Monto Anticipo",
+   "Monto Pagos",
+   "Monto Facturas",
+   "Monto Documentos",
+   "Diferencia",
+   "Monto de Pagos",
+   "Monto a Cancelar",
+   "Monto Documento",
+   "Caja",
+   "Cambio",
+   "Divisa",
+   "N. Comprobante",
+   "N. Pago / Anticipo",
+   "Cobrador",
+   "Debito",
+   "Credito",
+   "N. Recibo Cobro",
+   "Caja",
+   "Monto Caja"
+  ],
+  "entradas": [
+   "DateTimePicker:dateTimePicker1",
+   "ComboBox:cmbTipo",
+   "TextBox:txtMontoFP",
+   "TextBox:txtNumero",
+   "TextBox:txtNumeroCuenta",
+   "ComboBox:cmbBanco",
+   "DateTimePicker:fechaPago",
+   "ComboBox:cmbFormaPago",
+   "RadioButton:rbCredito=\"Credito\"",
+   "RadioButton:rbDebito=\"Debito\"",
+   "TextBox:txtMontoMC",
+   "TextBox:txtDescripcion=\"RECIBO DE INGRESO\"",
+   "TextBox:txtMontoRestante=\"0.00\"",
+   "TextBox:txtMontoAnticipo=\"0.00\"",
+   "TextBox:txtMontoPagos=\"0.00\"",
+   "TextBox:txtMontoFacturas=\"0.00\"",
+   "TextBox:txtDiferenciaT=\"0.00\"",
+   "TextBox:txtMontoPagoT=\"0.00\"",
+   "TextBox:txtMontoDocuT=\"0.00\"",
+   "TextBox:txtMontoCanDocP",
+   "TextBox:txtMontoDocP",
+   "TextBox:textBox5",
+   "TextBox:textBox4",
+   "TextBox:txtNumeroComprobante",
+   "TextBox:txtNumeroRecibo",
+   "ComboBox:cmbCobrador",
+   "ComboBox:cmbCaja",
+   "TextBox:txtDebito=\"0,00\"",
+   "TextBox:txtCredito=\"0,00\"",
+   "TextBox:nReciboCobro"
+  ],
+  "botones": [
+   "Salir",
+   "Aceptar",
+   "Agregar",
+   "Eliminar",
+   "Agregar",
+   "Eliminar",
+   "Pagar",
+   "...",
+   "Cancelar",
+   "Aceptar",
+   "Eliminar",
+   "...",
+   "...",
+   "button1"
+  ],
+  "columnas": [
+   "Forma de pago",
+   "Banco",
+   "Cuenta",
+   "Numero",
+   "Fecha",
+   "Monto",
+   "IdBanco",
+   "FormaPago",
+   "Item",
+   "Descripcion",
+   "Cuenta",
+   "Tipo",
+   "Monto D",
+   "Monto C",
+   "TipoNumero",
+   "Auxiliar",
+   "Monto",
+   "Tipo",
+   "Numero Documento",
+   "Numero Fiscal",
+   "Factura Afectada",
+   "Fecha Emision",
+   "Fecha Vencimiento",
+   "Monto Origen",
+   "Monto Iva",
+   "Saldo Documento",
+   "Monto Cancelado",
+   "indice",
+   "FE",
+   "FV",
+   "MO",
+   "MI",
+   "SD",
+   "MC"
+  ]
+ },
+ "formularios/tesoreria/frmRetIvaCli.Designer.cs": {
+  "titulo": "Retencion Iva Clientes",
+  "etiquetas": [
+   "Codigo Cliente",
+   "Numero Fiscal",
+   "% Ret",
+   "Numero Retencion",
+   "Fecha Recibido",
+   "Fecha Retencion",
+   "Retencion",
+   "Fecha",
+   "Iva",
+   "Base Imponible",
+   "Exento",
+   "Neto",
+   "Estado",
+   "Numero",
+   "Documento",
+   "EL MONTO DE LA RETENCION ES DE",
+   "Â¿DESEA CONTINUAR?"
+  ],
+  "entradas": [
+   "TextBox:txtControlFiscal",
+   "ComboBox:cmbPorcRet",
+   "TextBox:txtNumRetenc",
+   "DateTimePicker:fechaRecibido",
+   "DateTimePicker:fecha",
+   "TextBox:txtMontoRet=\"0,00\"",
+   "TextBox:txtFecha",
+   "TextBox:txtEstado",
+   "TextBox:txtIva",
+   "TextBox:txtBaseImponible",
+   "TextBox:txtExento",
+   "TextBox:txtNeto",
+   "TextBox:txtNumDoc",
+   "TextBox:txtTipoDoc",
+   "TextBox:txtComprobante"
+  ],
+  "botones": [
+   "button1",
+   "   Cancelar",
+   "Aceptar",
+   "    Procesar",
+   "    Limpiar",
+   "button4",
+   "button3",
+   "button5",
+   "btnAuxiliar",
+   "      Reimprimir"
+  ],
+  "columnas": []
+ },
+ "formularios/tesoreria/lbxReciboIngreso.Designer.cs": {
+  "titulo": "Recibos de Ingreso",
+  "etiquetas": [],
+  "entradas": [
+   "RadioButton:radioButton1=\"Numero\"",
+   "TextBox:textBox1",
+   "RadioButton:radioButton3=\"Tipo Pago\"",
+   "RadioButton:radioButton2=\"Cliente\""
+  ],
+  "botones": [
+   "Salir",
+   "Imprimir",
+   "Nuevo",
+   "Buscar"
+  ],
+  "columnas": []
+ },
+ "formularios/clientes/frmClientes.Designer.cs": {
+  "titulo": "Lebrun -  FrmClientes",
+  "etiquetas": [
+   "Fax:",
+   "Tipo Persona:",
+   "Vendedor:",
+   "DirecciÃ³n:",
+   "CÃ³digo:",
+   "RazÃ³n Social:",
+   "RIF:",
+   "DirecciÃ³n 2:",
+   "DirecciÃ³n Envio:",
+   "Zona GeogrÃ¡fica:",
+   "Tipo Negocio:",
+   "Zona Postal:",
+   "TelÃ©fono:",
+   "E-mail:",
+   "Transporte:",
+   "% Comision V:",
+   "% Comision C:",
+   "Cobrador:",
+   "NIF:",
+   "Tipo Lista:",
+   "Dia Cobro:",
+   "Representante:",
+   "Auxiliar",
+   "Plan C",
+   "Fecha Fin Vacaciones",
+   "Fecha inicio Vacaciones",
+   "F. Nacimiento:",
+   "Observaciones",
+   "Condicion Pago:",
+   "Situacion:",
+   "Contribuyente Especial:",
+   "Dscto.vtas.3:",
+   "Dscto.vtas.2:",
+   "Dscto.vtas.1:",
+   "Lim Credi:",
+   "cp ff"
+  ],
+  "entradas": [
+   "TextBox:txtTelefono",
+   "TextBox:txtFax",
+   "TextBox:txtDireccion",
+   "TextBox:txtRazonSocial",
+   "TextBox:txtRif",
+   "TextBox:txtDireccion2",
+   "TextBox:txtDireccion3",
+   "ComboBox:cboGeografica",
+   "ComboBox:cboTipoNegocio",
+   "TextBox:txtZonaPostal",
+   "TextBox:txtEmail",
+   "ComboBox:cboTransporte",
+   "ComboBox:cboLista",
+   "TextBox:txtNif",
+   "TextBox:txtRepresentante",
+   "TextBox:txtCodigoCliente=\"Codigo\"",
+   "DateTimePicker:dateTimePicker2",
+   "DateTimePicker:dateTimePicker1",
+   "DateTimePicker:dtpFechaNac",
+   "TextBox:txtObservaciones",
+   "ComboBox:cboCondicionPago",
+   "ComboBox:cboSituacion",
+   "ComboBox:cboTipoPersona",
+   "ComboBox:comboBox1",
+   "ComboBox:cboCPFerle"
+  ],
+  "botones": [
+   "Salir",
+   "Agregar",
+   "cmdBuscarVendedor",
+   "Modificar",
+   "cmdBuscarCobrador",
+   "button2",
+   "button1"
+  ],
+  "columnas": []
+ },
+ "formularios/clientes/lbxClientes.Designer.cs": {
+  "titulo": "Lebrun - Lbx Clientes",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:txtBuscar",
+   "RadioButton:grupo=\"Rif\"",
+   "RadioButton:descripcion=\"Nombre\"",
+   "RadioButton:codigo=\"Codigo\""
+  ],
+  "botones": [
+   "cmdBuscar",
+   "Agregar",
+   "Modificar",
+   "Eliminar",
+   "Imprimir",
+   "Salir",
+   "Limpiar"
+  ],
+  "columnas": []
+ },
+ "formularios/clientes/lbxClientes1.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "formularios/complementos/frmPagare.designer.cs": {
+  "titulo": "Pagare",
+  "etiquetas": [
+   "Fecha Vencimiento:",
+   "Fecha Emision:",
+   "Tipo Doc:",
+   "Monto:",
+   "Documento:",
+   "Proveedor:",
+   "Auxiliar",
+   "Cuenta",
+   "Monto",
+   "Descripcion",
+   "Total Conta",
+   "Total Docu",
+   "Referencia",
+   "Concepto:"
+  ],
+  "entradas": [
+   "DateTimePicker:PickerVencimiento",
+   "DateTimePicker:PickerEmision",
+   "TextBox:txtMonto",
+   "TextBox:txtSufijo=\"0\"",
+   "TextBox:txtDocumento",
+   "TextBox:txtMontoConta",
+   "TextBox:txtDescripcion",
+   "RadioButton:radioCredito=\"Credito\"",
+   "RadioButton:radioDebito=\"Debito\"",
+   "TextBox:txtTotalMov=\"0,00\"",
+   "TextBox:txtTotalDoc=\"0,00\"",
+   "TextBox:txtReferencia",
+   "TextBox:txtConcepto"
+  ],
+  "botones": [
+   "Eliminar",
+   "...",
+   "Agregar",
+   "...",
+   "Agregar",
+   "...",
+   "Eliminar",
+   "Salir",
+   "Aceptar",
+   "..."
+  ],
+  "columnas": [
+   "Item",
+   "Proveedor",
+   "TipoDoc",
+   "Documento",
+   "Sufijo",
+   "Monto",
+   "Fecha Emision",
+   "Fecha Vencimiento",
+   "FE",
+   "FV",
+   "Item",
+   "Cuenta",
+   "Descripcion",
+   "Auxiliar",
+   "Monto Debito",
+   "Monto Credito",
+   "Referencia",
+   "tipoMov",
+   "Descripcion"
+  ]
+ },
+ "formularios/complementos/frmproductos.designer.cs": {
+  "titulo": "Productos",
+  "etiquetas": [
+   "Arancel",
+   "Requiere Unidad de medida",
+   "Iva",
+   "Descripcion Editable",
+   "Utilizacion",
+   "Procedencia",
+   "Promocion",
+   "Metodo Costo",
+   "Estado",
+   "Fabricante",
+   "Descripcion",
+   "Codigo",
+   "Division",
+   "Marca",
+   "Sub-Grupo",
+   "Grupo",
+   "Patente"
+  ],
+  "entradas": [
+   "ComboBox:comboBox9",
+   "ComboBox:comboBox8",
+   "ComboBox:comboBox7",
+   "ComboBox:comboBox6",
+   "ComboBox:comboBox5",
+   "ComboBox:comboBox4",
+   "ComboBox:comboBox3",
+   "ComboBox:comboBox2",
+   "ComboBox:comboBox1",
+   "TextBox:textBox3",
+   "TextBox:textBox2",
+   "TextBox:textBox1",
+   "ComboBox:comboBox10",
+   "TextBox:textBox7",
+   "TextBox:textBox6",
+   "TextBox:textBox5",
+   "TextBox:textBox4"
+  ],
+  "botones": [
+   "...",
+   "...",
+   "...",
+   "..."
+  ],
+  "columnas": []
+ },
+ "formularios/complementos/lbxProductos2.designer.cs": {
+  "titulo": "Productos",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:txtBusqueda",
+   "RadioButton:radioButton10=\"Procedencia\"",
+   "RadioButton:radioButton9=\"Fabricante\"",
+   "RadioButton:radioButton8=\"UtilizaciÃ³n\"",
+   "RadioButton:radioButton7=\"Alicuota\"",
+   "RadioButton:radioButton6=\"DivisiÃ³n\"",
+   "RadioButton:radioButton5=\"Marca\"",
+   "RadioButton:radioButton4=\"Sub-Grupo\"",
+   "RadioButton:radioButton3=\"Grupo\"",
+   "RadioButton:radioButton2=\"DescripciÃ³n\"",
+   "RadioButton:radioButton1=\"CÃ³digo\""
+  ],
+  "botones": [
+   "Modificar",
+   "Agregar",
+   "Eliminar",
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/complementos/lbxProveedores.designer.cs": {
+  "titulo": "Proveedores",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:txtBusqueda",
+   "RadioButton:radioButton2=\"Nombre\"",
+   "RadioButton:radioButton1=\"Codigo\""
+  ],
+  "botones": [
+   "button1",
+   "btnSalir"
+  ],
+  "columnas": []
+ },
+ "formularios/complementos/lbxtipoDocPro.designer.cs": {
+  "titulo": "Tipo de Documento",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:txtBusqueda",
+   "RadioButton:rbtnDescripcion=\"Descripcion\"",
+   "RadioButton:rbtnCodigo=\"Codigo\""
+  ],
+  "botones": [
+   "Buscar"
+  ],
+  "columnas": []
+ },
+ "formularios/contabilidad/frmComprobanteCierre.Designer.cs": {
+  "titulo": "frmComprobanteCierre",
+  "etiquetas": [
+   "Fecha Comprobante Cierre",
+   "Generar Balance ComprobaciÃ³n",
+   "Actualizar Saldo Apertura",
+   "Actualizar Saldo Auxiliares",
+   "Generar Comprobante Cierre"
+  ],
+  "entradas": [
+   "DateTimePicker:dateTimePicker1"
+  ],
+  "botones": [
+   "Salir",
+   "Siguiente",
+   "Cancelar",
+   "Aceptar"
+  ],
+  "columnas": []
+ },
+ "formularios/contabilidad/frmComprobanteContable.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [
+   "Credito:",
+   "Debito:",
+   "Contabilidad",
+   "Fecha Carga",
+   "Fecha Comp.",
+   "Id. Origen",
+   "DescripciÃ³n",
+   "Comprobante",
+   "Plan C",
+   "Auxiliar",
+   "Referencia",
+   "Nro Documento",
+   "Concepto",
+   "Tipo de Movimiento",
+   "Monto Asiento"
+  ],
+  "entradas": [
+   "TextBox:txtCredito=\"0\"",
+   "TextBox:txtDebito=\"0\"",
+   "DateTimePicker:dateTimePicker3",
+   "DateTimePicker:dateTimePicker4",
+   "TextBox:txtDescripcion",
+   "TextBox:textBox5",
+   "TextBox:txtReferencia",
+   "TextBox:txtMontoAsiento",
+   "TextBox:txtConcepto",
+   "RadioButton:rbtCredito=\"CrÃ©dito\"",
+   "RadioButton:rbtDebito=\"DÃ©bito\"",
+   "TextBox:txtNroDocumento"
+  ],
+  "botones": [
+   "Salir",
+   "Eliminar",
+   "Modificar",
+   "Agregar",
+   "Buscar",
+   "Guardar",
+   "Cerrar Definitivo",
+   "Guardar",
+   "Buscar Aux"
+  ],
+  "columnas": [
+   "#",
+   "Plan de Cuentas",
+   "Auxiliar",
+   "Docum",
+   "Referencia",
+   "Descripcion",
+   "Concepto",
+   "Debito",
+   "Credito",
+   "codigo planCuentas",
+   "fecha Transaccion",
+   "ultimaModificacion",
+   "UltimoUsuarioModificacion"
+  ]
+ },
+ "formularios/contabilidad/frmAuxiliarContable.Designer.cs": {
+  "titulo": "Lebrun - Auxiliar Contable",
+  "etiquetas": [
+   "CÃ³digo Plan Cuentas:",
+   "Nombre del Auxiliar:",
+   "CÃ³digo del Auxiliar:",
+   "Los campos en Rojo son Obligatorios",
+   "Monto Apertura:",
+   "Indique las compaÃ±ias que no Procesaran esta Auxiliar",
+   "Clave SupervisiÃ³n"
+  ],
+  "entradas": [
+   "TextBox:txtNombreAuxiliar",
+   "TextBox:txtCodigoAuxiliar",
+   "CheckBox:chkManejaDocumentos=\"Maneja Documentos\"",
+   "TextBox:txtMontoApertura=\"0\"",
+   "RadioButton:rbtEliminar=\"rbtEliminar\"",
+   "RadioButton:rbtModificar=\"rbtModificar\"",
+   "TextBox:txtClave"
+  ],
+  "botones": [
+   "Salir",
+   "Agregar",
+   "Modificar",
+   "Cancelar",
+   "Aceptar"
+  ],
+  "columnas": [
+   "Status",
+   "Nombre CompaÃ±ia"
+  ]
+ },
+ "formularios/contabilidad/frmPlanCuentas.Designer.cs": {
+  "titulo": "Lebrun - Plan de Cuentas",
+  "etiquetas": [
+   "Grupo:",
+   "Sub Grupo:",
+   "Sub Cuenta:",
+   "Auxiliar 1 :",
+   "Nombre de la cuenta:",
+   "Siglas:",
+   "Saldo Inicial Ejercicio:",
+   "Vista Previa:",
+   "Cuenta:",
+   "Los campos en Rojo son Obligatorios",
+   "Indique las compaÃ±ias que no Procesaran esta cuenta",
+   "Clave SupervisiÃ³n"
+  ],
+  "entradas": [
+   "ComboBox:cboGrupo",
+   "ComboBox:cboSubCuenta",
+   "TextBox:txtNombreCuenta",
+   "TextBox:txtSiglas",
+   "CheckBox:chkImprimeBalance=\"Imprime Balance\"",
+   "CheckBox:chckImprimeDiario=\"Imprime Diarios\"",
+   "ComboBox:cboCuenta",
+   "TextBox:txtInicialEjercicio",
+   "ComboBox:cboSubGrupo",
+   "TextBox:txtAuxiliar",
+   "RadioButton:rbtEliminar=\"rbtEliminar\"",
+   "RadioButton:rbtModificar=\"rbtModificar\"",
+   "TextBox:txtClave"
+  ],
+  "botones": [
+   "Agregar",
+   "Salir",
+   "Modificar",
+   "Cancelar",
+   "Aceptar"
+  ],
+  "columnas": [
+   "Status",
+   "Nombre CompaÃ±ia"
+  ]
+ },
+ "formularios/contabilidad/lbxAuxiliarContable.Designer.cs": {
+  "titulo": "lebrun - Auxiliar Contable",
+  "etiquetas": [
+   "CÃ³digo Ã³ DescripciÃ³n",
+   "Auxiliar Contable",
+   "Plan de Cuenta"
+  ],
+  "entradas": [
+   "TextBox:txtBuscar"
+  ],
+  "botones": [
+   "Ver",
+   "Limpiar",
+   "Eliminar",
+   "Buscar"
+  ],
+  "columnas": []
+ },
+ "formularios/contabilidad/lbxAuxiliaresOnly.Designer.cs": {
+  "titulo": "lbxAuxiliaresOnly",
+  "etiquetas": [
+   "CÃ³digo Ã³ DescripciÃ³n"
+  ],
+  "entradas": [
+   "TextBox:txtBuscar"
+  ],
+  "botones": [
+   "Buscar",
+   "Salir",
+   "Limpiar"
+  ],
+  "columnas": []
+ },
+ "formularios/contabilidad/lbxComprobanteContable.Designer.cs": {
+  "titulo": "Lebrun - Lbx Comprobante Contable",
+  "etiquetas": [
+   "Clave SupervisiÃ³n",
+   "Comprobante"
+  ],
+  "entradas": [
+   "TextBox:textBox5",
+   "TextBox:txtClave",
+   "RadioButton:rbtModificar=\"rbtModificar\"",
+   "RadioButton:rbtEliminar=\"rbtEliminar\""
+  ],
+  "botones": [
+   "Modificar",
+   "Nuevo",
+   "Eliminar",
+   "Buscar",
+   "Salir",
+   "Ver",
+   "Limpiar",
+   "Cancelar",
+   "Aceptar"
+  ],
+  "columnas": []
+ },
+ "formularios/contabilidad/lbxPlanCuentas.Designer.cs": {
+  "titulo": "Lebrun - Lbx Plan de Cuentas",
+  "etiquetas": [
+   "CÃ³digo Ã³ DescripciÃ³n"
+  ],
+  "entradas": [
+   "TextBox:txtBuscar"
+  ],
+  "botones": [
+   "Ver",
+   "Modificar",
+   "Limpiar",
+   "Eliminar",
+   "Agregar",
+   "Buscar"
+  ],
+  "columnas": []
+ },
+ "formularios/contabilidad/parametrosContables.Designer.cs": {
+  "titulo": "Lebrun -  Parametros Contables",
+  "etiquetas": [
+   "CÃ³digo Ã³ DescripciÃ³n",
+   "CÃ³digo de CompaÃ±ia",
+   "Siglas",
+   "DescripciÃ³n:",
+   "1ra. Cuenta de Ingresos G. y P.",
+   "Ult. Cuenta de Ingresos G. y P.",
+   "1ra. Cuenta de Ingresos G. y P.",
+   "DescripciÃ³n:",
+   "Siglas",
+   "CÃ³digo de CompaÃ±ia",
+   "Id del Sistema",
+   "1ra. Cuenta de Ingresos G. y P.",
+   "DescripciÃ³n:",
+   "Siglas",
+   "CÃ³digo de CompaÃ±ia",
+   "Id del Sistema",
+   "Cuenta  SuperAvit  del Cierre",
+   "Ultimo Cierre Mensual",
+   "Ultimo Cierre Anual",
+   "Mascara de ImpresiÃ³n",
+   "Nro. Digitos Cuenta",
+   "Clave ComprobaciÃ³n",
+   "Correlativo Sistema",
+   "Los campos en Rojo son Obligatorios",
+   "Ultimo Cierre Diario"
+  ],
+  "entradas": [
+   "TextBox:txtBuscar",
+   "TextBox:txtSiglas",
+   "TextBox:txtDescripcion",
+   "TextBox:txt1CuentaGP",
+   "TextBox:txtUltCuentaGP",
+   "TextBox:textBox3",
+   "TextBox:textBox4",
+   "TextBox:textBox5",
+   "TextBox:textBox6",
+   "ComboBox:comboBox1",
+   "TextBox:textBox7",
+   "TextBox:textBox8",
+   "TextBox:textBox9",
+   "TextBox:textBox10",
+   "ComboBox:comboBox2",
+   "TextBox:txtCuentaSuperAvit",
+   "DateTimePicker:timePickUltimoCierreMensual",
+   "DateTimePicker:TimePickerCierreAnual",
+   "TextBox:txtMascaraImpresion",
+   "CheckBox:chckConsolidaContabilidad=\"Consolida Contabilidad\"",
+   "CheckBox:chkParametroGlobal=\"Es Parametro Global\"",
+   "TextBox:txtClaveCompro",
+   "MaskedTextBox:txtNroDigitosCta",
+   "MaskedTextBox:txtCodigoSiglas",
+   "CheckBox:chkComprobantesDescuadrados=\"Cerrar Comprobantes Descuadrados\"",
+   "DateTimePicker:dateTimePickerDiario"
+  ],
+  "botones": [
+   "Buscar",
+   "Eliminar",
+   "Agregar",
+   "Salir",
+   "Limpiar",
+   "Agregar",
+   "Limpiar",
+   "Modificar",
+   "Modificar",
+   "Ver"
+  ],
+  "columnas": []
+ },
+ "formularios/facturacion/frmFactura.Designer.cs": {
+  "titulo": "Lebrun - Facturacion",
+  "etiquetas": [
+   "Cliente",
+   "Nombre",
+   "Nombre",
+   "Vend",
+   "Num Fac",
+   "Num Contr",
+   "Des G",
+   "Plazo Dias",
+   "Fecha",
+   "Nombre",
+   "Producto",
+   "Cantidad",
+   "Almacen",
+   "Precio",
+   "Condicion",
+   "Modo Pago",
+   "Monto Abonar",
+   "Sub - Total",
+   "Des - Items",
+   "Base",
+   "Total Prod.",
+   "Iva",
+   "Neto",
+   "Unidad",
+   "Divisa",
+   "Pagado",
+   "Tarjetas",
+   "Contado",
+   "Efectivo",
+   "Cambio",
+   "Cheques",
+   "NÂº",
+   "Banco",
+   "Z",
+   "RIF",
+   "MOSTRAR PRECIO",
+   "Origen"
+  ],
+  "entradas": [
+   "DateTimePicker:dateTimePicker1",
+   "ComboBox:comboBox2",
+   "ComboBox:cboCondicionPago",
+   "ComboBox:cboModoPago",
+   "ComboBox:cboUnidad",
+   "ComboBox:cboDivisa",
+   "CheckBox:chkCambioPrecio=\"Cambiar Precio\"",
+   "ComboBox:cboOrigenVenta"
+  ],
+  "botones": [
+   "cmdBuscarVendedor",
+   "cmdBuscarProducto",
+   "Eliminar",
+   "Agregar",
+   "Cancelar Documento",
+   "Confirmar Documento",
+   "Eliminar",
+   "Agregar",
+   "cmdlbxBancos",
+   "cmdConfirmarDocumento",
+   "cmdSalir",
+   "button1",
+   "Regresar",
+   "Ver"
+  ],
+  "columnas": [
+   "procedencia",
+   "tipoIva",
+   "Producto",
+   "Med",
+   "Cod Num",
+   "Cod Tipo",
+   "Detalle Tipo"
+  ]
+ },
+ "formularios/facturacion/lbxFacturas.Designer.cs": {
+  "titulo": "Lebrun - ",
+  "etiquetas": [
+   "NÃºmero, Cliente, Num. Fiscal",
+   "Fecha Hasta",
+   "Fecha Desde"
+  ],
+  "entradas": [
+   "TextBox:txtBuscar",
+   "CheckBox:chkFecha=\"Por Fecha\"",
+   "DateTimePicker:dateTimePicker2",
+   "DateTimePicker:dateTimePicker1"
+  ],
+  "botones": [
+   "Limpiar",
+   "Salir",
+   "Imprimir",
+   "Ver",
+   "Devolucion",
+   "Agregar",
+   "cmdBuscar"
+  ],
+  "columnas": []
+ },
+ "formularios/importaciones/frmImportaciones.Designer.cs": {
+  "titulo": "Importaciones",
+  "etiquetas": [
+   "Orden:"
+  ],
+  "entradas": [],
+  "botones": [
+   "Salir"
+  ],
+  "columnas": []
+ },
+ "formularios/importaciones/frmOrdenCompra.designer.cs": {
+  "titulo": "Orden de Compra",
+  "etiquetas": [
+   "Moneda",
+   "Fecha recepcion",
+   "Fecha Orden",
+   "Observaciones",
+   "Condicion",
+   "Proveedor",
+   "Orden nro",
+   "Producto",
+   "Unidad",
+   "Costo",
+   "Cantidad",
+   "% Desc",
+   "Referencia",
+   "Valor Cambio",
+   "Total en Bs",
+   "Des Docu",
+   "Total Orden",
+   "Des Item",
+   "Total",
+   "Unidades",
+   "Items",
+   "Descuento2",
+   "Descuento1",
+   "Descuento3",
+   "%Arancel",
+   "Cod Arancel"
+  ],
+  "entradas": [
+   "TextBox:txtOrdenNum",
+   "TextBox:txtValCamb=\"0\"",
+   "TextBox:txtDocumento",
+   "TextBox:txtSufijo=\"0\"",
+   "TextBox:txtTotalCambio=\"0,00\"",
+   "TextBox:txtDesDocum=\"0,00\"",
+   "TextBox:txtDesitem=\"0,00\"",
+   "TextBox:txtTotal1=\"0,00\"",
+   "TextBox:txtUnidades=\"0,00\"",
+   "TextBox:txtItems=\"0\"",
+   "TextBox:txtTotal=\"0,00\"",
+   "TextBox:txtConcepto",
+   "TextBox:txtPorcArancel=\"0,00\"",
+   "TextBox:txtCodArancel"
+  ],
+  "botones": [
+   "...",
+   "..."
+  ],
+  "columnas": [
+   "item",
+   "Codigo",
+   "Producto",
+   "Unidad",
+   "Cant",
+   "Costo",
+   "Des1",
+   "Des2",
+   "Des3",
+   "Total",
+   "Proveedor",
+   "Documento",
+   "Sufijo",
+   "Hora",
+   "FechaCarga",
+   "FechaRecep",
+   "TipoDoc",
+   "CostoDes",
+   "TotalDesc",
+   "PorcArancel"
+  ]
+ },
+ "formularios/importaciones/gastosImportaciones.Designer.cs": {
+  "titulo": "gastosImportaciones",
+  "etiquetas": [
+   "gasto1"
+  ],
+  "entradas": [
+   "TextBox:textBox1"
+  ],
+  "botones": [],
+  "columnas": []
+ },
+ "formularios/importaciones/lbxImportaciones.Designer.cs": {
+  "titulo": "Importaciones",
+  "etiquetas": [
+   "Buscar"
+  ],
+  "entradas": [
+   "TextBox:textBox1"
+  ],
+  "botones": [
+   "Buscar",
+   "Cargar",
+   "Eliminar",
+   "Imprimir",
+   "Modificar",
+   "Proyec."
+  ],
+  "columnas": []
+ },
+ "formularios/importaciones/lbxOrdenDeCompra.designer.cs": {
+  "titulo": "Ordenes de Compra",
+  "etiquetas": [],
+  "entradas": [
+   "TextBox:txtBusqueda",
+   "RadioButton:radioButton3=\"Documento\"",
+   "RadioButton:radioButton2=\"Nombre Proveedor\"",
+   "RadioButton:radioButton1=\"Cod Proveedor\""
+  ],
+  "botones": [
+   "Salir",
+   "Imprimir Importada",
+   "Imprimir"
+  ],
+  "columnas": []
+ },
+ "formularios/importaciones/ProductosImportaciones.Designer.cs": {
+  "titulo": "ProductosImportaciones",
+  "etiquetas": [
+   "Produtos"
+  ],
+  "entradas": [
+   "TextBox:textBox1"
+  ],
+  "botones": [],
+  "columnas": []
+ },
+ "formularios/transporte/lbxTransporte.Designer.cs": {
+  "titulo": "Lebrun - lbxTransporte",
+  "etiquetas": [
+   "CÃ³digo ,Nombre, CÃ³digo Proveedor",
+   "CÃ³digo: ",
+   "DescripciÃ³n: ",
+   "Estatus:",
+   "Proveedor: ",
+   "Observaciones"
+  ],
+  "entradas": [
+   "TextBox:txtBuscar",
+   "TextBox:txtCodigoTrans",
+   "TextBox:txtDescripcion",
+   "TextBox:txtProveedor",
+   "ComboBox:comboBox1",
+   "TextBox:txtObservaciones"
+  ],
+  "botones": [
+   "Limpiar",
+   "Salir",
+   "Eliminar",
+   "Modificar",
+   "Agregar",
+   "cmdBuscar",
+   "Salir",
+   "Modificar",
+   "Agregar"
+  ],
+  "columnas": []
+ },
+ "formularios/vendedores/lbxVendedores.Designer.cs": {
+  "titulo": "Lebrun - LbxVendedores",
+  "etiquetas": [
+   "CÃ³digo Vendedor ,Nombre"
+  ],
+  "entradas": [
+   "TextBox:txtBuscar"
+  ],
+  "botones": [
+   "Limpiar",
+   "Salir",
+   "Imprimir",
+   "Eliminar",
+   "Modificar",
+   "Agregar",
+   "cmdBuscar"
+  ],
+  "columnas": []
+ },
+ "Properties/Resources.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Properties/Settings.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/bulto/dataset/DataSetBultos.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/bulto/frmContenedorBulto.Designer.cs": {
+  "titulo": "frmContenedorBulto",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/compras/dataset/DataSetOrden.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/compras/frmContenedorCompras.Designer.cs": {
+  "titulo": "Reporte",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/compras/frmContenedorOrden.Designer.cs": {
+  "titulo": "Reporte Orden Compras",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/DataSet11.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/datasetARC.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/datasetPagare1.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/dtProductoLista.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/facturacion/dataSet/DataSetCierreCaja.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/facturacion/frmReporteCierreCaja.Designer.cs": {
+  "titulo": "frmReporteCierreCaja",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/frmContenedorARC.Designer.cs": {
+  "titulo": "ARC",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/frmContenedorProductos.Designer.cs": {
+  "titulo": "frmContenedorProductos",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/frmReporte.Designer.cs": {
+  "titulo": "Reporte",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/MovContab/dataset/datasetMovContab1.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/MovContab/frmConteMovContab.Designer.cs": {
+  "titulo": "Comprobante Contable",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/pagos/dataset/dataSetVoucher.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/pagos/frmContendorRptCompras.Designer.cs": {
+  "titulo": "Reporte",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/cotizacion/dataset/dsPedido1.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/cotizacion/frmContePedido.designer.cs": {
+  "titulo": "frmContePedido",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/pedido/dataset/dsPedido1.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/pedido/frmReportePedido.designer.cs": {
+  "titulo": "frmReportePedido",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/prefactura/dataset/dsPrefactura1.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/prefactura/frmReportePrefactura.designer.cs": {
+  "titulo": "frmReportePrefactura",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/producto/dataset/dsCambioPrecio.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/producto/frmConteProductos.Designer.cs": {
+  "titulo": "frmConteProductos",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/retenciones/dataset/DataSetRetencionISLR.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/retenciones/dataset/dataSetRetencionIva.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/retenciones/frmContenedorRetISLR.Designer.cs": {
+  "titulo": "frmContenedorRetISLR",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/retenciones/frmContenedorRetIva.Designer.cs": {
+  "titulo": "Retencion Iva",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ },
+ "Reportes/tesoreria/dataset/datasetRecibo.Designer.cs": {
+  "titulo": "",
+  "etiquetas": [],
+  "entradas": [],
+  "botones": [],
+  "columnas": []
+ }
+}
