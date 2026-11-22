@@ -185,3 +185,15 @@ model Parroquia {
   @@unique([municipioId, codigo])
   @@map("parroquia")
 }
+
+/// Centros de costo: dónde se imputa un gasto o una compra. Equivale a admcentrocostos.
+model CentroCosto {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("centro_costo")
+}

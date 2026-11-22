@@ -30,6 +30,18 @@ model FacturaCompra {
   /// REGISTRADA, ANULADA
   estado           String              @default("REGISTRADA")
   observaciones    String?
+  /// Fechas del documento: la de recepción de la mercancía y la del libro de compras (por omisión, la de emisión).
+  fechaRecepcion   DateTime?           @map("fecha_recepcion") @db.Date
+  fechaLibro       DateTime?           @map("fecha_libro") @db.Date
+  recibidoPor      String?             @map("recibido_por")
+  /// Planilla de importación (si es una compra del exterior).
+  planillaImportacion String?          @map("planilla_importacion")
+  condicionPagoId  String?             @map("condicion_pago_id") @db.Uuid
+  transporteId     String?             @map("transporte_id") @db.Uuid
+  centroCostoId    String?             @map("centro_costo_id") @db.Uuid
+  /// Cuenta contable de la base (gasto o activo) cuando no es mercancía; vacío = el concepto de compras.
+  cuentaGastoId    String?             @map("cuenta_gasto_id") @db.Uuid
+  lineas           FacturaCompraLinea[]
   creadoPorId      String?             @map("creado_por_id") @db.Uuid
   creadoPorNombre  String?             @map("creado_por_nombre")
   creadoEn         DateTime            @default(now()) @map("creado_en") @db.Timestamptz(6)
@@ -100,4 +112,17 @@ model PagoAplicacion {
   @@unique([pagoId, facturaId])
   @@index([facturaId])
   @@map("pago_aplicacion")
+}
+
+/// Desglose del documento del proveedor por alícuota (exento 0 %, reducida, general…): base e IVA en USD. Sin líneas (documentos anteriores) el libro deduce la alícuota.
+model FacturaCompraLinea {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  facturaId  String        @map("factura_id") @db.Uuid
+  factura    FacturaCompra @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  porcentaje Decimal       @db.Decimal(7, 4)
+  base       Decimal       @db.Decimal(18, 4)
+  iva        Decimal       @default(0) @db.Decimal(18, 4)
+
+  @@index([facturaId])
+  @@map("factura_compra_linea")
 }

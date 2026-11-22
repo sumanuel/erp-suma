@@ -37,22 +37,56 @@ export type DatosFacturaCompra = {
   subtotal: number;
   iva: number;
   observaciones: string | null;
+  /// Desglose por alícuota (exento 0 %, reducida, general…). Si viene, la base y el IVA del documento son sus sumas y `subtotal`/`iva` se ignoran.
+  desglose?: { porcentaje: number; base: number; iva: number }[];
+  fechaRecepcion?: Date | null;
+  /// Fecha del libro de compras (período fiscal); por omisión, la de emisión.
+  fechaLibro?: Date | null;
+  recibidoPor?: string | null;
+  planillaImportacion?: string | null;
+  condicionPagoId?: string | null;
+  transporteId?: string | null;
+  centroCostoId?: string | null;
+  /// Cuenta contable de la base cuando no es mercancía (gasto, activo); vacío = el concepto de compras.
+  cuentaGastoId?: string | null;
 };
 
 export async function registrarFacturaCompra(db: Db, actor: Actor, d: DatosFacturaCompra): Promise<ResultadoCxp<{ id: string; numero: number }>> {
   return ejecutar(async () => {
+    const desglose = (d.desglose ?? []).filter((x) => x.base > 0 || x.iva > 0);
+    if (d.desglose) {
+      if (desglose.length === 0) throw new CxpError("Indica al menos una base del documento.");
+      if (desglose.length > 10) throw new CxpError("Máximo 10 alícuotas por documento.");
+      if (new Set(desglose.map((x) => x.porcentaje)).size !== desglose.length) throw new CxpError("Hay una alícuota repetida: suma sus bases en una sola fila.");
+      for (const x of desglose) {
+        if (!Number.isFinite(x.porcentaje) || x.porcentaje < 0 || x.porcentaje > 100) throw new CxpError("La alícuota debe estar entre 0 y 100.");
+        if (x.porcentaje === 0 && x.iva !== 0) throw new CxpError("Una base exenta (0 %) no lleva IVA.");
+        // El IVA que trae la factura puede diferir unos centavos del cálculo (redondeo del proveedor), no más.
+        if (Math.abs(x.iva - (x.base * x.porcentaje) / 100) > Math.max(0.02, x.base * 0.001)) throw new CxpError(`El IVA de la base al ${x.porcentaje} % no corresponde (${x.iva} contra ${Math.round(x.base * x.porcentaje) / 100}).`);
+      }
+      d = { ...d, subtotal: Math.round(desglose.reduce((s, x) => s + x.base, 0) * 10000) / 10000, iva: Math.round(desglose.reduce((s, x) => s + x.iva, 0) * 10000) / 10000 };
+    }
     for (const [campo, v] of [["La base", d.subtotal], ["El IVA", d.iva]] as const) {
       if (!Number.isFinite(v) || v < 0 || v > 1e12 || decimales(v) > 4) throw new CxpError(`${campo} debe ser un monto válido (hasta 4 decimales).`);
     }
     if (!(d.subtotal > 0)) throw new CxpError("La base de la factura debe ser mayor que 0.");
     if (!Number.isInteger(d.diasCredito) || d.diasCredito < 0 || d.diasCredito > 365) throw new CxpError("Los días de crédito deben ser un entero entre 0 y 365.");
     if (d.fecha.getTime() > hoyCaracas().getTime()) throw new CxpError("La fecha de la factura no puede ser futura.");
+    if (d.fechaRecepcion && (d.fechaRecepcion.getTime() > hoyCaracas().getTime() || d.fechaRecepcion.getTime() < d.fecha.getTime())) throw new CxpError("La fecha de recepción no puede ser futura ni anterior a la de emisión.");
+    if (d.fechaLibro && d.fechaLibro.getTime() < d.fecha.getTime()) throw new CxpError("La fecha del libro de compras no puede ser anterior a la de emisión.");
     const total = Math.round((d.subtotal + d.iva) * 10000) / 10000;
     const vence = new Date(d.fecha.getTime() + d.diasCredito * 86_400_000);
 
     const r = await db.$transaction(async (tx) => {
       const p = await tx.proveedor.findUnique({ where: { id: d.proveedorId }, select: { activo: true } });
       if (!p || !p.activo) throw new CxpError("El proveedor no existe o está inactivo.");
+      if (d.condicionPagoId && !(await tx.condicionPago.findUnique({ where: { id: d.condicionPagoId }, select: { activo: true } }))?.activo) throw new CxpError("La condición de pago no existe o está inactiva.");
+      if (d.transporteId && !(await tx.transporte.findUnique({ where: { id: d.transporteId }, select: { activo: true } }))?.activo) throw new CxpError("El transporte no existe o está inactivo.");
+      if (d.centroCostoId && !(await tx.centroCosto.findUnique({ where: { id: d.centroCostoId }, select: { activo: true } }))?.activo) throw new CxpError("El centro de costo no existe o está inactivo.");
+      if (d.cuentaGastoId) {
+        const g = await tx.cuentaContable.findUnique({ where: { id: d.cuentaGastoId }, select: { posteable: true, activo: true } });
+        if (!g?.posteable || !g.activo) throw new CxpError("La cuenta contable elegida no existe o no recibe movimientos.");
+      }
       if (d.ordenId) {
         const o = await tx.ordenCompra.findUnique({ where: { id: d.ordenId }, select: { proveedorId: true, estado: true } });
         if (!o || o.proveedorId !== d.proveedorId) throw new CxpError("La orden de compra no es de este proveedor.");
@@ -66,6 +100,9 @@ export async function registrarFacturaCompra(db: Db, actor: Actor, d: DatosFactu
         data: {
           tasaUsd: tasa.valor, proveedorId: d.proveedorId, ordenId: d.ordenId, documento: d.documento, numeroControl: d.numeroControl, fecha: d.fecha, diasCredito: d.diasCredito,
           fechaVencimiento: vence, subtotal: d.subtotal, iva: d.iva, total, saldo: total, observaciones: d.observaciones, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
+          fechaRecepcion: d.fechaRecepcion ?? null, fechaLibro: d.fechaLibro ?? null, recibidoPor: d.recibidoPor?.trim().slice(0, 60) || null, planillaImportacion: d.planillaImportacion?.trim().slice(0, 30) || null,
+          condicionPagoId: d.condicionPagoId || null, transporteId: d.transporteId || null, centroCostoId: d.centroCostoId || null, cuentaGastoId: d.cuentaGastoId || null,
+          ...(desglose.length ? { lineas: { create: desglose.map((x) => ({ porcentaje: x.porcentaje, base: x.base, iva: x.iva })) } } : {}),
         },
         select: { id: true, numero: true },
       });

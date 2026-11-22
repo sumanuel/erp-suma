@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
+import { FilasCondicionesCompra } from "@/components/compras/filas-condiciones-compra";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { ESTADOS_ORDEN, numeroOrden, numeroRecepcion, type EstadoOrden } from "@/lib/compras/calculos";
 import { formatoCantidad, formatoFecha, formatoFechaHora, formatoUsd } from "../formato";
@@ -50,6 +51,7 @@ export default async function DetalleOrden({ params }: { params: Promise<{ id: s
           <div><dt className="text-gris-500">Fecha</dt><dd>{formatoFecha(o.fecha)}</dd></div>
           <div><dt className="text-gris-500">Entrega esperada</dt><dd>{formatoFecha(o.fechaEsperada)}</dd></div>
           <div><dt className="text-gris-500">Creada por</dt><dd>{o.creadoPorNombre ?? "—"} · {formatoFechaHora(o.creadoEn)}</dd></div>
+          <FilasCondicionesCompra db={ctx.db} doc={o} />
           <div><dt className="text-gris-500">Observaciones</dt><dd>{o.observaciones ?? "—"}</dd></div>
         </dl>
       </Tarjeta>

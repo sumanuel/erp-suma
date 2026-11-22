@@ -105,14 +105,16 @@ export const revertirCobro = (tx: Tx, actor: Actor, numero: number) => revertir(
 
 // ---------- Compras ----------
 export async function contabilizarFacturaCompra(tx: Tx, actor: Actor, id: string) {
-  const f = await tx.facturaCompra.findUniqueOrThrow({ where: { id }, include: { proveedor: { select: { razonSocial: true } } } });
+  const f = await tx.facturaCompra.findUniqueOrThrow({ where: { id }, include: { proveedor: { select: { razonSocial: true } }, lineas: true } });
   const tasa = Number(f.tasaUsd);
-  const baseBs = bs(Number(f.subtotal), tasa);
-  const totalBs = bs(Number(f.total), tasa);
+  // Con desglose por alícuota, cada base y cada IVA se pasa a bolívares por separado (así el asiento y el libro de compras coinciden al centavo).
+  const baseBs = f.lineas.length ? redondear2(f.lineas.reduce((s, l) => s + bs(Number(l.base), tasa), 0)) : bs(Number(f.subtotal), tasa);
+  const ivaBs = f.lineas.length ? redondear2(f.lineas.reduce((s, l) => s + bs(Number(l.iva), tasa), 0)) : redondear2(bs(Number(f.total), tasa) - baseBs);
+  const totalBs = f.lineas.length ? redondear2(baseBs + ivaBs) : bs(Number(f.total), tasa);
   const ref = numeroFacturaCompra(f.numero);
   await publicar(tx, actor, {
-    origen: "FACTURA_COMPRA", referencia: ref, fecha: f.fecha, descripcion: `Factura de proveedor ${ref} (${f.documento}) · ${f.proveedor.razonSocial}`,
-    lineas: [{ concepto: "COMPRAS", debe: baseBs }, { concepto: "IVA_CREDITO", debe: redondear2(totalBs - baseBs) }, { concepto: "CXP", haber: totalBs }],
+    origen: "FACTURA_COMPRA", referencia: ref, fecha: f.fechaLibro ?? f.fecha, descripcion: `Factura de proveedor ${ref} (${f.documento}) · ${f.proveedor.razonSocial}`,
+    lineas: [f.cuentaGastoId ? { cuentaId: f.cuentaGastoId, debe: baseBs } : { concepto: "COMPRAS", debe: baseBs }, { concepto: "IVA_CREDITO", debe: ivaBs }, { concepto: "CXP", haber: totalBs }],
   });
 }
 export const revertirFacturaCompra = (tx: Tx, actor: Actor, numero: number) => revertir(tx, actor, "FACTURA_COMPRA", "ANULACION_FACTURA_COMPRA", numeroFacturaCompra(numero), `Anulación de factura de proveedor ${numeroFacturaCompra(numero)}`);

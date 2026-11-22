@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
+import { FilasDocumentoProveedor } from "@/components/compras/filas-condiciones-compra";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { numeroOrden } from "@/lib/compras/calculos";
 import { ESTADOS_FACTURA_COMPRA, ESTADOS_PAGO, numeroFacturaCompra, numeroPago, type EstadoFacturaCompra, type EstadoPago } from "@/lib/cxp/estados";
@@ -18,7 +19,7 @@ export default async function DetalleFacturaProveedor({ params }: { params: Prom
   const f = await ctx.db.facturaCompra.findUnique({
     where: { id },
     include: {
-      proveedor: { select: { id: true, razonSocial: true, documento: true } }, orden: { select: { id: true, numero: true } },
+      lineas: { orderBy: { porcentaje: "asc" } }, proveedor: { select: { id: true, razonSocial: true, documento: true } }, orden: { select: { id: true, numero: true } },
       notas: { orderBy: { numero: "asc" } }, retenciones: { orderBy: { numero: "asc" } },
       aplicaciones: { include: { pago: { select: { id: true, numero: true, estado: true, fecha: true } } }, orderBy: { pago: { numero: "asc" } } },
     },
@@ -59,6 +60,7 @@ export default async function DetalleFacturaProveedor({ params }: { params: Prom
           {Number(f.ajuste) !== 0 ? <div><dt className="text-gris-500">Ajuste por notas USD</dt><dd className="tabular-nums">{formatoUsd(Number(f.ajuste))}</dd></div> : null}
           <div><dt className="text-gris-500">Saldo por pagar USD</dt><dd className="font-semibold tabular-nums">{formatoUsd(Number(f.saldo))}</dd></div>
           <div className="sm:col-span-2"><dt className="text-gris-500">Registrada por</dt><dd>{f.creadoPorNombre ?? "—"} · {formatoFechaHora(f.creadoEn)}</dd></div>
+          <FilasDocumentoProveedor db={ctx.db} f={f} />
           <div className="sm:col-span-2"><dt className="text-gris-500">Observaciones</dt><dd>{f.observaciones ?? "—"}</dd></div>
           {f.estado === "ANULADA" ? <div className="sm:col-span-2 xl:col-span-4"><dt className="text-gris-500">Anulada</dt><dd>{f.anuladaPorNombre ?? "—"} · {formatoFechaHora(f.anuladaEn)} · {f.motivoAnulacion}</dd></div> : null}
         </dl>

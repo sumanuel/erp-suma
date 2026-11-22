@@ -21,7 +21,19 @@ const Orden = z.object({
     cantidad: z.number().finite(),
     costoUnitario: z.number().finite(),
     descuento: z.number().finite(),
+    descuento2: z.number().finite().optional(),
+    descuento3: z.number().finite().optional(),
+    arancelId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null).nullable().optional(),
   })).max(500),
+  encabezado: z.object({
+    condicionPagoId: z.string().uuid().nullable(),
+    transporteId: z.string().uuid().nullable(),
+    centroCostoId: z.string().uuid().nullable(),
+    referencia: z.string().trim().max(60).nullable(),
+    moneda: z.enum(["USD", "VES"]),
+    valorCambio: z.number().finite().nullable(),
+    descuentos: z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]),
+  }).optional(),
 });
 
 /** Busca productos activos por código, descripción o código de barras para armar las líneas de la orden. */

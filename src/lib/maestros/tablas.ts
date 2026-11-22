@@ -182,6 +182,21 @@ export const tarifasRetencion: Maestro = {
   mensajeDuplicado: "Ya existe un concepto con este número.",
 };
 
+export const centrosCosto: Maestro = {
+  id: "centros-costo", modulo: "tablas", ruta: "/tablas/centros-costo", entidad: "centro_costo", singular: "centro de costo", plural: "centros de costo", genero: "el",
+  delegado: (db) => db.centroCosto as unknown as Delegado, clave,
+  campos: [
+    { nombre: "codigo", etiqueta: "Código", tipo: "texto", max: 15, requerido: true, soloCrear: true, ayuda: "No se puede cambiar después." },
+    { nombre: "nombre", etiqueta: "Nombre", tipo: "texto", max: 100, requerido: true, ancho: 2 },
+    { nombre: "activo", etiqueta: "Activo", tipo: "booleano" },
+  ],
+  valoresIniciales: { activo: true },
+  columnas: [{ id: "nombre", titulo: "Nombre", campo: "nombre", fija: true }, { id: "codigo", titulo: "Código", campo: "codigo" }, { id: "activo", titulo: "Estado", campo: "activo", etiqueta: etiquetaActivo }],
+  busqueda: { texto: "Buscar por código o nombre", campos: ["codigo", "nombre"] }, filtros: [filtroActivo],
+  orden: { columna: "codigo", dir: "asc" }, titulo: (f) => String(f.nombre ?? ""), descripcion: (f) => `Código ${f.codigo}`,
+  preparar: mayusculas, mensajeDuplicado: "Ya existe un centro de costo con este código.", mensajeDependientes: "No se puede eliminar: hay órdenes o documentos en este centro de costo. Márcalo como inactivo en su lugar.",
+};
+
 // ---------- Geografía ----------
 
 const geo = (id: string, modulo: string, ruta: string, entidad: string, singular: string, plural: string, genero: "el" | "la", delegado: Maestro["delegado"]) => ({ id, modulo, ruta, entidad, singular, plural, genero, delegado, clave });

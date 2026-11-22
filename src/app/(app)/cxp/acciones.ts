@@ -52,8 +52,17 @@ const FacturaProveedor = z.object({
   numeroControl: z.string().trim().max(60).transform((v) => v || null),
   fecha: Fecha,
   diasCredito: z.number().int("Días de crédito inválidos").min(0).max(365),
-  subtotal: z.number().finite("Base inválida"),
-  iva: z.number().finite("IVA inválido"),
+  subtotal: z.number().finite("Base inválida").optional(),
+  iva: z.number().finite("IVA inválido").optional(),
+  desglose: z.array(z.object({ porcentaje: z.number().finite(), base: z.number().finite(), iva: z.number().finite() })).max(10).optional(),
+  fechaRecepcion: z.union([Fecha, z.literal("")]).transform((v) => (v === "" ? null : v)).optional(),
+  fechaLibro: z.union([Fecha, z.literal("")]).transform((v) => (v === "" ? null : v)).optional(),
+  recibidoPor: z.string().trim().max(60).transform((v) => v || null).optional(),
+  planillaImportacion: z.string().trim().max(30).transform((v) => v || null).optional(),
+  condicionPagoId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null).optional(),
+  transporteId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null).optional(),
+  centroCostoId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null).optional(),
+  cuentaGastoId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null).optional(),
   observaciones: z.string().trim().max(1000).transform((v) => v || null),
 });
 
@@ -61,7 +70,7 @@ export async function registrarFacturaProveedor(datos: unknown): Promise<EstadoF
   const ctx = await requerirPermisoAccion("cxp", "crear");
   const r = FacturaProveedor.safeParse(datos);
   if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
-  const res = await registrarFacturaCompra(ctx.db, ctx.usuario, r.data);
+  const res = await registrarFacturaCompra(ctx.db, ctx.usuario, { ...r.data, subtotal: r.data.subtotal ?? 0, iva: r.data.iva ?? 0 });
   if (!res.ok) return { error: res.error };
   revalidatePath("/cxp");
   revalidatePath("/cxp/facturas");

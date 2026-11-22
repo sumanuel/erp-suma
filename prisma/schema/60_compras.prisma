@@ -12,6 +12,19 @@ model OrdenCompra {
   /// BORRADOR, EMITIDA, RECIBIDA_PARCIAL, RECIBIDA, ANULADA
   estado          String             @default("BORRADOR")
   observaciones   String?
+  /// Condiciones de la orden (la condición y el transporte vienen del proveedor y se pueden cambiar).
+  condicionPagoId String?            @map("condicion_pago_id") @db.Uuid
+  transporteId    String?            @map("transporte_id") @db.Uuid
+  centroCostoId   String?            @map("centro_costo_id") @db.Uuid
+  /// Número o referencia del proveedor (cotización, pedido, proforma).
+  referencia      String?
+  /// USD o VES: moneda en que el proveedor cotiza. Con VES los costos de las líneas se escriben en bolívares y se convierten a USD con el valor de cambio.
+  moneda          String             @default("USD")
+  valorCambio     Decimal?           @map("valor_cambio") @db.Decimal(18, 8)
+  /// Descuentos 1, 2 y 3 del documento (%): se aplican en cadena a todas las líneas, dentro del descuento efectivo de cada una.
+  descuentoGlobal1 Decimal           @default(0) @map("descuento_global_1") @db.Decimal(7, 4)
+  descuentoGlobal2 Decimal           @default(0) @map("descuento_global_2") @db.Decimal(7, 4)
+  descuentoGlobal3 Decimal           @default(0) @map("descuento_global_3") @db.Decimal(7, 4)
   /// Suma de las líneas ya con descuento, sin IVA.
   subtotal        Decimal            @default(0) @db.Decimal(18, 4)
   descuento       Decimal            @default(0) @db.Decimal(18, 4)
@@ -42,8 +55,17 @@ model OrdenCompraLinea {
   cantidad         Decimal           @db.Decimal(18, 4)
   /// Costo unitario en USD, antes de descuento.
   costoUnitario    Decimal           @map("costo_unitario") @db.Decimal(18, 4)
-  /// Porcentaje de descuento de la línea.
+  /// Costo unitario en la moneda de la orden (nulo cuando la orden es en USD).
+  costoMoneda      Decimal?          @map("costo_moneda") @db.Decimal(18, 4)
+  /// Porcentaje de descuento EFECTIVO de la línea (los tres de la línea y los del documento combinados); con él se calcula el total.
   descuento        Decimal           @default(0) @db.Decimal(7, 4)
+  /// Los tres descuentos que se escribieron en la línea.
+  descuento1       Decimal           @default(0) @map("descuento_1") @db.Decimal(7, 4)
+  descuento2       Decimal           @default(0) @map("descuento_2") @db.Decimal(7, 4)
+  descuento3       Decimal           @default(0) @map("descuento_3") @db.Decimal(7, 4)
+  /// Arancel de la línea y su porcentaje al momento de la orden (importaciones).
+  arancelId        String?           @map("arancel_id") @db.Uuid
+  arancelPct       Decimal           @default(0) @map("arancel_pct") @db.Decimal(7, 4)
   /// Alícuota de IVA de compra del producto al momento de la orden.
   ivaPorcentaje    Decimal           @default(0) @map("iva_porcentaje") @db.Decimal(7, 4)
   cantidadRecibida Decimal           @default(0) @map("cantidad_recibida") @db.Decimal(18, 4)

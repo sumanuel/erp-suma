@@ -189,6 +189,8 @@ Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédi
 | Cantidad de ítems y de unidades (totales) | Se calculan ✔️ | — |
 | Usuario que modificó, fecha de última modificación | Auditoría general ✔️ | — |
 
+> **✅ Avance 2026-11-22 (orden de compra):** condición de pago, transporte, centro de costo, referencia, moneda y valor de cambio, tres descuentos por línea y del documento, arancel por línea. **⬜ Pendiente:** usar el arancel en la liquidación de importaciones.
+
 ### 4.3 Documento del proveedor (`admdocpro`, `frmServicios` «Carga Documento»)
 
 | Campo original | En el nuevo | Prio |
@@ -207,6 +209,8 @@ Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédi
 | Gastos de compra (`admdocprogasto`, `admgastoscompra`) | Falta | M |
 | **Pagaré / documentos por pagar** (`frmPagare`) | Falta | M |
 | Cruce de saldos (`frmCruceDeSaldo`) | Falta (entre cliente y proveedor, o notas) | M |
+
+> **✅ Avance 2026-11-22 (documento del proveedor):** fechas de emisión, recepción y del libro, recibido por, planilla de importación, condición, transporte, centro de costo, cuenta contable de la base y **desglose por alícuota**. **⬜ Pendiente:** gastos de compra (`admdocprogasto`), pagaré y cruce de saldos.
 
 ## 5. Tesorería y contabilidad
 
