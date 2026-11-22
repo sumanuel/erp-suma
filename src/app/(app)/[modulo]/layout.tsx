@@ -14,10 +14,12 @@ export default async function LayoutModulo({ children, params }: { children: Rea
   await requerirPermiso(mod.modulo, "ver");
   return (
     <div className="flex flex-col gap-6">
-      <EncabezadoPagina titulo={item.etiqueta} descripcion={item.descripcion} />
-      {mod.secciones.length > 1 || mod.paginas?.length ? (
-        <Pestanas pestanas={[...mod.secciones.map((s) => ({ href: s.slug ? `/${modulo}/${s.slug}` : `/${modulo}`, etiqueta: s.titulo })), ...(mod.paginas ?? []).map((p) => ({ href: `/${modulo}/${p.slug}`, etiqueta: p.titulo }))]} />
-      ) : null}
+      <div className="flex flex-col gap-6 print:hidden">
+        <EncabezadoPagina titulo={item.etiqueta} descripcion={item.descripcion} />
+        {mod.secciones.length > 1 || mod.paginas?.length ? (
+          <Pestanas pestanas={[...mod.secciones.map((s) => ({ href: s.slug ? `/${modulo}/${s.slug}` : `/${modulo}`, etiqueta: s.titulo })), ...(mod.paginas ?? []).map((p) => ({ href: `/${modulo}/${p.slug}`, etiqueta: p.titulo }))]} />
+        ) : null}
+      </div>
       {children}
     </div>
   );

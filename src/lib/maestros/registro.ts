@@ -35,7 +35,7 @@ export const modulosMaestros: ModuloMaestros[] = [
       { slug: "proveedores", titulo: "Proveedores por producto", maestro: proveedoresProducto },
       { slug: "relacionados", titulo: "Sustitutos y componentes", maestro: relacionesProducto },
     ],
-    paginas: [{ slug: "cambio-precios", titulo: "Cambio de precios" }],
+    paginas: [{ slug: "cambio-precios", titulo: "Cambio de precios" }, { slug: "etiquetas", titulo: "Etiquetas" }],
   },
   {
     modulo: "existencias",

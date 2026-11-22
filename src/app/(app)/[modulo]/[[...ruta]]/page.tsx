@@ -7,9 +7,10 @@ import type { Busqueda } from "@/lib/listados";
 import { itemsMenu } from "@/lib/menu";
 import { buscarModulo } from "@/lib/maestros/registro";
 import { PaginaCambioPrecios } from "@/components/productos/pagina-cambio-precios";
+import { PaginaEtiquetas } from "@/components/productos/pagina-etiquetas";
 
 // Pantallas propias de un módulo (declaradas en `paginas` del registro).
-const paginasPropias: Record<string, () => Promise<React.JSX.Element>> = { "productos/cambio-precios": PaginaCambioPrecios };
+const paginasPropias: Record<string, () => Promise<React.JSX.Element>> = { "productos/cambio-precios": PaginaCambioPrecios, "productos/etiquetas": PaginaEtiquetas };
 
 // Una sola ruta atiende todos los módulos:
 //   /<módulo>                      listado de la primera sección
