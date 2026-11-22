@@ -149,7 +149,7 @@ Ya está: código, descripción, categoría/subcategoría, alícuota de IVA, ara
 Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédito; por línea: producto, cantidad, precio, descuento %. En el pedido: cliente, fecha, observaciones, líneas.
 
 > **✅ Avance 2026-11-21 (cotización, pedido y factura):** hecho: **vendedor**, **condición de pago** (propone los días de crédito de la factura), **transporte**, **dirección de entrega** y **tres descuentos globales** en cadena; todo se propone desde la ficha del cliente y se puede cambiar. El precio sale de la **lista de precios del cliente** (con **promociones** de precio o descuento vigentes) y se respeta el **descuento máximo** de la lista. **Control de crédito** al facturar: bloqueado no compra; a crédito solo con crédito habilitado, sin mora, dentro del **límite** y sin facturas vencidas más allá de los **días máximos**. Los documentos copian sus condiciones al convertirse (cotización → pedido → factura) y el detalle las muestra.
-> **⬜ Sigue pendiente:** **pronto pago** (días y % 1 y 2), almacén y unidad **por línea**, bultos y kilos, origen de venta, aprobación gerencial, control del permiso «cambiar precio», promociones de «compra N y llévate M» (cantidad otorgada), y **candado por cliente** en el crédito (dos ventas a crédito simultáneas pueden pasar el límite juntas).
+> **⬜ Sigue pendiente:** aplicar el **pronto pago** al cobrar, la **unidad de venta por línea** (ventas por presentación), el permiso «cambiar precio» en el POS, y **candado por cliente** en el crédito (dos ventas a crédito simultáneas pueden pasar el límite juntas).
 
 > **✅ Avance 2026-11-22 (punto de venta):** hecho: **turnos de caja** (apertura con fondo en Bs. y USD, un turno abierto por cajero), **venta de mostrador** (factura de contado + cobros en una sola transacción), **pago mixto** (efectivo en Bs. o USD, punto de venta, pago móvil, transferencia, Zelle, con cuenta y referencia), **vuelto** en la moneda del pago o en la otra, **cierre de caja** con conteo, diferencia y observaciones, y **recibo no fiscal**.
 > **⬜ Sigue pendiente:** impresora fiscal y **serie fiscal** (caja, serial, IP; número fiscal y de control al facturar), reportes **Z y X**, devoluciones y anulación de una venta desde el POS, cheques y tarjeta de crédito/débito diferenciadas en el cierre, venta a crédito y vendedor en el mostrador, y control del permiso «cambiar precio».
@@ -163,7 +163,7 @@ Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédi
 | **Pronto pago:** días 1 y 2 y porcentajes 1 y 2 (`pDiasPP1/2`, `pFechaPP1/2`) | ✅ 2026-11-22: en la condición de pago y copiado al documento (falta aplicarlo al cobrar) | M |
 | **Dirección de entrega** y dirección fiscal impresas | Falta (se toma del cliente, que solo tiene una) | A |
 | **Transporte**, cantidad de bultos, kilos | ✅ 2026-11-22 | M |
-| **Almacén por línea** y **unidad de venta** por línea | Un almacén por documento; sin unidad | A |
+| **Almacén por línea** y **unidad de venta** por línea | ✅ Almacén por línea (2026-11-22). ⬜ Unidad de venta por línea: requiere vender por presentación con conversión de unidades | A |
 | **Divisa de visualización** y valor de cambio | Todo en USD con tasa congelada ✔️ (la divisa elegida en pantalla no) | M |
 | **Origen de venta** (`cboOrigenVenta`) | ✅ 2026-11-22 (catálogo + campo del documento) | M |
 | **Caja, número de punto de venta, relación de caja** | Falta (llega con el POS) | A |
@@ -171,7 +171,7 @@ Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédi
 | **Serie fiscal / serial / IP de la impresora** (`frmSerieFiscal`) | Falta (llega con la impresora fiscal) | A |
 | «Cambiar precio» (permiso de cambiar el precio en la línea) | ✅ 2026-11-22: permiso especial; sin él solo se vende al precio de la lista (falta en el POS) | M |
 | **Pago contado/mixto en la propia factura:** efectivo, tarjetas, **cheques (banco, número)**, cambio, monto a abonar | Falta (llega con el POS; hoy se cobra aparte) | A |
-| Aprobación gerencial (`frmAprobacionGerencial`, `pFlagAprob`, `pLoginAprob`) | Falta | M |
+| Aprobación gerencial (`frmAprobacionGerencial`, `pFlagAprob`, `pLoginAprob`) | ✅ 2026-11-22: permiso especial que aprueba excepciones de crédito con motivo (falta el flujo de pedir aprobación a otro gerente) | M |
 | Tipo de pedido, nota de entrega (`pNroNotaEntrega`), «genera giro», «grava comisión especial», pre-lista | Falta ¿? | B |
 | Documentos no impresos (`frmDocumentosNoImpresos`), reimpresión | Falta | M |
 | Cierre de caja (`cierreCaja`: facturas, devoluciones, punto de venta, cheque, efectivo, tarjetas, IVA, cuadre) | Falta (llega con el POS) | A |

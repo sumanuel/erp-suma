@@ -61,6 +61,7 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
           <div><dt className="text-gris-500">Pedido</dt><dd>{f.pedido ? <Link href={`/pedidos/${f.pedido.id}`} className="text-marca-texto hover:underline">{numeroPedido(f.pedido.numero)}</Link> : "—"}</dd></div>
           <div><dt className="text-gris-500">Emitida por</dt><dd>{f.creadoPorNombre ?? "—"} · {formatoFechaHora(f.creadoEn)}</dd></div>
           <FilasCondiciones db={ctx.db} doc={f} />
+          {f.aprobadoPorNombre ? <div className="md:col-span-2"><dt className="text-gris-500">Aprobación gerencial</dt><dd>{f.aprobadoPorNombre}: {f.aprobacionMotivo}</dd></div> : null}
           <div className="sm:col-span-2"><dt className="text-gris-500">Observaciones</dt><dd>{f.observaciones ?? "—"}</dd></div>
           {f.estado === "ANULADA" ? <div className="sm:col-span-2 xl:col-span-4"><dt className="text-gris-500">Anulada</dt><dd>{f.anuladaPorNombre ?? "—"} · {formatoFechaHora(f.anuladaEn)} · {f.motivoAnulacion}</dd></div> : null}
         </dl>

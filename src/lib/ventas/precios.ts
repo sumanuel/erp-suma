@@ -16,6 +16,29 @@ export type PrecioResuelto = {
 
 type Lector = Pick<Db, "producto" | "productoPrecio" | "promocion">;
 
+export type PromoLleve = { requerida: number; otorgada: number; multiplo: number };
+
+/**
+ * Cantidad regalada por una promoción «compra N, llévate M» (la más reciente vigente del producto y la lista). Si lo comprado alcanza la cantidad
+ * requerida se regala `otorgada` por cada múltiplo comprado (múltiplo 0 = una sola vez).
+ */
+export const cantidadBonificada = (p: PromoLleve, comprado: number) => {
+  if (!(p.requerida > 0) || !(p.otorgada > 0) || comprado + 1e-9 < p.requerida) return 0;
+  const veces = p.multiplo > 0 ? Math.floor((comprado + 1e-9) / p.multiplo) : 1;
+  return veces * p.otorgada;
+};
+
+export async function promocionesLleve(db: Pick<Db, "promocion">, codigos: string[], lista: string, hoy: Date = hoyCaracas()): Promise<Map<string, PromoLleve>> {
+  const r = new Map<string, PromoLleve>();
+  if (codigos.length === 0) return r;
+  const filas = await db.promocion.findMany({
+    where: { productoCodigo: { in: codigos }, presentacionId: null, activo: true, desde: { lte: hoy }, hasta: { gte: hoy }, cantidadRequerida: { gt: 0 }, cantidadOtorgada: { gt: 0 }, OR: [{ lista: null }, { lista }] },
+    orderBy: { creadoEn: "desc" },
+  });
+  for (const f of filas) if (!r.has(f.productoCodigo)) r.set(f.productoCodigo, { requerida: Number(f.cantidadRequerida), otorgada: Number(f.cantidadOtorgada), multiplo: Number(f.multiplo) });
+  return r;
+}
+
 export async function resolverPrecios(db: Lector, codigos: string[], lista: string, hoy: Date = hoyCaracas()): Promise<Map<string, PrecioResuelto>> {
   const resultado = new Map<string, PrecioResuelto>();
   if (codigos.length === 0) return resultado;

@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { requerirPermiso } from "@/lib/dal";
+import { requerirPermiso, tienePermisoEspecial } from "@/lib/dal";
 import { datosVentaForm } from "@/lib/ventas/formularios";
 import { numeroPedido } from "@/lib/pedidos/calculos";
 import { FormularioFactura, type InicialFactura } from "../formulario-factura";
@@ -9,7 +9,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // /facturacion/nueva            factura directa
 // /facturacion/nueva?pedido=ID  factura de un pedido confirmado
 export default async function NuevaFactura({ searchParams }: { searchParams: Promise<{ pedido?: string }> }) {
-  const { db } = await requerirPermiso("facturacion", "crear");
+  const ctx = await requerirPermiso("facturacion", "crear");
+  const { db } = ctx;
   const { pedido: pedidoId } = await searchParams;
   const [venta, almacenes] = await Promise.all([
     datosVentaForm(db),
@@ -30,8 +31,8 @@ export default async function NuevaFactura({ searchParams }: { searchParams: Pro
     opcionesCliente = [{ valor: p.clienteId, etiqueta: `${p.cliente.razonSocial} (${p.cliente.documento})` }];
     inicial = {
       clienteId: p.clienteId, almacenId: almacenInicial, observaciones: p.observaciones ?? "", diasCredito: String(venta.datos.condiciones.find((c) => c.valor === p.condicionPagoId)?.dias ?? 0),
-      lineas: p.lineas.map((l) => ({ productoCodigo: l.productoCodigo, descripcion: l.descripcion, ivaPorcentaje: Number(l.ivaPorcentaje), cantidad: String(Number(l.cantidad)), precioUnitario: String(Number(l.precioUnitario)), descuento: String(Number(l.descuento)) })),
+      lineas: p.lineas.map((l) => ({ productoCodigo: l.productoCodigo, descripcion: l.descripcion, ivaPorcentaje: Number(l.ivaPorcentaje), cantidad: String(Number(l.cantidad)), precioUnitario: String(Number(l.precioUnitario)), descuento: String(Number(l.descuento)), bonificacion: l.bonificacion })),
     };
   }
-  return <FormularioFactura pedido={pedido} inicial={inicial} clientes={opcionesCliente} almacenes={opcionesAlmacen} ventas={venta.datos} />;
+  return <FormularioFactura pedido={pedido} inicial={inicial} clientes={opcionesCliente} almacenes={opcionesAlmacen} ventas={venta.datos} puedeAprobar={tienePermisoEspecial(ctx, "ventas.aprobar")} />;
 }

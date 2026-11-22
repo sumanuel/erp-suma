@@ -55,6 +55,10 @@ model Factura {
   creadoPorId      String?        @map("creado_por_id") @db.Uuid
   creadoPorNombre  String?        @map("creado_por_nombre")
   creadoEn         DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  /// Aprobación gerencial de una excepción de crédito (límite, morosidad o facturas vencidas) al emitir.
+  aprobadoPorId    String?        @map("aprobado_por_id") @db.Uuid
+  aprobadoPorNombre String?       @map("aprobado_por_nombre")
+  aprobacionMotivo String?        @map("aprobacion_motivo")
   anuladaEn        DateTime?      @map("anulada_en") @db.Timestamptz(6)
   anuladaPorNombre String?        @map("anulada_por_nombre")
   motivoAnulacion  String?        @map("motivo_anulacion")
@@ -87,6 +91,10 @@ model FacturaLinea {
   total          Decimal  @default(0) @db.Decimal(18, 4)
   /// Costo promedio unitario (USD) al vender: base para el margen.
   costoUnitario  Decimal  @default(0) @map("costo_unitario") @db.Decimal(18, 4)
+  /// Línea regalada por una promoción «compra N, llévate M» (precio 0); la genera el sistema y se recalcula al editar el documento.
+  bonificacion   Boolean  @default(false)
+  /// Almacén del que salió esta línea (vacío = el de la factura).
+  almacenId      String?  @map("almacen_id") @db.Uuid
   notaLineas     NotaVentaLinea[]
 
   @@unique([facturaId, linea])

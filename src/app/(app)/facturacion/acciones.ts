@@ -11,7 +11,10 @@ import { buscarProductosVenta, type ProductoVenta } from "@/lib/pedidos/servicio
 
 export type EstadoFacturaForm = { error?: string };
 
+const Aprobacion = z.object({ motivo: z.string().trim().min(3, "Escribe el motivo de la aprobación").max(300) }).nullable().optional();
+
 const Factura = z.object({
+  aprobacion: Aprobacion,
   encabezado: EncabezadoVentaZ.optional(),
   clienteId: z.string().uuid("Elige un cliente"),
   almacenId: z.string().uuid("Elige un almacén"),
@@ -22,8 +25,12 @@ const Factura = z.object({
     cantidad: z.number().finite(),
     precioUnitario: z.number().finite(),
     descuento: z.number().finite(),
+    almacenId: z.string().uuid().nullable().optional(),
   })).max(500),
 });
+
+/** La aprobación solo vale si quien emite tiene el permiso especial: si no, se ignora y rige el control de crédito normal. */
+const aprobacionDe = (ctx: Parameters<typeof tienePermisoEspecial>[0], a: { motivo: string } | null | undefined) => (a && tienePermisoEspecial(ctx, "ventas.aprobar") ? { motivo: a.motivo } : undefined);
 
 export async function buscarProductosFactura(texto: string, lista = "A"): Promise<ProductoVenta[]> {
   const { db } = await requerirPermisoAccion("facturacion", "crear");
@@ -35,13 +42,13 @@ export async function emitirFacturaVenta(pedidoId: string | null, datos: unknown
   const ctx = await requerirPermisoAccion("facturacion", "crear");
   let res;
   if (pedidoId) {
-    const r = z.object({ almacenId: z.string().uuid("Elige un almacén"), observaciones: z.string().trim().max(1000).transform((v) => v || null), diasCredito: z.number().int("Días de crédito inválidos").min(0).max(365) }).safeParse(datos);
+    const r = z.object({ aprobacion: Aprobacion, almacenId: z.string().uuid("Elige un almacén"), observaciones: z.string().trim().max(1000).transform((v) => v || null), diasCredito: z.number().int("Días de crédito inválidos").min(0).max(365) }).safeParse(datos);
     if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
-    res = await emitirFacturaDePedido(ctx.db, ctx.usuario, pedidoId, r.data.almacenId, r.data.observaciones, r.data.diasCredito);
+    res = await emitirFacturaDePedido(ctx.db, ctx.usuario, pedidoId, r.data.almacenId, r.data.observaciones, r.data.diasCredito, aprobacionDe(ctx, r.data.aprobacion));
   } else {
     const r = Factura.safeParse(datos);
     if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
-    res = await emitirFactura(ctx.db, ctx.usuario, { ...r.data, sinCambiarPrecio: !tienePermisoEspecial(ctx, "ventas.cambiar_precio") });
+    res = await emitirFactura(ctx.db, ctx.usuario, { ...r.data, aprobacion: aprobacionDe(ctx, r.data.aprobacion), sinCambiarPrecio: !tienePermisoEspecial(ctx, "ventas.cambiar_precio") });
   }
   if (!res.ok) return { error: res.error };
   revalidatePath("/facturacion");

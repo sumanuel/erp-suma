@@ -5,13 +5,13 @@ import type { Actor } from "@/lib/inventario/movimientos";
 import { tasaVigente } from "@/lib/tasas";
 import { calcularLinea, calcularTotales, descuentoEfectivo, descuentoGlobal, numeroPedido } from "./calculos";
 import { VentaError, validarEncabezado, type EncabezadoVenta } from "@/lib/ventas/condiciones";
-import { resolverPrecios } from "@/lib/ventas/precios";
+import { cantidadBonificada, promocionesLleve, resolverPrecios } from "@/lib/ventas/precios";
 
 // Servicio de pedidos de venta. Cada operación es una transacción. Confirmar reserva mercancía: la reserva no es una columna sino la suma
 // de las líneas de pedidos CONFIRMADOS, así que no hay un saldo que se pueda desajustar; el candado por producto evita que dos
 // confirmaciones simultáneas reserven lo mismo.
 
-export type LineaPedido = { productoCodigo: string; cantidad: number; precioUnitario: number; descuento: number };
+export type LineaPedido = { productoCodigo: string; cantidad: number; precioUnitario: number; descuento: number; almacenId?: string | null };
 /// `sinCambiarPrecio`: quien guarda no tiene el permiso «cambiar precio»; el precio de cada línea debe ser el de la lista del cliente.
 export type DatosPedido = { clienteId: string; fecha: Date; observaciones: string | null; lineas: LineaPedido[]; encabezado?: EncabezadoVenta; sinCambiarPrecio?: boolean };
 export type ResultadoPedido<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -50,13 +50,19 @@ export async function prepararLineasVenta(tx: Tx, d: Pick<DatosPedido, "clienteI
   if (cliente.situacion === "BLOQUEADO") throw new PedidoError("El cliente está bloqueado: no se le puede vender.");
   const global = descuentoGlobal(d.descuentos ?? []);
   const precios = await resolverPrecios(tx, d.lineas.map((l) => l.productoCodigo), cliente.listaPrecio);
+  const lleve = await promocionesLleve(tx, d.lineas.map((l) => l.productoCodigo), cliente.listaPrecio);
+  const almacenes = [...new Set(d.lineas.map((l) => l.almacenId).filter((x): x is string => !!x))];
+  if (almacenes.length) {
+    const ok = new Set((await tx.almacen.findMany({ where: { id: { in: almacenes }, activo: true }, select: { id: true } })).map((a) => a.id));
+    if (almacenes.some((a) => !ok.has(a))) throw new PedidoError("Hay un almacén de línea que no existe o está inactivo.");
+  }
   if (d.lineas.length === 0) throw new PedidoError("Agrega al menos un producto.");
   if (d.lineas.length > 500) throw new PedidoError("Máximo 500 líneas por pedido.");
   const codigos = d.lineas.map((l) => l.productoCodigo);
   if (new Set(codigos).size !== codigos.length) throw new PedidoError("Hay un producto repetido: suma sus cantidades en una sola línea.");
   const productos = await tx.producto.findMany({ where: { codigo: { in: codigos } }, include: { alicuotaIva: { select: { porcentajeVenta: true } } } });
   const porCodigo = new Map(productos.map((p) => [p.codigo, p]));
-  return d.lineas.map((l, i) => {
+  const normales = d.lineas.map((l, i) => {
     const p = porCodigo.get(l.productoCodigo);
     if (!p) throw new PedidoError(`El producto ${l.productoCodigo} no existe.`);
     if (!p.activo) throw new PedidoError(`El producto ${l.productoCodigo} está inactivo.`);
@@ -73,8 +79,17 @@ export async function prepararLineasVenta(tx: Tx, d: Pick<DatosPedido, "clienteI
     if (d.sinCambiarPrecio && tope && Math.abs(l.precioUnitario - tope.precioUsd) > 1e-4) throw new PedidoError(`${l.productoCodigo}: no tienes permiso para cambiar el precio (la lista ${cliente.listaPrecio} dice ${tope.precioUsd}).`);
     if (tope && tope.origen === "LISTA" && tope.descuentoMaxPct > 0 && l.descuento > tope.descuentoMaxPct + 1e-9) throw new PedidoError(`${l.productoCodigo}: el descuento máximo de la lista ${cliente.listaPrecio} es ${tope.descuentoMaxPct} %.`);
     const calc = calcularLinea({ cantidad: l.cantidad, costoUnitario: l.precioUnitario, descuento: efectivo, ivaPorcentaje });
-    return { linea: i + 1, productoCodigo: l.productoCodigo, descripcion: p.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: efectivo, descuentoLinea: l.descuento, ivaPorcentaje, total: calc.total, _e: { cantidad: l.cantidad, costoUnitario: l.precioUnitario, descuento: efectivo, ivaPorcentaje } };
+    return { linea: i + 1, productoCodigo: l.productoCodigo, descripcion: p.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: efectivo, descuentoLinea: l.descuento as number | null, ivaPorcentaje, total: calc.total, bonificacion: false, almacenId: l.almacenId ?? null, _e: { cantidad: l.cantidad, costoUnitario: l.precioUnitario, descuento: efectivo, ivaPorcentaje } };
   });
+  // Promociones «compra N, llévate M»: el sistema agrega la línea regalada (precio 0) al final.
+  const regalos = normales.flatMap((l) => {
+    const promo = lleve.get(l.productoCodigo);
+    const extra = promo ? cantidadBonificada(promo, l.cantidad) : 0;
+    if (extra <= 0) return [];
+    return [{ productoCodigo: l.productoCodigo, descripcion: `${l.descripcion} (bonificación)`, cantidad: extra, precioUnitario: 0, descuento: 0, descuentoLinea: null as number | null, ivaPorcentaje: l.ivaPorcentaje, total: 0, bonificacion: true, almacenId: l.almacenId, _e: { cantidad: extra, costoUnitario: 0, descuento: 0, ivaPorcentaje: l.ivaPorcentaje } }];
+  });
+  if (normales.length + regalos.length > 500) throw new PedidoError("Máximo 500 líneas por documento (con las bonificaciones).");
+  return [...normales, ...regalos.map((r, k) => ({ ...r, linea: normales.length + k + 1 }))];
 }
 
 export async function guardarPedido(db: Db, actor: Actor, id: string | null, d: DatosPedido): Promise<ResultadoPedido<{ id: string; numero: number }>> {
@@ -83,7 +98,7 @@ export async function guardarPedido(db: Db, actor: Actor, id: string | null, d: 
       const enc = await validarEncabezado(tx, d.encabezado);
       const lineas = await prepararLineasVenta(tx, { ...d, descuentos: enc.descuentos });
       const t = calcularTotales(lineas.map((l) => l._e));
-      const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total }));
+      const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total, bonificacion: l.bonificacion, almacenId: l.almacenId }));
       const base = { clienteId: d.clienteId, fecha: d.fecha, observaciones: d.observaciones, ...enc.columnas, ...t };
       if (id) {
         // Se edita solo si sigue en borrador: la condición va en el mismo UPDATE para que no se pisen dos personas.

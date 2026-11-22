@@ -102,23 +102,29 @@ export const encabezadoDe = (x: DocConEncabezado): EncabezadoVenta => ({
 /**
  * Control de crédito al vender. Un cliente bloqueado no compra; a crédito (días > 0) solo compra quien tiene crédito, no es moroso, no se pasa
  * de su límite (lo que ya debe más esta venta) y no tiene facturas vencidas por más de sus días máximos. Al contado solo importa el bloqueo.
+ * Con `aprobacion` (aprobación gerencial) las excepciones de crédito (moroso, sin crédito, límite, vencidas) se permiten y la función devuelve cuál fue; el bloqueo no se aprueba.
  */
-export async function verificarCredito(tx: TxVenta, clienteId: string, totalUsd: number, diasCredito: number) {
+export async function verificarCredito(tx: TxVenta, clienteId: string, totalUsd: number, diasCredito: number, aprobacion?: { motivo: string }): Promise<string | null> {
+  const excepcion = (m: string) => {
+    if (aprobacion) return m;
+    throw new VentaError(`${m} Requiere aprobación gerencial.`);
+  };
   const c = await tx.cliente.findUnique({ where: { id: clienteId }, select: { razonSocial: true, situacion: true, tieneCredito: true, limiteCredito: true, diasMaxVencimiento: true } });
   if (!c) throw new VentaError("El cliente no existe.");
   if (c.situacion === "BLOQUEADO") throw new VentaError(`${c.razonSocial} está bloqueado: no se le puede vender.`);
-  if (diasCredito <= 0) return;
-  if (c.situacion === "MOROSO") throw new VentaError(`${c.razonSocial} es moroso: solo se le vende de contado.`);
-  if (!c.tieneCredito) throw new VentaError(`${c.razonSocial} no tiene crédito: pon 0 días de crédito (contado) o habilítaselo en su ficha.`);
+  if (diasCredito <= 0) return null;
+  if (c.situacion === "MOROSO") return excepcion(`${c.razonSocial} es moroso: solo se le vende de contado.`);
+  if (!c.tieneCredito) return excepcion(`${c.razonSocial} no tiene crédito: pon 0 días de crédito (contado) o habilítaselo en su ficha.`);
   const abiertas = await tx.factura.findMany({ where: { clienteId, estado: "EMITIDA", saldo: { gt: 0 } }, select: { saldo: true, fechaVencimiento: true } });
   const debe = abiertas.reduce((s, f) => s + Number(f.saldo), 0);
   const limite = Number(c.limiteCredito);
   if (limite > 0 && debe + totalUsd > limite + 1e-9) {
-    throw new VentaError(`Supera el límite de crédito de ${c.razonSocial}: debe ${debe.toFixed(2)} USD y esta venta suma ${totalUsd.toFixed(2)} sobre un límite de ${limite.toFixed(2)} USD.`);
+    return excepcion(`Supera el límite de crédito de ${c.razonSocial}: debe ${debe.toFixed(2)} USD y esta venta suma ${totalUsd.toFixed(2)} sobre un límite de ${limite.toFixed(2)} USD.`);
   }
   if (c.diasMaxVencimiento > 0) {
     const hoy = hoyCaracas().getTime();
     const peor = Math.max(0, ...abiertas.map((f) => Math.floor((hoy - f.fechaVencimiento.getTime()) / 86_400_000)));
-    if (peor > c.diasMaxVencimiento) throw new VentaError(`${c.razonSocial} tiene facturas vencidas hace ${peor} días (máximo permitido ${c.diasMaxVencimiento}): debe ponerse al día para comprar a crédito.`);
+    if (peor > c.diasMaxVencimiento) return excepcion(`${c.razonSocial} tiene facturas vencidas hace ${peor} días (máximo permitido ${c.diasMaxVencimiento}): debe ponerse al día para comprar a crédito.`);
   }
+  return null;
 }
