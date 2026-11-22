@@ -215,17 +215,24 @@ export async function registrarVentaPos(db: Db, actor: Actor, d: DatosVentaPos):
 export async function resumenTurno(db: Db, id: string) {
   const t = await db.turnoCaja.findUnique({ where: { id }, include: { ventas: { include: { pagos: true }, orderBy: { creadoEn: "desc" } } } });
   if (!t) return null;
-  const facturas = await db.factura.findMany({ where: { id: { in: t.ventas.map((v) => v.facturaId) } }, select: { id: true, numero: true, total: true, totalBs: true, estado: true } });
+  const facturas = await db.factura.findMany({ where: { id: { in: t.ventas.map((v) => v.facturaId) } }, select: { id: true, numero: true, total: true, totalBs: true, subtotal: true, iva: true, estado: true } });
+  const notas = await db.notaVenta.findMany({ where: { facturaId: { in: facturas.map((f) => f.id) }, estado: "ACTIVA" }, select: { tipo: true, total: true } });
   const porFactura = new Map(facturas.map((f) => [f.id, f]));
   const cobrado = new Map<string, number>();
   const vueltos = { VES: 0, USD: 0 };
-  let totalUsd = 0;
+  let totalUsd = 0, subtotalUsd = 0, ivaUsd = 0, anuladas = 0;
   for (const v of t.ventas) {
     const f = porFactura.get(v.facturaId);
-    if (f?.estado === "EMITIDA") totalUsd += Number(f.total);
+    if (f?.estado === "EMITIDA") {
+      totalUsd += Number(f.total);
+      subtotalUsd += Number(f.subtotal);
+      ivaUsd += Number(f.iva);
+    } else if (f?.estado === "ANULADA") anuladas += 1;
     if (v.vueltoMoneda) vueltos[v.vueltoMoneda as "VES" | "USD"] += Number(v.vueltoMonto);
     for (const p of v.pagos) cobrado.set(`${p.formaPago}|${p.moneda}`, r2((cobrado.get(`${p.formaPago}|${p.moneda}`) ?? 0) + Number(p.aplicado)));
   }
   const esperado = t.estado === "ABIERTO" ? await esperadoTurno(db, t) : { ves: Number(t.esperadoVes), usd: Number(t.esperadoUsd) };
-  return { turno: t, facturas: porFactura, cobrado: [...cobrado].map(([k, monto]) => ({ forma: k.split("|")[0], moneda: k.split("|")[1], monto })), vueltos, totalUsd: r4(totalUsd), esperado };
+  return { turno: t, facturas: porFactura, cobrado: [...cobrado].map(([k, monto]) => ({ forma: k.split("|")[0], moneda: k.split("|")[1], monto })), vueltos, totalUsd: r4(totalUsd), esperado,
+    // Datos del reporte X/Z (original: cierreCaja): base, IVA, facturas anuladas y devoluciones (notas de crédito) sobre las facturas del turno.
+    subtotalUsd: r4(subtotalUsd), ivaUsd: r4(ivaUsd), anuladas, devolucionesUsd: r4(notas.filter((n) => n.tipo === "CREDITO").reduce((s, n) => s + Number(n.total), 0)), debitosUsd: r4(notas.filter((n) => n.tipo === "DEBITO").reduce((s, n) => s + Number(n.total), 0)) };
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Tarjeta } from "@/components/ui";
-import { requerirPermiso } from "@/lib/dal";
+import { Tarjeta, clasesBoton } from "@/components/ui";
+import { requerirPermiso, tienePermiso } from "@/lib/dal";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { FORMAS_PAGO_POS, numeroTurno, numeroVentaPos } from "@/lib/pos/estados";
 import { formatoFechaHora } from "../../../facturacion/formato";
@@ -14,7 +14,8 @@ const m = (n: number) => n.toLocaleString("es-VE", { minimumFractionDigits: 2, m
 export default async function ReciboVenta({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();
-  const { db } = await requerirPermiso("pos", "ver");
+  const ctx = await requerirPermiso("pos", "ver");
+  const { db } = ctx;
   const v = await db.ventaPos.findUnique({ where: { id }, include: { pagos: true, turno: { select: { id: true, numero: true, usuarioNombre: true } } } });
   if (!v) notFound();
   const [f, cliente] = await Promise.all([
@@ -26,8 +27,13 @@ export default async function ReciboVenta({ params }: { params: Promise<{ id: st
     <div className="mx-auto flex w-full max-w-md flex-col gap-4">
       <div className="flex items-center justify-between print:hidden">
         <Link href={`/pos/turnos/${v.turno.id}`} className="text-sm font-medium text-marca-fuerte hover:underline">← {numeroTurno(v.turno.numero)}</Link>
-        <BotonImprimir />
+        <div className="flex items-center gap-2">
+          {f.estado === "EMITIDA" && tienePermiso(ctx, "facturacion", "crear") ? <Link href={`/facturacion/notas/nueva?factura=${f.id}&tipo=CREDITO`} className={clasesBoton("secundario")}>Devolver</Link> : null}
+          {f.estado === "EMITIDA" && tienePermiso(ctx, "facturacion", "eliminar") ? <Link href={`/facturacion/${f.id}`} className={clasesBoton("secundario")}>Anular venta</Link> : null}
+          <BotonImprimir />
+        </div>
       </div>
+      {f.estado === "ANULADA" ? <p className="text-center text-sm font-semibold text-error print:hidden">Venta anulada</p> : null}
       <Tarjeta className="p-6 text-[13px]">
         <div className="text-center">
           <p className="text-[15px] font-semibold">{empresa?.razonSocial ?? "Recibo de venta"}</p>

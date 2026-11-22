@@ -181,6 +181,11 @@ describe("Punto de venta", () => {
     assert.ok((await venta(abierto.id, p.codigo, 1, [{ formaPago: "EFECTIVO", moneda: "USD", recibido: 20 }])).ok); // vuelto 8,40 USD
     const parcial = await resumenTurno(e.db, abierto.id);
     assert.deepEqual(parcial!.esperado, { ves: 964, usd: 31.6 });
+    // Reporte X/Z: base, IVA, devoluciones y anuladas del turno (dos ventas de 1 unidad a 10 USD + IVA 16 %).
+    assert.equal(parcial!.totalUsd, Math.round((parcial!.subtotalUsd + parcial!.ivaUsd) * 1e4) / 1e4);
+    assert.ok(parcial!.subtotalUsd > 0 && parcial!.ivaUsd >= 0);
+    assert.equal(parcial!.devolucionesUsd, 0);
+    assert.equal(parcial!.anuladas, 0);
     assert.equal((await cerrarTurno(e.db, e.actor, abierto.id, { contadoVes: -1, contadoUsd: 0, observaciones: null })).ok, false);
     const c = await cerrarTurno(e.db, e.actor, abierto.id, { contadoVes: 960, contadoUsd: 31.6, observaciones: "Faltan 4 Bs." });
     assert.ok(c.ok, JSON.stringify(c));

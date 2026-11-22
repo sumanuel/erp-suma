@@ -6,6 +6,7 @@ import { numeroFactura } from "@/lib/facturacion/estados";
 import { ESTADOS_TURNO, FORMAS_PAGO_POS, numeroTurno, numeroVentaPos, type EstadoTurno } from "@/lib/pos/estados";
 import { resumenTurno } from "@/lib/pos/servicio";
 import { formatoFechaHora } from "../../../facturacion/formato";
+import { BotonImprimir } from "../../../reportes/[reporte]/imprimir";
 import { FormularioCierre } from "./formulario-cierre";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -29,13 +30,18 @@ export default async function DetalleTurno({ params }: { params: Promise<{ id: s
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-semibold">{numeroTurno(t.numero)}</h2>
           <Etiqueta tono={e.tono}>{e.etiqueta}</Etiqueta>
-          <Link href="/pos" className="ml-auto text-sm font-medium text-marca-fuerte hover:underline">Volver a vender</Link>
+          <span className="text-sm text-gris-600">{t.estado === "ABIERTO" ? "Reporte X (parcial, no cierra la caja)" : "Reporte Z (cierre de caja)"}</span>
+          <span className="ml-auto flex items-center gap-3 print:hidden"><BotonImprimir /><Link href="/pos" className="text-sm font-medium text-marca-fuerte hover:underline">Volver a vender</Link></span>
         </div>
         <dl className="mt-4 grid gap-4 text-[13.5px] sm:grid-cols-2 xl:grid-cols-4">
           {dato("Cajero", t.usuarioNombre)}
           {dato("Abierto", formatoFechaHora(t.abiertoEn))}
           {dato("Cerrado", formatoFechaHora(t.cerradoEn))}
           {dato("Ventas", `${t.ventas.length} · ${m(r.totalUsd)} USD`)}
+          {dato("Base imponible", `${m(r.subtotalUsd)} USD`)}
+          {dato("IVA", `${m(r.ivaUsd)} USD`)}
+          {dato("Devoluciones (notas de crédito)", `${m(r.devolucionesUsd)} USD`)}
+          {dato("Facturas anuladas", String(r.anuladas))}
           {dato("Fondo inicial", `${m(Number(t.fondoVes))} Bs. · ${m(Number(t.fondoUsd))} USD`)}
           {dato("Vueltos entregados", `${m(r.vueltos.VES)} Bs. · ${m(r.vueltos.USD)} USD`)}
           {dato(t.estado === "ABIERTO" ? "Debe haber ahora en caja" : "Debía haber al cerrar", `${m(r.esperado.ves)} Bs. · ${m(r.esperado.usd)} USD`)}
@@ -50,7 +56,7 @@ export default async function DetalleTurno({ params }: { params: Promise<{ id: s
         ) : null}
       </Tarjeta>
 
-      {puedeCerrar ? <FormularioCierre turnoId={t.id} /> : null}
+      {puedeCerrar ? <div className="print:hidden"><FormularioCierre turnoId={t.id} /></div> : null}
 
       <Tarjeta>
         <h3 className="px-4 pt-4 text-[13px] font-semibold uppercase tracking-wide text-gris-600">Cobrado por forma de pago</h3>
