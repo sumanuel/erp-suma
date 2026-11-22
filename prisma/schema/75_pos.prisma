@@ -1,0 +1,66 @@
+// Punto de venta (POS): turnos de caja, ventas de mostrador y sus pagos. Una venta POS es una factura de contado más sus cobros, todo en una
+// sola transacción. Las referencias a otras tablas (caja, almacén, factura, cobro…) son columnas con su clave foránea en la migración.
+
+model TurnoCaja {
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo (se muestra como TC-000123).
+  numero           Int         @unique @default(autoincrement())
+  /// ABIERTO o CERRADO. Un usuario tiene a lo sumo un turno abierto (índice único parcial).
+  estado           String      @default("ABIERTO")
+  usuarioId        String      @map("usuario_id") @db.Uuid
+  usuarioNombre    String      @map("usuario_nombre")
+  almacenId        String      @map("almacen_id") @db.Uuid
+  /// Cajas de tesorería donde entra el efectivo del turno, una por moneda.
+  cajaVesId        String      @map("caja_ves_id") @db.Uuid
+  cajaUsdId        String      @map("caja_usd_id") @db.Uuid
+  /// Efectivo con que se abre el turno (ya está en el saldo de la caja: es informativo y base del cuadre).
+  fondoVes         Decimal     @default(0) @map("fondo_ves") @db.Decimal(18, 2)
+  fondoUsd         Decimal     @default(0) @map("fondo_usd") @db.Decimal(18, 2)
+  abiertoEn        DateTime    @default(now()) @map("abierto_en") @db.Timestamptz(6)
+  cerradoEn        DateTime?   @map("cerrado_en") @db.Timestamptz(6)
+  /// Al cerrar: lo que se contó, lo que debía haber y la diferencia (contado − esperado), en cada moneda.
+  contadoVes       Decimal?    @map("contado_ves") @db.Decimal(18, 2)
+  contadoUsd       Decimal?    @map("contado_usd") @db.Decimal(18, 2)
+  esperadoVes      Decimal?    @map("esperado_ves") @db.Decimal(18, 2)
+  esperadoUsd      Decimal?    @map("esperado_usd") @db.Decimal(18, 2)
+  observaciones    String?
+  ventas           VentaPos[]
+
+  @@index([usuarioId, abiertoEn(sort: Desc)])
+  @@map("turno_caja")
+}
+
+model VentaPos {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo (se muestra como VP-000123).
+  numero        Int            @unique @default(autoincrement())
+  turnoId       String         @map("turno_id") @db.Uuid
+  turno         TurnoCaja      @relation(fields: [turnoId], references: [id])
+  facturaId     String         @unique @map("factura_id") @db.Uuid
+  clienteId     String         @map("cliente_id") @db.Uuid
+  /// Vuelto entregado al cliente (en la moneda indicada), si pagó de más en efectivo.
+  vueltoMoneda  String?        @map("vuelto_moneda")
+  vueltoMonto   Decimal        @default(0) @map("vuelto_monto") @db.Decimal(18, 2)
+  creadoEn      DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  pagos         VentaPosPago[]
+
+  @@index([turnoId, creadoEn(sort: Desc)])
+  @@map("venta_pos")
+}
+
+model VentaPosPago {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ventaId     String   @map("venta_id") @db.Uuid
+  venta       VentaPos @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  cobroId     String   @unique @map("cobro_id") @db.Uuid
+  formaPago   String   @map("forma_pago")
+  moneda      String
+  cuentaId    String   @map("cuenta_id") @db.Uuid
+  /// Lo que entregó el cliente (en la moneda del pago) y lo que se aplicó a la factura (el resto fue vuelto).
+  recibido    Decimal  @db.Decimal(18, 2)
+  aplicado    Decimal  @db.Decimal(18, 2)
+  referencia  String?
+
+  @@index([ventaId])
+  @@map("venta_pos_pago")
+}

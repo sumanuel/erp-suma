@@ -1,7 +1,7 @@
 import "server-only";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
-import type { Actor } from "@/lib/inventario/movimientos";
+import type { Actor, Tx } from "@/lib/inventario/movimientos";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { hoyCaracas, tasaVigente } from "@/lib/tasas";
 import { aplicarMovimientoCuenta, TesoreriaRechazada } from "@/lib/tesoreria/movimientos";
@@ -13,7 +13,7 @@ import { FORMAS_PAGO, numeroCobro, type FormaPago } from "./estados";
 // se debe, ni dos cobros simultáneos pasarse del saldo). Anular un cobro restituye exactamente lo que aplicó.
 
 export type ResultadoCobro<T = object> = ({ ok: true } & T) | { ok: false; error: string };
-class CobroError extends Error {}
+export class CobroError extends Error {}
 
 const redondear2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const decimales = (n: number) => (String(n).split(".")[1] ?? "").length;
@@ -38,17 +38,11 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoCobro<T>>): Promise<R
   }
 }
 
-export async function registrarCobro(db: Db, actor: Actor, d: DatosCobro): Promise<ResultadoCobro<{ id: string; numero: number }>> {
-  return ejecutar(async () => {
-    if (!(d.formaPago in FORMAS_PAGO)) throw new CobroError("Forma de pago inválida.");
-    if (d.moneda !== "USD" && d.moneda !== "VES") throw new CobroError("Moneda inválida.");
-    const aplic = d.aplicaciones.filter((a) => a.montoUsd > 0);
-    if (aplic.length === 0) throw new CobroError("Indica cuánto se aplica al menos a una factura.");
-    if (aplic.length > 200) throw new CobroError("Máximo 200 facturas por cobro.");
-    if (new Set(aplic.map((a) => a.facturaId)).size !== aplic.length) throw new CobroError("Hay una factura repetida.");
-    for (const a of aplic) if (!Number.isFinite(a.montoUsd) || decimales(a.montoUsd) > 4 || a.montoUsd > 1e12) throw new CobroError("Los montos admiten hasta 4 decimales.");
-
-    const r = await db.$transaction(async (tx) => {
+/**
+ * Registra un cobro DENTRO de la transacción recibida (la usa el punto de venta para cobrar y facturar a la vez). `aplic` ya viene filtrada y validada.
+ * `montoMoneda` fija el monto exacto recibido en la moneda del pago (por ejemplo, los bolívares que se contaron) en vez de recalcularlo desde USD.
+ */
+export async function cobrarEnTx(tx: Tx, actor: Actor, d: DatosCobro, aplic: { facturaId: string; montoUsd: number }[], opc: { montoMoneda?: number } = {}) {
       const cliente = await tx.cliente.findUnique({ where: { id: d.clienteId }, select: { activo: true } });
       if (!cliente) throw new CobroError("El cliente no existe.");
       const total = aplic.reduce((s, a) => s + a.montoUsd, 0);
@@ -59,7 +53,7 @@ export async function registrarCobro(db: Db, actor: Actor, d: DatosCobro): Promi
         if (!t) throw new CobroError("No hay tasa del dólar cargada para convertir el pago en bolívares.");
         tasa = t.valor;
       }
-      const montoMoneda = d.moneda === "VES" ? redondear2(montoUsd * (tasa as number)) : redondear2(montoUsd);
+      const montoMoneda = opc.montoMoneda ?? (d.moneda === "VES" ? redondear2(montoUsd * (tasa as number)) : redondear2(montoUsd));
       if (!(montoMoneda > 0)) throw new CobroError("El monto es demasiado pequeño.");
 
       for (const a of aplic) {
@@ -86,7 +80,19 @@ export async function registrarCobro(db: Db, actor: Actor, d: DatosCobro): Promi
       await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.cuentaId, tipo: "COBRO", monto: montoMoneda, documento: numeroCobro(c.numero), descripcion: `Cobro a cliente${d.referencia ? ` · ref. ${d.referencia}` : ""}` });
       await contabilizarCobro(tx, actor, c.id);
       return { ...c, montoUsd, montoMoneda };
-    });
+}
+
+export async function registrarCobro(db: Db, actor: Actor, d: DatosCobro): Promise<ResultadoCobro<{ id: string; numero: number }>> {
+  return ejecutar(async () => {
+    if (!(d.formaPago in FORMAS_PAGO)) throw new CobroError("Forma de pago inválida.");
+    if (d.moneda !== "USD" && d.moneda !== "VES") throw new CobroError("Moneda inválida.");
+    const aplic = d.aplicaciones.filter((a) => a.montoUsd > 0);
+    if (aplic.length === 0) throw new CobroError("Indica cuánto se aplica al menos a una factura.");
+    if (aplic.length > 200) throw new CobroError("Máximo 200 facturas por cobro.");
+    if (new Set(aplic.map((a) => a.facturaId)).size !== aplic.length) throw new CobroError("Hay una factura repetida.");
+    for (const a of aplic) if (!Number.isFinite(a.montoUsd) || decimales(a.montoUsd) > 4 || a.montoUsd > 1e12) throw new CobroError("Los montos admiten hasta 4 decimales.");
+
+    const r = await db.$transaction((tx) => cobrarEnTx(tx, actor, d, aplic));
     await registrarCambio(db, actor, {
       modulo: "cxc", entidad: "cobro", entidadId: r.id, descripcion: numeroCobro(r.numero), accion: "crear",
       despues: { formaPago: d.formaPago, moneda: d.moneda, montoMoneda: r.montoMoneda, montoUsd: r.montoUsd, facturas: aplic.length },

@@ -3,7 +3,7 @@ import type { ModuloId } from "./modulos";
 // Áreas desplegables con sus módulos, y una tarjeta por módulo en el inicio.
 export type IconoMenu =
   | "inicio" | "comercial" | "compras" | "inventario" | "finanzas" | "analisis" | "configuracion"
-  | "clientes" | "cotizaciones" | "pedidos" | "facturacion" | "proveedores" | "ordenes" | "importaciones"
+  | "clientes" | "cotizaciones" | "pedidos" | "facturacion" | "pos" | "proveedores" | "ordenes" | "importaciones"
   | "productos" | "catalogos" | "tablas" | "existencias" | "tasas" | "cxc" | "cxp" | "tesoreria" | "contabilidad" | "reportes" | "seguridad" | "auditoria";
 
 export type ItemMenu = {
@@ -25,6 +25,7 @@ export const areas: AreaMenu[] = [
       { href: "/clientes", etiqueta: "Clientes", descripcion: "Clientes, sus contactos, condiciones de pago y documentos.", icono: "clientes", modulo: "clientes" },
       { href: "/cotizaciones", etiqueta: "Cotizaciones", descripcion: "Cotizaciones a clientes y su seguimiento.", icono: "cotizaciones", modulo: "cotizaciones" },
       { href: "/pedidos", etiqueta: "Pedidos", descripcion: "Pedidos, prefacturas y reservas de inventario.", icono: "pedidos", modulo: "pedidos" },
+      { href: "/pos", etiqueta: "Punto de venta", descripcion: "Venta de mostrador, cobro en varias monedas, vuelto y cierre de caja.", icono: "pos", modulo: "pos" },
       { href: "/facturacion", etiqueta: "Facturación", descripcion: "Facturas, notas y punto de venta.", icono: "facturacion", modulo: "facturacion" },
     ],
   },

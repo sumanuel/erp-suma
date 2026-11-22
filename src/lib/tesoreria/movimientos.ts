@@ -149,3 +149,14 @@ export async function conciliar(db: Db, actor: Actor, movimientoId: bigint, conc
     return { ok: true };
   });
 }
+
+/**
+ * Vuelto entregado en una moneda distinta a la que pagó el cliente (pagó 20 USD, se le devuelven bolívares): la caja que recibió de más lo conserva
+ * (entrada) y la que entrega el vuelto lo pierde (salida), por el mismo valor a la tasa del día. Corre dentro de la transacción de la venta.
+ */
+export async function intercambioVuelto(tx: Tx, actor: Actor, d: { recibeId: string; montoRecibe: number; entregaId: string; montoEntrega: number; documento: string }) {
+  const grupo = randomUUID();
+  const salida = await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.entregaId, tipo: "VUELTO_SALIDA", monto: d.montoEntrega, documento: d.documento, descripcion: "Vuelto entregado en otra moneda", grupo });
+  await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.recibeId, tipo: "VUELTO_ENTRADA", monto: d.montoRecibe, documento: d.documento, descripcion: "Excedente recibido (vuelto en otra moneda)", grupo });
+  await contabilizarTransferencia(tx, actor, { movimientoId: salida, origenId: d.entregaId, destinoId: d.recibeId, monto: d.montoEntrega });
+}

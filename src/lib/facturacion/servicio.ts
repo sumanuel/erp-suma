@@ -14,7 +14,7 @@ import { aBolivares, hoyCaracas, tasaVigente } from "@/lib/tasas";
 // Una factura emitida no se edita. Anular devuelve la mercancía como ajuste sobrante (no altera el costo promedio) y reabre el pedido de origen.
 
 export type ResultadoFactura<T = object> = ({ ok: true } & T) | { ok: false; error: string };
-class FacturaError extends Error {}
+export class FacturaError extends Error {}
 
 async function ejecutar<T>(trabajo: () => Promise<ResultadoFactura<T>>): Promise<ResultadoFactura<T>> {
   try {
@@ -63,27 +63,30 @@ async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedido
   return { ...f, total: t.total, lineas: d.lineas.length };
 }
 
-async function auditarEmision(db: Db, actor: Actor, r: { id: string; numero: number; total: number; lineas: number }, pedidoId: string | null) {
+export async function auditarEmision(db: Db, actor: Actor, r: { id: string; numero: number; total: number; lineas: number }, pedidoId: string | null) {
   await registrarCambio(db, actor, { modulo: "facturacion", entidad: "factura", entidadId: r.id, descripcion: numeroFactura(r.numero), accion: "crear", despues: { lineas: r.lineas, totalUsd: r.total, ...(pedidoId ? { pedidoId } : {}) } });
 }
 
 export type DatosFactura = { clienteId: string; almacenId: string; observaciones: string | null; diasCredito: number; lineas: LineaPedido[]; encabezado?: EncabezadoVenta };
 
 /** Factura directa (sin pedido). Respeta lo reservado por pedidos confirmados de otros clientes. */
+/** Emite una factura directa DENTRO de la transacción recibida (la usa el punto de venta para sumarle sus cobros). Lanza si no procede. */
+export async function emitirFacturaEnTx(tx: Tx, actor: Actor, d: DatosFactura) {
+  const enc = await validarEncabezado(tx, d.encabezado);
+  const lineas = await prepararLineasVenta(tx, { ...d, descuentos: enc.descuentos });
+  const codigos = lineas.map((l) => l.productoCodigo).sort();
+  for (const c of codigos) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"reserva:" + c}))`;
+  const libre = await disponibles(tx, codigos);
+  for (const l of lineas) {
+    const hay = libre.get(l.productoCodigo) ?? 0;
+    if (l.cantidad > hay) throw new FacturaError(`${l.productoCodigo}: solo hay ${Math.max(hay, 0)} disponibles (existencia menos reservas de pedidos).`);
+  }
+  return crearFactura(tx, actor, { clienteId: d.clienteId, pedidoId: null, almacenId: d.almacenId, observaciones: d.observaciones, diasCredito: d.diasCredito, lineas, encabezado: enc.columnas });
+}
+
 export async function emitirFactura(db: Db, actor: Actor, d: DatosFactura): Promise<ResultadoFactura<{ id: string; numero: number }>> {
   return ejecutar(async () => {
-    const r = await db.$transaction(async (tx) => {
-      const enc = await validarEncabezado(tx, d.encabezado);
-      const lineas = await prepararLineasVenta(tx, { ...d, descuentos: enc.descuentos });
-      const codigos = lineas.map((l) => l.productoCodigo).sort();
-      for (const c of codigos) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"reserva:" + c}))`;
-      const libre = await disponibles(tx, codigos);
-      for (const l of lineas) {
-        const hay = libre.get(l.productoCodigo) ?? 0;
-        if (l.cantidad > hay) throw new FacturaError(`${l.productoCodigo}: solo hay ${Math.max(hay, 0)} disponibles (existencia menos reservas de pedidos).`);
-      }
-      return crearFactura(tx, actor, { clienteId: d.clienteId, pedidoId: null, almacenId: d.almacenId, observaciones: d.observaciones, diasCredito: d.diasCredito, lineas, encabezado: enc.columnas });
-    });
+    const r = await db.$transaction((tx) => emitirFacturaEnTx(tx, actor, d));
     await auditarEmision(db, actor, r, null);
     return { ok: true, id: r.id, numero: r.numero };
   });
