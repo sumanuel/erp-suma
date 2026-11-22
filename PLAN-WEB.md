@@ -203,7 +203,7 @@ erp-suma/
 
 ## 11. Estado de avance
 
-> Cada entrada trae su lista «Pendiente». La lista **consolidada y priorizada** está en la sección 12, al final de este archivo.
+> Cada entrada trae su lista «Pendiente». La lista **consolidada y priorizada** (reconciliada el 2026-11-22) está en la sección 12, al final de este archivo.
 
 - **2026-11-22 · Punto de venta (POS).** Migración `20261122000000_pos`: `turno_caja` (índice único parcial: un turno abierto por usuario; fondo, contado, esperado), `venta_pos` y `venta_pos_pago`, y dos tipos nuevos en el libro de tesorería (`VUELTO_ENTRADA/SALIDA`). **Refactor:** `emitirFacturaEnTx` (facturación) y `cobrarEnTx` (cuentas por cobrar) se extrajeron para correr dentro de la transacción de otro servicio; `intercambioVuelto` en tesorería. **Una venta POS es una sola transacción:** factura de contado (inventario, asiento, control de bloqueo), un cobro por forma de pago (el efectivo entra a las cajas del turno; lo demás, a la cuenta elegida), vuelto y registro; si algo falla no queda nada. **Vuelto:** en la misma moneda el cobro ya queda neto; en la otra, un par de movimientos entre las dos cajas del turno con su asiento (a la tasa del día). **Cierre:** esperado = fondo + movimientos del cajero en sus cajas desde la apertura; se anota contado y diferencia. Módulo `pos` (menú Comercial), pantallas `/pos` (apertura o venta con buscador/lector, cobro mixto, «exacto» Bs./USD, vista previa de falta y vuelto), `/pos/turnos`, detalle con cierre y `/pos/ventas/[id]` (recibo no fiscal imprimible). `tests/pos.test.ts` (suite: 117 pruebas: efectivo, mixto, vuelto en ambas monedas, rollback por vuelto sin fondos, rechazos, 6 ventas simultáneas sobre existencia para 3, cierre y cuadre, otro cajero). Verificado en pantalla: apertura de turno, lector con Enter, cobro de 20 USD con vuelto en bolívares (358,09 Bs.), recibo, esperado 641,91 Bs. / 20 USD y cierre con diferencia de −1,91 Bs.
   - **Pendiente:** impresora fiscal y serie fiscal, reportes Z/X, anular o devolver una venta desde el POS (hoy: anular el cobro en Cuentas por cobrar y luego la factura, o una nota de crédito), cheques y tarjetas separados en el cierre, venta a crédito y vendedor en el mostrador, permiso de «cambiar precio»; si dos cajeros comparten caja, el esperado de cada uno cuenta solo sus movimientos.
@@ -328,63 +328,113 @@ Lo que no cabe en el motor (documentos con líneas, flujos) se escribe como pant
 
 ## 12. Pendientes consolidados
 
-Reúne lo que cada módulo dejó fuera y lo que quedó sin verificar. Prioridad: **A** = bloquea operar con clientes reales, **M** = importante pero hay alternativa, **B** = mejora. Al cerrar un punto, bórralo aquí y de la entrada del módulo.
+> **Reconciliada el 2026-11-22** con todo lo hecho hasta el punto de venta. Es la **lista única** para decidir qué sigue: lo resuelto se quitó y lo nuevo se sumó. El detalle campo por campo está en `ANALISIS-CAMPOS.md` (se actualiza al cerrar cada paso). Al cerrar un punto, bórralo aquí y de la entrada del módulo en la sección 11.
+>
+> Prioridad: **A** = bloquea operar con clientes reales o declarar impuestos, **M** = importante pero hay alternativa, **B** = mejora u ocasional.
 
-### 12.1 Deuda técnica y cosas sin verificar
-- **M · Pruebas automatizadas:** suite de 73 pruebas hecha (`npm test`, sección 11). Falta correrla en CI y cubrir inventario puro (traslados/ajustes) y maestros.
-- **M · Permisos con usuarios limitados:** la auditoría de código y la lógica están en la suite; falta probar en pantalla con un perfil limitado (ocultar botones, redirecciones a `/sin-acceso`).
-- **M · Anular una factura desde el navegador:** en una prueba el botón no la anuló y se anuló por script; en Facturación sí funcionó antes. Investigar (probablemente el `prompt` del navegador de pruebas, pero no está confirmado).
-- **M · Selector de cuenta en los formularios de cobro y pago:** verificado por script y `tsc`, no en pantalla (el demo no tenía facturas con saldo).
-- **M · Sin probar de punta a punta:** suspender/reactivar un cliente, entrar por subdominio real, editar y eliminar en varios maestros, un traslado exitoso en pantalla (el demo tiene un solo almacén), editar/anular una orden de compra y recepciones simultáneas.
-- **M · Huecos en los correlativos.** `FAC-`, `PED-`, `COT-`, `COB-`, `PAG-`, `REC-` usan secuencias de la base: si una transacción falla, el número se salta. Para documentos internos es aceptable; **para el número fiscal de la factura no** (ver 12.2).
-- **M · Las migraciones no son atómicas:** si una falla a la mitad quedan aplicados los pasos anteriores (pasó dos veces); para recuperarla hay que deshacer lo parcial a mano y borrar su fila de `_prisma_migrations`. Hacer las migraciones idempotentes (`IF NOT EXISTS`) o envolverlas en `BEGIN/COMMIT`.
-- **M · Migraciones:** aplicarlas siempre con el rol migrador (`npm run db:migrar:todos` sin `MIGRATION_DATABASE_URL` de administrador exportada); ya pasó una vez que una tabla quedó con dueño `postgres`. Agregar una verificación en `migrar-todos` que lo detecte.
-- **B · Limpieza:** la cuenta demo `BCO-VES` conserva movimientos de prueba; un comentario con redacción incorrecta en `cotizaciones/[id]/editar/page.tsx`; los cobros y pagos anteriores a Tesorería quedaron sin cuenta (solo existen en datos de prueba).
+### 12.0 Ruta sugerida hacia el corte
 
-### 12.2 Fiscal y legal (confirmar con el contador de cada cliente)
-- **A · Impresora/máquina fiscal:** prueba de concepto del agente local, número fiscal en la factura (campo `numero_fiscal` ya existe) y **correlativo fiscal sin saltos**, que debe asignarlo la máquina o una secuencia propia protegida, no la secuencia de la base.
-- **M · Notas de crédito/débito (resta):** nº fiscal y de control de la nota de venta, saldo a favor cuando la nota excede el saldo, devolución a proveedor con salida de inventario y PDF. (El núcleo de venta y compra, con inventario, contabilidad y libros, ya está.)
-- **A · Retenciones de IVA e ISLR** (comprobantes de retención de clientes y a proveedores), y su efecto en cobros y pagos.
-- **A · Libros de compras y de ventas**, ARC y demás reportes fiscales.
-- **M · Facturas de proveedor en bolívares** y órdenes de compra en bolívares (hoy todo es USD con la tasa del día).
-- **M · Revisar con el contador** si aplican cargos adicionales a pagos en divisas (por ejemplo IGTF) y otras normas vigentes antes del primer cliente; hoy no están modeladas.
+1. **Campos de los formularios (12.1):** lo que falta en tesorería y bancos, compras y proveedores, contabilidad y almacenes. Es el criterio «vital» del proyecto: sin estos campos no se puede dejar el escritorio.
+2. **Fiscal y POS (12.3, 12.4):** impresora fiscal con correlativo sin saltos, reportes Z/X, anulación y devolución desde el POS.
+3. **Importación y paralelo (12.9):** cargar los catálogos y datos reales del MySQL (geografía, bancos, tarifas de ISLR, clientes, productos…), operar en paralelo, plan de vuelta atrás.
+4. **Plataforma para alquilar (12.8):** respaldos, facturación del alquiler, panel del proveedor.
+5. **Cierre del ejercicio contable** (a petición del usuario, al final).
 
-### 12.3 Ventas y cobranza
-- **A · Punto de venta (POS):** venta rápida con caja, cierre y arqueo; depende del agente fiscal.
-- **M · Listas de precios por cliente o condición de pago, descuentos por perfil, vendedor y comisiones.**
+### 12.1 Campos de los formularios (frente al Lebrun original)
+
+Estado por módulo en `ANALISIS-CAMPOS.md`. **Hecho:** tablas base (condición de pago, vendedores y cobradores, tipo de negocio, transporte, bancos, retenciones de ISLR, geografía), clientes, proveedores, productos (marca, método de costo, listas de precio, promociones), condiciones comerciales de cotización/pedido/factura, y POS.
+
+- **A · Tesorería y bancos:** cuenta con **titular**, sucursal, tipo de cuenta, «acepta depósitos/pagos», **ITF/IDB** (porcentaje, desde, hasta) y **chequeras** (rangos, último cheque, formato); la cuenta debe elegir su banco del **catálogo de bancos** (hoy el banco es texto libre).
+- **A · Pagos a proveedores:** cheque (número, chequera, **portador**), número de comprobante, pago manual con asientos adicionales.
+- **A · Cobros:** **cobrador**, **varias formas de pago en un solo recibo**, **anticipos** y saldos a favor, cheque con banco/cuenta/número/fecha, fecha propia del recibo.
+- **A · Documento del proveedor:** **fechas separadas** (emisión, recepción, vencimiento, libro de compras, retención), **desglose por alícuota** (exento, reducida, general), recibido por, planilla de importación, centro de costo, cuentas contables por documento.
+- **A · Orden de compra:** **condición de pago**, **tres descuentos por línea y del documento**, moneda y valor de cambio, referencia del proveedor, arancel por línea, transporte. (La condición de pago y los descuentos del proveedor ya existen en su ficha pero **no se aplican** a órdenes ni facturas de compra.)
+- **A · Contabilidad:** **auxiliares contables** (por cliente, proveedor, banco), saldo inicial del ejercicio, concepto y documento por línea del comprobante, cierre definitivo del comprobante.
+- **M · Almacén:** teléfonos, comentario, sucursal y cuentas contables por tipo de movimiento.
+- **M · Catálogos sin hacer:** sucursales, actividad económica y clasificación (hoy texto libre en clientes y proveedores), centros de costo, series fiscales (con la impresora), colores/tallas/divisiones.
+- **M · Cliente y proveedor:** **contactos** (varias personas), **sucursales del cliente**, cuentas contables del tercero.
+- **M · Productos:** **cambio masivo de precios**, imagen, división, sustitutos/asociados/componentes, ubicación física.
+- **M · Documentos de venta:** **pronto pago** (días y % 1 y 2), almacén y unidad **por línea**, bultos y kilos, origen de venta, aprobación gerencial, permiso de «cambiar precio».
+- **B · Productos:** seriales, tallas y colores, etiquetas de góndola, «impuesto patente» (¿?).
+- **B · Sin comparar todavía:** importaciones (`frmOtrosDatos`, `frmFacturaImportacion`…), consultas gerenciales, bultos, seguimientos y solicitudes del original.
+- **M · Usar lo cargado:** las **tarifas de ISLR** aún no se aplican en las retenciones; la **geografía**, los **bancos** y las tarifas están vacíos hasta la importación.
+
+### 12.2 Deuda técnica y verificación
+
+- **M · Candado de crédito por cliente:** dos facturas a crédito simultáneas pueden pasar el límite juntas (el control lee lo adeudado sin bloquear al cliente).
+- **M · Correr `npm test` en CI** (GitHub Actions con PostgreSQL; hay que replicar `npm run local:preparar` y los roles) y sumar pruebas de inventario puro (traslados y ajustes) y de las pantallas de maestros.
+- **M · Permisos con perfiles limitados en pantalla:** la auditoría de código y la lógica están en la suite; falta ver botones ocultos y redirecciones a `/sin-acceso`.
+- **M · Sin probar en pantalla:** rechazo por crédito y factura a crédito, pagos del POS con punto de venta o transferencia, abrir turno con otro cajero, alta de un proveedor completo, selector de cuenta en cobros y pagos, suspender/reactivar un cliente, entrar por subdominio real, traslado exitoso (el demo tiene un solo almacén), editar/anular una orden de compra.
+- **M · Anular una factura desde el navegador:** una vez el botón no la anuló y se hizo por script; probablemente el cuadro de confirmación del navegador de pruebas, sin confirmar.
+- **M · Huecos en los correlativos** (`FAC-`, `PED-`, `COT-`, `COB-`, `PAG-`, `REC-`, `VP-`, `TC-`): usan secuencias de la base y se saltan si una transacción falla. Aceptable en lo interno; **no para el número fiscal** (12.3).
+- **M · Las migraciones no son atómicas:** si una falla a la mitad queda lo parcial (pasó dos veces). Hacerlas idempotentes (`IF NOT EXISTS`) o envolverlas en `BEGIN/COMMIT`.
+- **M · Migraciones con el rol migrador** (`npm run db:migrar:todos` sin `MIGRATION_DATABASE_URL` de administrador exportada): agregar una verificación que lo detecte.
+- **B · Limpieza:** la cuenta demo `BCO-VES` conserva movimientos de prueba; los cobros y pagos anteriores a Tesorería quedaron sin cuenta (solo datos de prueba); advertencias de fin de línea (CRLF/LF) en git, conviene fijar `.gitattributes`.
+
+### 12.3 Fiscal y legal (confirmar con el contador de cada cliente)
+
+- **A · Impresora/máquina fiscal (TFHKA):** agente local, **número fiscal y de control al facturar** y **correlativo fiscal sin saltos** (lo asigna la máquina o una secuencia propia protegida), serie fiscal por caja. Sin impresora para probar: se hará con una implementación simulada y su capa separada.
+- **A · Reportes fiscales restantes:** **ARC**, comprobantes de retención en PDF, archivos XML del SENIAT, planillas de declaración.
+- **M · Retenciones:** aplicar las tarifas de ISLR (catálogo) al calcular, concepto por proveedor, saldo con diferencia de 0,01 Bs. aceptada entre el pasivo contable y el saldo × tasa.
+- **M · Notas de crédito/débito:** número fiscal y de control de la nota de venta, saldo a favor cuando la nota excede el saldo, devolución a proveedor con salida de inventario, PDF.
+- **M · Facturas y órdenes de compra en bolívares** (hoy todo es USD con la tasa del día).
+- **M · Revisar con el contador** si aplican IGTF u otras cargas a pagos en divisas, y otras normas vigentes antes del primer cliente: no están modeladas.
+
+### 12.4 Ventas, POS y cobranza
+
+- **A · POS — fiscal:** impresora y serie fiscal (12.3), reportes **Z y X** de caja.
+- **A · POS — anular y devolver** una venta desde el mostrador (hoy: anular el cobro en Cuentas por cobrar y luego la factura, o una nota de crédito).
+- **M · POS:** cheques y tarjetas de crédito/débito separados en el cierre, venta a crédito y vendedor en el mostrador, descuento sin permiso, dos cajeros en la misma caja (el esperado de cada uno cuenta solo sus movimientos).
+- **M · Promociones «compra N y llévate M»** (cantidad otorgada) aplicadas solas; hoy solo se aplican las de precio o descuento.
+- **M · Comisiones:** cálculo y reporte por vendedor y cobrador (los porcentajes ya están en cliente, producto y categoría).
 - **M · PDF y envío por correo** de cotización, pedido, factura y recibo de cobro.
-- **M · Anticipos y pagos sin factura** (de clientes y a proveedores); cobro con varias monedas en un solo recibo.
 - **M · Cobranza:** recordatorios de mora, intereses de mora, estado de cuenta imprimible.
-- **B · Convertir una cotización directo en factura**, versiones de cotización, seguimiento comercial (probabilidad de cierre).
-- **B · Reserva por almacén** (hoy la reserva es global por producto).
+- **B · Convertir una cotización directo en factura**, versiones de cotización, seguimiento comercial.
+- **B · Reserva por almacén** (hoy es global por producto).
 
-### 12.4 Compras, importaciones y pagos
+### 12.5 Compras, importaciones y pagos
+
 - **A · Importaciones:** liquidación con gastos de importación y su efecto en el costo del producto (módulo sin empezar).
-- **M · Compras sugeridas** (por mínimos, ventas y proveedor) y condiciones de pago por proveedor.
-- **M · Programación de pagos por vencimiento** y notas de débito/crédito del proveedor.
+- **M · Compras sugeridas** (por mínimos, ventas y proveedor).
+- **M · Programación de pagos por vencimiento.**
+- **M · Aplicar** la condición de pago, los descuentos y el límite de crédito del proveedor en órdenes y facturas de compra.
 - **M · Número de recepción:** puede saltar cuando una recepción falla.
 
-### 12.5 Inventario y productos
-- **M · Conteo físico con conciliación**, reporte de kardex por producto y fecha, exportar a Excel.
-- **M · Cambio masivo de precios, promociones, listas de precios, etiquetas y códigos de barras, importación masiva desde Excel.**
+### 12.6 Inventario y productos
+
+- **M · Conteo físico con conciliación**, kardex por producto y fecha, exportar a Excel.
+- **M · Importación masiva desde Excel**, etiquetas y códigos de barras.
 - **M · Precio en bolívares** en la ficha del producto (con la tasa del día).
 - **B · Lotes y vencimientos** y costo por lote, solo si el cliente los usa.
 - **B · Regla de presentación principal única por producto** (sin validar todavía).
 
-### 12.6 Tesorería y bancos
-- **M · Cambio de divisas** entre cuentas de distinta moneda.
-- **M · Importar el estado de cuenta del banco** y conciliar automáticamente; cheques emitidos y en tránsito.
-- **M · Arqueo y cierre de caja**; comisiones bancarias automáticas.
+### 12.7 Tesorería y bancos
+
+- **M · Cambio de divisas** entre cuentas de distinta moneda como operación propia (el vuelto del POS ya usa un intercambio entre cajas).
+- **M · Revaluación de saldos en divisas:** las cuentas en USD no se revalúan; no se registra la diferencia cambiaria al cierre del mes.
+- **M · Corregir movimientos manuales** (hoy con un contramovimiento) y anularlos con su asiento.
+- **M · Importar el estado de cuenta del banco** y conciliar automáticamente; cheques emitidos y en tránsito; comisiones bancarias automáticas.
 - **B · Reportes de tesorería** (flujo de caja, saldos por fecha).
 
-### 12.7 Plataforma como servicio (alquiler)
+### 12.8 Plataforma como servicio (alquiler)
+
 - **A · Respaldos por cliente** (`pg_dump` programado y prueba de restauración) y plan de recuperación.
-- **A · Facturación del alquiler** y planes (qué módulos y qué límites incluye cada plan).
+- **A · Facturación del alquiler** y planes (qué módulos y límites incluye cada plan).
 - **A · Panel del proveedor restringido a `admin.<dominio>`** y endurecimiento (límite de intentos, auditoría del panel).
 - **M · Carga automática de la tasa desde el BCV** (tarea programada por cliente) y otras divisas con su fuente.
 - **M · Monitoreo** (errores, rendimiento, espacio por cliente) y despliegue (Docker/CI).
 
-### 12.8 Módulos y fases sin empezar
-- **A · Contabilidad (resta):** asientos automáticos de recepciones de compra, revaluación de saldos en divisas, contabilizar lo anterior a la activación, cierre del ejercicio, estados financieros (balance general y estado de resultados), libro diario y exportación. Ya están el plan de cuentas, asientos manuales, mayor, balance de comprobación, períodos y los asientos automáticos de factura, cobro, factura de proveedor y pago.
-- **A · Reportes (resta lo fiscal restante y lo gerencial avanzado):** ARC y retenciones en los libros, `.xlsx`/PDF con membrete, kardex por producto, estado de cuenta imprimible, flujo de caja, compras por proveedor, ventas por vendedor o categoría, comparativos y gráficos, y los equivalentes de los Crystal Reports de Lebrun aún no cubiertos. Ya están ventas/costo/margen, inventario valorado, antigüedad de CxC/CxP, balance general y estado de resultados.
-- **A · Datos, paralelo y corte:** importación repetible desde el MySQL de Lebrun (clientes, proveedores, productos, existencias, saldos), operación en paralelo por empresa, capacitación y plan de vuelta atrás (fase 12 del plan).
+### 12.9 Datos, paralelo y corte
+
+- **A · Importación repetible desde el MySQL de Lebrun:** geografía, bancos, tarifas de ISLR, condiciones de pago, vendedores, clientes, proveedores, productos con sus precios, existencias y saldos. El respaldo local tiene datos de los catálogos.
+- **A · Operación en paralelo por empresa**, capacitación y plan de vuelta atrás (fase 12 del plan).
+- **A · Confirmar con quien opera el sistema** qué campos del original se usan de verdad (hay marcados con «¿?») y descartar los vacíos con el respaldo de producción.
+
+### 12.10 Contabilidad y reportes
+
+- **A · Contabilidad (resta):** asientos automáticos de las **recepciones de compra**, contabilizar documentos **anteriores a la activación**, libro diario y exportación, y —al final, por decisión del usuario— **cierre del ejercicio** (asiento de cierre a resultados acumulados). Ya están: plan de cuentas, asientos manuales y automáticos (factura, cobro, factura de proveedor, pago, retenciones, notas, enteros, tesorería y vuelto), mayor, balance de comprobación, períodos, balance general y estado de resultados.
+- **M · Reportes gerenciales:** `.xlsx`/PDF con membrete, kardex, estado de cuenta imprimible, flujo de caja, compras por proveedor, ventas por vendedor o categoría, comparativos y gráficos, y los equivalentes de los Crystal Reports de Lebrun aún no cubiertos. Ya están: ventas/costo/margen, inventario valorado, antigüedad de CxC/CxP, libros de ventas y compras, resumen de IVA, retenciones, balance y estado de resultados.
+
+### 12.11 Resuelto desde la consolidación anterior (para trazabilidad)
+
+Retenciones de IVA e ISLR y su entero · libros de ventas y compras · notas de crédito y débito (núcleo) · asientos automáticos de tesorería y del vuelto · balance general y estado de resultados · **suite de 117 pruebas** · tablas base · clientes, proveedores y productos con sus campos · listas de precio y promociones (precio/descuento) · vendedor, condición de pago, descuentos globales y entrega en documentos · **control de crédito** · **POS** con turnos, cobro mixto, vuelto, cierre y recibo.
