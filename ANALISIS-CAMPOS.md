@@ -19,8 +19,8 @@
 
 | Área | Campos en el original | Campos en el nuevo | Veredicto |
 |---|---|---|---|
-| **Clientes** | 49 columnas · 36 etiquetas en pantalla | 9 | **Muy incompleto** (falta casi todo lo comercial y fiscal) |
-| **Proveedores** | 42 columnas · 50 etiquetas | 10 | **Muy incompleto** |
+| **Clientes** | 49 columnas · 36 etiquetas en pantalla | ~55 | **✅ Completado el 2026-11-21** (faltan contactos, sucursales y cuenta contable) |
+| **Proveedores** | 42 columnas · 50 etiquetas | ~45 | **✅ Completado el 2026-11-21** (falta varios contactos y cuentas contables) |
 | **Productos** | 31 columnas + presentaciones, precios por lista, promociones | ~26 | **Parcial**: falta marca, listas de precio, promociones, método de costo |
 | **Pedido / Prefactura / Factura** | 46–47 columnas · ~40 etiquetas | cliente, almacén, observaciones, días de crédito y líneas | **Incompleto** (vendedor, condiciones, descuentos, entrega, pago mixto…) |
 | **Orden de compra** | 29 columnas | proveedor, fechas, observaciones, líneas | **Incompleto** (moneda/cambio, condición, 3 descuentos, arancel) |
@@ -72,6 +72,10 @@ Nuevo: documento (RIF), razón social, nombre comercial, tipo, categoría, direc
 | Sucursales del cliente (`admsucursalcli`, 17 columnas) | Falta | M |
 | Clasificación de clientes (`admclasiclient`), asociados (`admcliasociados`) | Falta | B |
 
+
+> **✅ Avance 2026-11-21 (clientes):** hecho: código automático o manual, NIF, tipo de persona, residente, contribuyente (especial), situación, tres direcciones y país→estado→municipio→parroquia, zona postal y geográfica, teléfonos, celulares, fax, web, vendedor, cobrador, comisiones, condición de pago, lista de precios, tres descuentos, tipo de negocio, transporte, moneda, crédito (límite y días máximos), día y hora de cobro, fecha de nacimiento, clasificación, actividad económica, representante y observaciones. Con reglas en la base y pruebas.
+> **⬜ Sigue pendiente:** contactos (`admpersonalcli`), sucursales del cliente, cuenta contable/auxiliar, clasificación y actividad económica como catálogos (hoy texto libre), y cargar los datos reales con la importación. No se llevaron `FERLE` (confirmado que no se usa), `gacenun`, `nonmbreg` ni las fechas de vacaciones.
+
 ### 3.2 Proveedores (`admproveedor`, `frmProveedores`)
 
 Nuevo: documento, razón social, nombre comercial, contacto, teléfono, correo, dirección, días de crédito, % retención de IVA, activo.
@@ -95,6 +99,10 @@ Nuevo: documento, razón social, nombre comercial, contacto, teléfono, correo, 
 | Fecha de registro | Falta | B |
 | Personas de contacto (`admpersonalprov`) | Un solo nombre de contacto | M |
 | % de retención de IVA | Sí (extra del nuevo) | — |
+
+
+> **✅ Avance 2026-11-21 (proveedores):** hecho: código, tipo de persona, residente, contribuyente (especial), zona libre, situación, clasificación, actividad económica, moneda en que factura, condición de pago (si los días están en 0 se toman de ella), límite de crédito, tres descuentos, las banderas de moneda extranjera, banco, tipo y número de cuenta, tres direcciones y ubicación encadenada, tres teléfonos, dos celulares, web y observaciones.
+> **⬜ Sigue pendiente:** varias personas de contacto (`admpersonalprov`), cuentas contables del proveedor, foto, y los catálogos de clasificación y actividad. El enlace de la condición de pago a las órdenes y facturas de compra se hace en el paso 5.
 
 ### 3.3 Productos (`adminv`, `adminvmed`, `adminvparam`, `admprecios`, `admpromociones`, `frmMantProductos`)
 

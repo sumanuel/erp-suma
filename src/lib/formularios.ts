@@ -8,13 +8,17 @@ export type CampoForm = {
   max?: number;
   requerido?: boolean;
   ayuda?: string;
-  opciones?: { valor: string; etiqueta: string }[];
+  opciones?: { valor: string; etiqueta: string; padre?: string }[];
   // La clave del registro: se escribe al crear y queda fija al editar.
   soloCrear?: boolean;
   // Ancho en columnas de la grilla (1 a 3).
   ancho?: 1 | 2 | 3;
   // Selección cuya columna es numérica (por ejemplo, un indicador 0/1): se guarda como número.
   numerico?: boolean;
+  // Título de sección: el formulario abre una sección nueva cada vez que cambia.
+  seccion?: string;
+  // Selección que depende de otra: solo muestra las opciones cuyo `padre` es el valor elegido en el campo indicado.
+  dependeDe?: string;
 };
 
 export type Valores = Record<string, string | boolean>;

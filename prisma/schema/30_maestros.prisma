@@ -9,6 +9,64 @@ model Cliente {
   direccion     String?
   telefono      String?
   email         String?
+  /// Código que usa el negocio (el del sistema anterior). Se asigna solo si no se da.
+  codigo          String   @unique @default(dbgenerated("('C'::text || lpad((nextval('cliente_codigo_seq'::regclass))::text, 6, '0'::text))"))
+  nif             String?
+  /// NATURAL o JURIDICA
+  tipoPersona     String?  @map("tipo_persona")
+  residente       Boolean  @default(true)
+  contribuyente   Boolean  @default(true)
+  contribuyenteEspecial Boolean @default(false) @map("contribuyente_especial")
+  /// NORMAL, MOROSO o BLOQUEADO
+  situacion       String   @default("NORMAL")
+  representante   String?
+  clasificacion   String?
+  actividadEconomica String? @map("actividad_economica")
+  direccion2      String?
+  direccionEnvio  String?  @map("direccion_envio")
+  paisId          String?   @map("pais_id") @db.Uuid
+  pais            Pais?     @relation(fields: [paisId], references: [id])
+  estadoId        String?   @map("estado_id") @db.Uuid
+  estado          Estado?   @relation(fields: [estadoId], references: [id])
+  municipioId     String?   @map("municipio_id") @db.Uuid
+  municipio       Municipio? @relation(fields: [municipioId], references: [id])
+  parroquiaId     String?   @map("parroquia_id") @db.Uuid
+  parroquia       Parroquia? @relation(fields: [parroquiaId], references: [id])
+  zonaPostal      String?  @map("zona_postal")
+  zona            String?
+  telefono2       String?
+  fax             String?
+  celular         String?
+  celular2        String?
+  web             String?
+  vendedorId      String?  @map("vendedor_id") @db.Uuid
+  vendedor        Vendedor? @relation("ClienteVendedor", fields: [vendedorId], references: [id])
+  cobradorId      String?  @map("cobrador_id") @db.Uuid
+  cobrador        Vendedor? @relation("ClienteCobrador", fields: [cobradorId], references: [id])
+  comisionVentaPct Decimal @default(0) @map("comision_venta_pct") @db.Decimal(7, 4)
+  comisionCobroPct Decimal @default(0) @map("comision_cobro_pct") @db.Decimal(7, 4)
+  condicionPagoId String?  @map("condicion_pago_id") @db.Uuid
+  condicionPago   CondicionPago? @relation(fields: [condicionPagoId], references: [id])
+  /// Si el cliente compra a crédito; límite en USD y días máximos de vencimiento permitidos.
+  tieneCredito    Boolean  @default(false) @map("tiene_credito")
+  limiteCredito   Decimal  @default(0) @map("limite_credito") @db.Decimal(18, 2)
+  diasMaxVencimiento Int   @default(0) @map("dias_max_vencimiento")
+  diaCobro        String?  @map("dia_cobro")
+  horaCobro       String?  @map("hora_cobro")
+  /// Lista de precios que se le aplica (A, B, C…) y si se le respeta el último precio vendido.
+  listaPrecio     String   @default("A") @map("lista_precio")
+  ultimoPrecio    Boolean  @default(false) @map("ultimo_precio")
+  descuento1      Decimal  @default(0) @map("descuento_1") @db.Decimal(7, 4)
+  descuento2      Decimal  @default(0) @map("descuento_2") @db.Decimal(7, 4)
+  descuento3      Decimal  @default(0) @map("descuento_3") @db.Decimal(7, 4)
+  tipoNegocioId   String?  @map("tipo_negocio_id") @db.Uuid
+  tipoNegocio     TipoNegocio? @relation(fields: [tipoNegocioId], references: [id])
+  transporteId    String?  @map("transporte_id") @db.Uuid
+  transporte      Transporte? @relation(fields: [transporteId], references: [id])
+  /// USD o VES: moneda en que se le cotiza.
+  divisa          String   @default("USD")
+  fechaNacimiento DateTime? @map("fecha_nacimiento") @db.Date
+  observaciones   String?
   activo        Boolean  @default(true)
   creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
@@ -38,6 +96,48 @@ model Proveedor {
   diasCredito     Int      @default(0) @map("dias_credito")
   /// Porcentaje del IVA que se le retiene en cada factura (0 = no se le retiene; 75 o 100 según su contribuyente).
   retencionIvaPct Decimal  @default(0) @map("retencion_iva_pct") @db.Decimal(7, 4)
+  /// Código que usa el negocio (el del sistema anterior). Se asigna solo si no se da.
+  codigo          String   @unique @default(dbgenerated("('P'::text || lpad((nextval('proveedor_codigo_seq'::regclass))::text, 6, '0'::text))"))
+  tipoPersona     String?  @map("tipo_persona")
+  residente       Boolean  @default(true)
+  contribuyente   Boolean  @default(true)
+  contribuyenteEspecial Boolean @default(false) @map("contribuyente_especial")
+  situacion       String   @default("NORMAL")
+  clasificacion   String?
+  actividadEconomica String? @map("actividad_economica")
+  /// USD o VES: moneda en que factura.
+  divisa          String   @default("USD")
+  condicionPagoId String?  @map("condicion_pago_id") @db.Uuid
+  condicionPago   CondicionPago? @relation(fields: [condicionPagoId], references: [id])
+  limiteCredito   Decimal  @default(0) @map("limite_credito") @db.Decimal(18, 2)
+  descuento1      Decimal  @default(0) @map("descuento_1") @db.Decimal(7, 4)
+  descuento2      Decimal  @default(0) @map("descuento_2") @db.Decimal(7, 4)
+  descuento3      Decimal  @default(0) @map("descuento_3") @db.Decimal(7, 4)
+  zonaLibre       Boolean  @default(false) @map("zona_libre")
+  cxpMonedaExtranjera Boolean @default(false) @map("cxp_moneda_extranjera")
+  ordenesMonedaExtranjera Boolean @default(false) @map("ordenes_moneda_extranjera")
+  solicitaCotizacionMonedaExtranjera Boolean @default(false) @map("solicita_cotizacion_moneda_extranjera")
+  bancoId         String?  @map("banco_id") @db.Uuid
+  banco           Banco?   @relation(fields: [bancoId], references: [id])
+  /// CORRIENTE o AHORRO
+  tipoCuentaBancaria String? @map("tipo_cuenta_bancaria")
+  numeroCuentaBancaria String? @map("numero_cuenta_bancaria")
+  direccion2      String?
+  direccion3      String?
+  paisId          String?   @map("pais_id") @db.Uuid
+  pais            Pais?     @relation(fields: [paisId], references: [id])
+  estadoId        String?   @map("estado_id") @db.Uuid
+  estado          Estado?   @relation(fields: [estadoId], references: [id])
+  municipioId     String?   @map("municipio_id") @db.Uuid
+  municipio       Municipio? @relation(fields: [municipioId], references: [id])
+  parroquiaId     String?   @map("parroquia_id") @db.Uuid
+  parroquia       Parroquia? @relation(fields: [parroquiaId], references: [id])
+  telefono2       String?
+  telefono3       String?
+  celular         String?
+  celular2        String?
+  web             String?
+  observaciones   String?
   activo          Boolean  @default(true)
   creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn   DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
