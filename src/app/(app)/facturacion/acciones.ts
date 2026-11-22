@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requerirPermisoAccion } from "@/lib/dal";
+import { requerirPermisoAccion, tienePermisoEspecial } from "@/lib/dal";
 import { EncabezadoVentaZ } from "@/lib/ventas/esquemas";
 import { anularFactura, emitirFactura, emitirFacturaDePedido, registrarNumerosFiscales } from "@/lib/facturacion/servicio";
 import { anularNotaVenta, crearNotaVenta } from "@/lib/notas/servicio";
@@ -41,7 +41,7 @@ export async function emitirFacturaVenta(pedidoId: string | null, datos: unknown
   } else {
     const r = Factura.safeParse(datos);
     if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
-    res = await emitirFactura(ctx.db, ctx.usuario, r.data);
+    res = await emitirFactura(ctx.db, ctx.usuario, { ...r.data, sinCambiarPrecio: !tienePermisoEspecial(ctx, "ventas.cambiar_precio") });
   }
   if (!res.ok) return { error: res.error };
   revalidatePath("/facturacion");

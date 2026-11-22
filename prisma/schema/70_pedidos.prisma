@@ -19,6 +19,14 @@ model PedidoVenta {
   condicionPagoId String?  @map("condicion_pago_id") @db.Uuid
   transporteId    String?  @map("transporte_id") @db.Uuid
   direccionEntrega String? @map("direccion_entrega")
+  origenVentaId    String? @map("origen_venta_id") @db.Uuid
+  bultos           Int?
+  kilos            Decimal? @db.Decimal(18, 3)
+  /// Pronto pago (se copia de la condición de pago): si paga dentro de N días, el porcentaje de descuento. Dos escalones.
+  prontoPagoDias1  Int     @default(0) @map("pronto_pago_dias_1")
+  prontoPagoPct1   Decimal @default(0) @map("pronto_pago_pct_1") @db.Decimal(7, 4)
+  prontoPagoDias2  Int     @default(0) @map("pronto_pago_dias_2")
+  prontoPagoPct2   Decimal @default(0) @map("pronto_pago_pct_2") @db.Decimal(7, 4)
   /// Descuentos globales 1, 2 y 3 (%): se aplican en cadena a todas las líneas (quedan dentro del descuento de cada línea).
   descuentoGlobal1 Decimal @default(0) @map("descuento_global_1") @db.Decimal(7, 4)
   descuentoGlobal2 Decimal @default(0) @map("descuento_global_2") @db.Decimal(7, 4)

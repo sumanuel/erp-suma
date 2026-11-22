@@ -67,7 +67,7 @@ export async function auditarEmision(db: Db, actor: Actor, r: { id: string; nume
   await registrarCambio(db, actor, { modulo: "facturacion", entidad: "factura", entidadId: r.id, descripcion: numeroFactura(r.numero), accion: "crear", despues: { lineas: r.lineas, totalUsd: r.total, ...(pedidoId ? { pedidoId } : {}) } });
 }
 
-export type DatosFactura = { clienteId: string; almacenId: string; observaciones: string | null; diasCredito: number; lineas: LineaPedido[]; encabezado?: EncabezadoVenta };
+export type DatosFactura = { clienteId: string; almacenId: string; observaciones: string | null; diasCredito: number; lineas: LineaPedido[]; encabezado?: EncabezadoVenta; sinCambiarPrecio?: boolean };
 
 /** Factura directa (sin pedido). Respeta lo reservado por pedidos confirmados de otros clientes. */
 /** Emite una factura directa DENTRO de la transacción recibida (la usa el punto de venta para sumarle sus cobros). Lanza si no procede. */

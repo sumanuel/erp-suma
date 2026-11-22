@@ -11,7 +11,7 @@ import { VentaError, encabezadoDe, validarEncabezado, type EncabezadoVenta } fro
 // Servicio de cotizaciones. Una cotización no reserva ni mueve inventario. Convertir una cotización emitida y vigente crea un pedido en borrador
 // con los mismos precios, y la cotización pasa a ACEPTADA en la misma transacción (el cambio de estado condicionado impide convertirla dos veces).
 
-export type DatosCotizacion = { clienteId: string; fecha: Date; validezDias: number; observaciones: string | null; lineas: LineaPedido[]; encabezado?: EncabezadoVenta };
+export type DatosCotizacion = { clienteId: string; fecha: Date; validezDias: number; observaciones: string | null; lineas: LineaPedido[]; encabezado?: EncabezadoVenta; sinCambiarPrecio?: boolean };
 export type ResultadoCotizacion<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
 class CotizacionError extends Error {}

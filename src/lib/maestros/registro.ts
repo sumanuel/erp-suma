@@ -2,7 +2,7 @@ import type { Maestro, ModuloMaestros } from "./tipos";
 import { alicuotas, aranceles, categorias, marcas, subcategorias, unidades } from "./catalogos";
 import { presentaciones, preciosLista, productos, promociones, proveedoresProducto, relacionesProducto } from "./productos";
 import { clientes, proveedores } from "./terceros";
-import { actividadesEconomicas, clasificacionesCliente, clasificacionesProveedor, colores, contactosCliente, contactosProveedor, divisiones, seriesFiscales, sucursales, sucursalesCliente, tallas, ubicacionesFisicas } from "./catalogos-extra";
+import { actividadesEconomicas, clasificacionesCliente, clasificacionesProveedor, colores, contactosCliente, contactosProveedor, divisiones, origenesVenta, seriesFiscales, sucursales, sucursalesCliente, tallas, ubicacionesFisicas } from "./catalogos-extra";
 import { almacenes, existencias, movimientos } from "./existencias";
 import { monedas, tasas } from "./tasas";
 import { auxiliaresContables, bancos, centrosCosto, condicionesPago, estados, municipios, paises, parroquias, tarifasRetencion, tiposNegocio, transportes, vendedores } from "./tablas";
@@ -87,6 +87,7 @@ export const modulosMaestros: ModuloMaestros[] = [
       { slug: "clasificacion-clientes", titulo: "Clasificación de clientes", maestro: clasificacionesCliente },
       { slug: "clasificacion-proveedores", titulo: "Clasificación de proveedores", maestro: clasificacionesProveedor },
       { slug: "series-fiscales", titulo: "Series fiscales", maestro: seriesFiscales },
+      { slug: "origenes-venta", titulo: "Orígenes de venta", maestro: origenesVenta },
     ],
   },
 ];

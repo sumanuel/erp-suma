@@ -28,4 +28,12 @@ export const MODULOS = [
 export type ModuloId = (typeof MODULOS)[number]["id"];
 
 export const permiso = (modulo: string, accion: Accion) => `${modulo}.${accion}`;
-export const todosLosPermisos = () => MODULOS.flatMap((m) => ACCIONES.map((a) => permiso(m.id, a)));
+
+/** Permisos especiales que no son de un módulo y una acción: controles puntuales dentro de un proceso. */
+export const PERMISOS_ESPECIALES = [
+  { id: "ventas.cambiar_precio", nombre: "Cambiar el precio de venta", ayuda: "Escribir en una cotización, pedido, factura o venta del mostrador un precio distinto al de la lista del cliente." },
+] as const;
+export type PermisoEspecial = (typeof PERMISOS_ESPECIALES)[number]["id"];
+export const esPermisoEspecial = (p: string) => PERMISOS_ESPECIALES.some((x) => x.id === p);
+
+export const todosLosPermisos = () => [...MODULOS.flatMap((m) => ACCIONES.map((a) => permiso(m.id, a))), ...PERMISOS_ESPECIALES.map((p) => p.id as string)];

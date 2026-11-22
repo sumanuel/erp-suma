@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { Db } from "@/lib/tenant";
 import { requerirPermisoAccion } from "@/lib/dal";
 import { registrarCambio, soloCambios } from "@/lib/auditoria";
-import { todosLosPermisos } from "@/lib/modulos";
+import { esPermisoEspecial, todosLosPermisos } from "@/lib/modulos";
 
 export type EstadoPerfil = { errores?: Record<string, string>; error?: string };
 
@@ -24,6 +24,7 @@ export async function guardarPerfil(id: string | null, _: EstadoPerfil, form: Fo
   const permisos = [...new Set(form.getAll("permiso").map(String))].filter((p) => validos.has(p));
   // Ver es requisito de cualquier otra acción del módulo.
   for (const p of [...permisos]) {
+    if (esPermisoEspecial(p)) continue;
     const [modulo] = p.split(".");
     if (!permisos.includes(`${modulo}.ver`)) permisos.push(`${modulo}.ver`);
   }

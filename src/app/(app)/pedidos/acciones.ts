@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requerirPermisoAccion } from "@/lib/dal";
+import { requerirPermisoAccion, tienePermisoEspecial } from "@/lib/dal";
 import { EncabezadoVentaZ } from "@/lib/ventas/esquemas";
 import { anularPedido, buscarProductosVenta, confirmarPedido, guardarPedido, type ProductoVenta } from "@/lib/pedidos/servicio";
 
@@ -34,7 +34,7 @@ export async function guardarPedidoVenta(id: string | null, datos: unknown): Pro
   const ctx = await requerirPermisoAccion("pedidos", id ? "editar" : "crear");
   const r = Pedido.safeParse(datos);
   if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
-  const res = await guardarPedido(ctx.db, ctx.usuario, id, r.data);
+  const res = await guardarPedido(ctx.db, ctx.usuario, id, { ...r.data, sinCambiarPrecio: !tienePermisoEspecial(ctx, "ventas.cambiar_precio") });
   if (!res.ok) return { error: res.error };
   revalidatePath("/pedidos");
   redirect(`/pedidos/${res.id}`);

@@ -160,16 +160,16 @@ Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédi
 | **Condición de pago** (catálogo) y **modo de pago** | Solo «días de crédito» | A |
 | **Plazo en días** y fecha de vencimiento | Días sí; sale del cliente en el original | M |
 | **Descuento global (3 niveles, `Des G`, `Dscto vtas 1-3`)** y descuento por ítem | Solo descuento por línea | A |
-| **Pronto pago:** días 1 y 2 y porcentajes 1 y 2 (`pDiasPP1/2`, `pFechaPP1/2`) | Falta | M |
+| **Pronto pago:** días 1 y 2 y porcentajes 1 y 2 (`pDiasPP1/2`, `pFechaPP1/2`) | ✅ 2026-11-22: en la condición de pago y copiado al documento (falta aplicarlo al cobrar) | M |
 | **Dirección de entrega** y dirección fiscal impresas | Falta (se toma del cliente, que solo tiene una) | A |
-| **Transporte**, cantidad de bultos, kilos | Falta | M |
+| **Transporte**, cantidad de bultos, kilos | ✅ 2026-11-22 | M |
 | **Almacén por línea** y **unidad de venta** por línea | Un almacén por documento; sin unidad | A |
 | **Divisa de visualización** y valor de cambio | Todo en USD con tasa congelada ✔️ (la divisa elegida en pantalla no) | M |
-| **Origen de venta** (`cboOrigenVenta`) | Falta | M |
+| **Origen de venta** (`cboOrigenVenta`) | ✅ 2026-11-22 (catálogo + campo del documento) | M |
 | **Caja, número de punto de venta, relación de caja** | Falta (llega con el POS) | A |
 | **Número fiscal** y **número de control** | Se registran después de emitir ✔️ | — |
 | **Serie fiscal / serial / IP de la impresora** (`frmSerieFiscal`) | Falta (llega con la impresora fiscal) | A |
-| «Cambiar precio» (permiso de cambiar el precio en la línea) | El precio es editable en todo caso; falta el control por permiso | M |
+| «Cambiar precio» (permiso de cambiar el precio en la línea) | ✅ 2026-11-22: permiso especial; sin él solo se vende al precio de la lista (falta en el POS) | M |
 | **Pago contado/mixto en la propia factura:** efectivo, tarjetas, **cheques (banco, número)**, cambio, monto a abonar | Falta (llega con el POS; hoy se cobra aparte) | A |
 | Aprobación gerencial (`frmAprobacionGerencial`, `pFlagAprob`, `pLoginAprob`) | Falta | M |
 | Tipo de pedido, nota de entrega (`pNroNotaEntrega`), «genera giro», «grava comisión especial», pre-lista | Falta ¿? | B |

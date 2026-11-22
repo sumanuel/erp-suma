@@ -9,6 +9,11 @@ model CondicionPago {
   dias          Int      @default(0)
   /// Días de gracia antes de que el saldo se considere en mora.
   diasMora      Int      @default(0) @map("dias_mora")
+  /// Pronto pago: si el cliente paga dentro de N días de la factura, se le da ese porcentaje de descuento (dos escalones; 0 = sin pronto pago).
+  prontoPagoDias1 Int    @default(0) @map("pronto_pago_dias_1")
+  prontoPagoPct1  Decimal @default(0) @map("pronto_pago_pct_1") @db.Decimal(7, 4)
+  prontoPagoDias2 Int    @default(0) @map("pronto_pago_dias_2")
+  prontoPagoPct2  Decimal @default(0) @map("pronto_pago_pct_2") @db.Decimal(7, 4)
   observaciones String?
   activo        Boolean  @default(true)
   creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
@@ -17,6 +22,19 @@ model CondicionPago {
   clientes      Cliente[]
   proveedores   Proveedor[]
   @@map("condicion_pago")
+}
+
+/// De dónde vino la venta (mostrador, teléfono, web, vendedor en ruta…). Equivale al origen de venta del sistema anterior.
+model OrigenVenta {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  observaciones String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("origen_venta")
 }
 
 /// Vendedores y cobradores: una persona puede ser una, otra o ambas cosas.

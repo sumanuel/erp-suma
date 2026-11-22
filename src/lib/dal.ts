@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { leerSesion } from "./sesion";
 import { dbParaClienteId } from "./tenant";
 import type { Accion } from "./modulos";
-import { tienePermiso } from "./permisos";
+import { tienePermiso, tienePermisoEspecial } from "./permisos";
 
 // Valida la sesión contra la base en cada página y acción: usuario activo, perfil activo y contraseña no cambiada después del inicio.
 export type UsuarioActual = {
@@ -25,7 +25,7 @@ export const requerirSesion = cache(async () => {
   return { db, cliente, usuario, sesion };
 });
 
-export { tienePermiso };
+export { tienePermiso, tienePermisoEspecial };
 
 export async function requerirPermiso(modulo: string, accion: Accion = "ver") {
   const ctx = await requerirSesion();

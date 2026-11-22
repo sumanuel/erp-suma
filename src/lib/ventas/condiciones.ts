@@ -15,8 +15,37 @@ export type EncabezadoVenta = {
   direccionEntrega: string | null;
   /// Descuentos globales 1, 2 y 3 (%), en cadena.
   descuentos: [number, number, number];
+  origenVentaId?: string | null;
+  bultos?: number | null;
+  kilos?: number | null;
+  /// Pronto pago: [días 1, % 1, días 2, % 2]. Si no viene, se toma de la condición de pago elegida.
+  prontoPago?: [number, number, number, number] | null;
 };
 export const ENCABEZADO_VACIO: EncabezadoVenta = { vendedorId: null, condicionPagoId: null, transporteId: null, direccionEntrega: null, descuentos: [0, 0, 0] };
+
+/** Valida el pronto pago (dos escalones: días y %, el segundo más lejano que el primero). Devuelve el mensaje de error o null. */
+export function errorProntoPago([d1, p1, d2, p2]: [number, number, number, number]): string | null {
+  if (![d1, p1, d2, p2].every(Number.isFinite)) return "El pronto pago tiene valores inválidos.";
+  if (!Number.isInteger(d1) || !Number.isInteger(d2) || d1 < 0 || d2 < 0 || d1 > 365 || d2 > 365) return "Los días de pronto pago deben ser enteros entre 0 y 365.";
+  if (p1 < 0 || p1 > 100 || p2 < 0 || p2 > 100) return "El porcentaje de pronto pago debe estar entre 0 y 100.";
+  if ((p1 === 0) !== (d1 === 0) || (p2 === 0) !== (d2 === 0)) return "Cada escalón de pronto pago lleva días y porcentaje (o ninguno de los dos).";
+  if (d2 > 0 && d2 <= d1) return "Los días del segundo pronto pago deben ser mayores que los del primero.";
+  return null;
+}
+
+/**
+ * Descuento por pronto pago que le corresponde a una factura si se paga en `fechaPago`: el del primer escalón si paga dentro de sus días, si no el del
+ * segundo. Los días se cuentan desde la fecha de la factura. 0 si ya pasó el plazo o no hay pronto pago.
+ */
+export function prontoPagoAplicable(f: { fecha: Date; prontoPagoDias1: number; prontoPagoPct1: unknown; prontoPagoDias2: number; prontoPagoPct2: unknown }, fechaPago: Date) {
+  const dias = Math.floor((fechaPago.getTime() - f.fecha.getTime()) / 86_400_000);
+  if (dias < 0) return { porcentaje: 0, hasta: null as Date | null };
+  const escalones = [[f.prontoPagoDias1, Number(f.prontoPagoPct1)], [f.prontoPagoDias2, Number(f.prontoPagoPct2)]] as const;
+  for (const [d, p] of escalones) {
+    if (d > 0 && p > 0 && dias <= d) return { porcentaje: p, hasta: new Date(f.fecha.getTime() + d * 86_400_000) };
+  }
+  return { porcentaje: 0, hasta: null as Date | null };
+}
 
 /** Valida el encabezado y lo deja en las columnas del documento. */
 export async function validarEncabezado(tx: TxVenta, enc: EncabezadoVenta | undefined) {
@@ -24,6 +53,20 @@ export async function validarEncabezado(tx: TxVenta, enc: EncabezadoVenta | unde
   for (const [i, d] of e.descuentos.entries()) {
     if (!Number.isFinite(d) || d < 0 || d > 100) throw new VentaError(`El descuento global ${i + 1} debe estar entre 0 y 100.`);
   }
+  const bultos = e.bultos ?? null;
+  const kilos = e.kilos ?? null;
+  if (bultos !== null && (!Number.isInteger(bultos) || bultos < 0 || bultos > 1_000_000)) throw new VentaError("Los bultos deben ser un entero mayor o igual a 0.");
+  if (kilos !== null && (!Number.isFinite(kilos) || kilos < 0 || kilos > 1e9)) throw new VentaError("Los kilos deben ser un número mayor o igual a 0.");
+  if (e.origenVentaId && !(await tx.origenVenta.findUnique({ where: { id: e.origenVentaId }, select: { activo: true } }))?.activo) throw new VentaError("El origen de venta no existe o está inactivo.");
+  // Pronto pago: el que mande el formulario; si no viene, el de la condición de pago.
+  let pp = e.prontoPago ?? null;
+  if (!pp && e.condicionPagoId) {
+    const c = await tx.condicionPago.findUnique({ where: { id: e.condicionPagoId }, select: { prontoPagoDias1: true, prontoPagoPct1: true, prontoPagoDias2: true, prontoPagoPct2: true } });
+    if (c) pp = [c.prontoPagoDias1, Number(c.prontoPagoPct1), c.prontoPagoDias2, Number(c.prontoPagoPct2)];
+  }
+  pp ??= [0, 0, 0, 0];
+  const errorPP = errorProntoPago(pp);
+  if (errorPP) throw new VentaError(errorPP);
   if (e.vendedorId) {
     const v = await tx.vendedor.findUnique({ where: { id: e.vendedorId }, select: { activo: true, esVendedor: true } });
     if (!v || !v.activo || !v.esVendedor) throw new VentaError("El vendedor no existe, está inactivo o no es vendedor.");
@@ -37,14 +80,23 @@ export async function validarEncabezado(tx: TxVenta, enc: EncabezadoVenta | unde
     columnas: {
       vendedorId: e.vendedorId, condicionPagoId: e.condicionPagoId, transporteId: e.transporteId, direccionEntrega: entrega,
       descuentoGlobal1: e.descuentos[0], descuentoGlobal2: e.descuentos[1], descuentoGlobal3: e.descuentos[2],
+      origenVentaId: e.origenVentaId || null, bultos, kilos,
+      prontoPagoDias1: pp[0], prontoPagoPct1: pp[1], prontoPagoDias2: pp[2], prontoPagoPct2: pp[3],
     },
   };
 }
 
+type DocConEncabezado = {
+  vendedorId: string | null; condicionPagoId: string | null; transporteId: string | null; direccionEntrega: string | null; descuentoGlobal1: unknown; descuentoGlobal2: unknown; descuentoGlobal3: unknown;
+  origenVentaId: string | null; bultos: number | null; kilos: unknown; prontoPagoDias1: number; prontoPagoPct1: unknown; prontoPagoDias2: number; prontoPagoPct2: unknown;
+};
+
 /** Encabezado de un documento ya guardado, para copiarlo al siguiente (cotización → pedido → factura). */
-export const encabezadoDe = (x: { vendedorId: string | null; condicionPagoId: string | null; transporteId: string | null; direccionEntrega: string | null; descuentoGlobal1: unknown; descuentoGlobal2: unknown; descuentoGlobal3: unknown }): EncabezadoVenta => ({
+export const encabezadoDe = (x: DocConEncabezado): EncabezadoVenta => ({
   vendedorId: x.vendedorId, condicionPagoId: x.condicionPagoId, transporteId: x.transporteId, direccionEntrega: x.direccionEntrega,
   descuentos: [Number(x.descuentoGlobal1), Number(x.descuentoGlobal2), Number(x.descuentoGlobal3)],
+  origenVentaId: x.origenVentaId, bultos: x.bultos, kilos: x.kilos === null ? null : Number(x.kilos),
+  prontoPago: [x.prontoPagoDias1, Number(x.prontoPagoPct1), x.prontoPagoDias2, Number(x.prontoPagoPct2)],
 });
 
 /**

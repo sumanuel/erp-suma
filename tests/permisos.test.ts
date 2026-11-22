@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, it } from "node:test";
 import { tienePermiso } from "../src/lib/permisos";
-import { ACCIONES, MODULOS, permiso, todosLosPermisos } from "../src/lib/modulos";
+import { ACCIONES, MODULOS, PERMISOS_ESPECIALES, permiso, todosLosPermisos } from "../src/lib/modulos";
 
 // Parte 1: auditoría del código. Toda acción del servidor y toda página del área privada debe exigir permiso o sesión ANTES de tocar datos.
 // Parte 2: la lógica de permisos con perfiles reales (administrador, limitado, sin permisos, módulo apagado para el cliente).
@@ -127,6 +127,6 @@ describe("Lógica de permisos", () => {
   });
 
   it("el administrador de un cliente nuevo recibe todos los permisos del catálogo", () => {
-    assert.equal(new Set(todosLosPermisos()).size, MODULOS.length * ACCIONES.length);
+    assert.equal(new Set(todosLosPermisos()).size, MODULOS.length * ACCIONES.length + PERMISOS_ESPECIALES.length);
   });
 });

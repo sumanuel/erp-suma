@@ -12,7 +12,8 @@ import { resolverPrecios } from "@/lib/ventas/precios";
 // confirmaciones simultáneas reserven lo mismo.
 
 export type LineaPedido = { productoCodigo: string; cantidad: number; precioUnitario: number; descuento: number };
-export type DatosPedido = { clienteId: string; fecha: Date; observaciones: string | null; lineas: LineaPedido[]; encabezado?: EncabezadoVenta };
+/// `sinCambiarPrecio`: quien guarda no tiene el permiso «cambiar precio»; el precio de cada línea debe ser el de la lista del cliente.
+export type DatosPedido = { clienteId: string; fecha: Date; observaciones: string | null; lineas: LineaPedido[]; encabezado?: EncabezadoVenta; sinCambiarPrecio?: boolean };
 export type ResultadoPedido<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
 export class PedidoError extends Error {}
@@ -43,7 +44,7 @@ export async function disponibles(db: Db | Tx, codigos: string[], excluirPedidoI
   return r;
 }
 
-export async function prepararLineasVenta(tx: Tx, d: Pick<DatosPedido, "clienteId" | "lineas"> & { descuentos?: number[] }) {
+export async function prepararLineasVenta(tx: Tx, d: Pick<DatosPedido, "clienteId" | "lineas" | "sinCambiarPrecio"> & { descuentos?: number[] }) {
   const cliente = await tx.cliente.findUnique({ where: { id: d.clienteId }, select: { activo: true, situacion: true, listaPrecio: true } });
   if (!cliente || !cliente.activo) throw new PedidoError("El cliente no existe o está inactivo.");
   if (cliente.situacion === "BLOQUEADO") throw new PedidoError("El cliente está bloqueado: no se le puede vender.");
@@ -69,6 +70,7 @@ export async function prepararLineasVenta(tx: Tx, d: Pick<DatosPedido, "clienteI
     const ivaPorcentaje = Number(p.alicuotaIva.porcentajeVenta);
     // El descuento máximo de la lista limita lo que escribió quien vende (el global del cliente no cuenta contra ese tope).
     const tope = precios.get(l.productoCodigo);
+    if (d.sinCambiarPrecio && tope && Math.abs(l.precioUnitario - tope.precioUsd) > 1e-4) throw new PedidoError(`${l.productoCodigo}: no tienes permiso para cambiar el precio (la lista ${cliente.listaPrecio} dice ${tope.precioUsd}).`);
     if (tope && tope.origen === "LISTA" && tope.descuentoMaxPct > 0 && l.descuento > tope.descuentoMaxPct + 1e-9) throw new PedidoError(`${l.productoCodigo}: el descuento máximo de la lista ${cliente.listaPrecio} es ${tope.descuentoMaxPct} %.`);
     const calc = calcularLinea({ cantidad: l.cantidad, costoUnitario: l.precioUnitario, descuento: efectivo, ivaPorcentaje });
     return { linea: i + 1, productoCodigo: l.productoCodigo, descripcion: p.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: efectivo, descuentoLinea: l.descuento, ivaPorcentaje, total: calc.total, _e: { cantidad: l.cantidad, costoUnitario: l.precioUnitario, descuento: efectivo, ivaPorcentaje } };

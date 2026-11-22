@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Aviso, Campo, clasesBoton } from "@/components/ui";
-import { ACCIONES, MODULOS, permiso } from "@/lib/modulos";
+import { ACCIONES, MODULOS, PERMISOS_ESPECIALES, permiso } from "@/lib/modulos";
 import { guardarPerfil, type EstadoPerfil } from "./acciones";
 
 const TITULOS: Record<(typeof ACCIONES)[number], string> = { ver: "Ver", crear: "Crear", editar: "Editar", eliminar: "Eliminar", exportar: "Exportar" };
@@ -56,6 +56,17 @@ export function FormularioPerfil({ id, inicial, textoBoton }: {
             })}
           </tbody>
         </table>
+      </div>
+      <div className="rounded-[12px] border border-borde p-4">
+        <h3 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-gris-600">Permisos especiales</h3>
+        <div className="flex flex-col gap-2">
+          {PERMISOS_ESPECIALES.map((p) => (
+            <label key={p.id} className="flex items-start gap-2 text-sm">
+              <input type="checkbox" name="permiso" value={p.id} checked={marcados.has(p.id)} onChange={(e) => alternar(p.id, e.target.checked)} className="mt-0.5 size-4 accent-marca-fuerte" />
+              <span><span className="font-medium">{p.nombre}</span> <span className="text-gris-500">{p.ayuda}</span></span>
+            </label>
+          ))}
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : textoBoton}</button>

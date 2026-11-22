@@ -1,5 +1,6 @@
 import type { Delegado, Maestro } from "./tipos";
 import { conErrores, etiquetaActivo, filtroActivo, noNegativos, rangoPorcentaje } from "./comunes";
+import { errorProntoPago } from "@/lib/ventas/condiciones";
 
 // Tablas base comerciales y financieras (condición de pago, vendedores, tipo de negocio, transporte, bancos, tarifas de ISLR y geografía).
 // Equivalen a admcondpago, admvendedor, admtiponegocio, admtransporte, admbancos, admtarifasreten y a las tablas geográficas del sistema anterior.
@@ -21,10 +22,14 @@ export const condicionesPago: Maestro = {
     { nombre: "nombre", etiqueta: "Descripción", tipo: "texto", max: 100, requerido: true, ancho: 2 },
     { nombre: "dias", etiqueta: "Días de plazo", tipo: "entero", requerido: true, ayuda: "0 = contado." },
     { nombre: "diasMora", etiqueta: "Días de gracia antes de la mora", tipo: "entero", requerido: true },
-    { nombre: "observaciones", etiqueta: "Observaciones", tipo: "textoLargo", max: 255, ancho: 3 },
+    { nombre: "prontoPagoDias1", etiqueta: "Pronto pago 1: días", tipo: "entero", requerido: true, seccion: "Pronto pago", ayuda: "Si el cliente paga dentro de estos días desde la factura, se le da el porcentaje. 0 = sin pronto pago." },
+    { nombre: "prontoPagoPct1", etiqueta: "Pronto pago 1: porcentaje de descuento", tipo: "decimal", requerido: true },
+    { nombre: "prontoPagoDias2", etiqueta: "Pronto pago 2: días", tipo: "entero", requerido: true, ayuda: "Debe ser mayor que los días del pronto pago 1." },
+    { nombre: "prontoPagoPct2", etiqueta: "Pronto pago 2: porcentaje de descuento", tipo: "decimal", requerido: true },
+    { nombre: "observaciones", etiqueta: "Observaciones", tipo: "textoLargo", max: 255, ancho: 3, seccion: "Otros datos" },
     { nombre: "activo", etiqueta: "Activa", tipo: "booleano" },
   ],
-  valoresIniciales: { activo: true, dias: "0", diasMora: "0" },
+  valoresIniciales: { activo: true, dias: "0", diasMora: "0", prontoPagoDias1: "0", prontoPagoPct1: "0", prontoPagoDias2: "0", prontoPagoPct2: "0" },
   columnas: [
     { id: "nombre", titulo: "Descripción", campo: "nombre", fija: true },
     { id: "codigo", titulo: "Código", campo: "codigo" },
@@ -34,7 +39,12 @@ export const condicionesPago: Maestro = {
   ],
   busqueda: { texto: "Buscar por código o descripción", campos: ["codigo", "nombre"] }, filtros: [filtroActivo],
   orden: { columna: "dias", dir: "asc" }, titulo: (f) => String(f.nombre ?? ""), descripcion: (f) => `Código ${f.codigo} · ${f.dias} día(s) de plazo`,
-  preparar: mayusculas, validar: async (_db, d) => conErrores(dias(d, ["dias", "diasMora"])),
+  preparar: mayusculas,
+  validar: async (_db, d) => {
+    const n = (c: string) => Number(d[c] ?? 0);
+    const msg = errorProntoPago([n("prontoPagoDias1"), n("prontoPagoPct1"), n("prontoPagoDias2"), n("prontoPagoPct2")]);
+    return conErrores(dias(d, ["dias", "diasMora"]), msg ? { prontoPagoDias1: msg } : {});
+  },
   mensajeDuplicado: "Ya existe una condición de pago con este código.",
 };
 

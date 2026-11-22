@@ -18,10 +18,20 @@ export type InfoCliente = {
   descuentos: [string, string, string];
 };
 export type OpcionVenta = { valor: string; etiqueta: string };
-export type DatosVentaForm = { clientes: Record<string, InfoCliente>; vendedores: OpcionVenta[]; condiciones: (OpcionVenta & { dias: number })[]; transportes: OpcionVenta[] };
-export type CondicionesInicial = { vendedorId: string; condicionPagoId: string; transporteId: string; direccionEntrega: string; descuentos: [string, string, string] };
+export type DatosVentaForm = {
+  clientes: Record<string, InfoCliente>; vendedores: OpcionVenta[];
+  /// Cada condición trae su pronto pago [días 1, % 1, días 2, % 2] para proponerlo en el documento.
+  condiciones: (OpcionVenta & { dias: number; prontoPago: [string, string, string, string] })[]; transportes: OpcionVenta[]; origenes: OpcionVenta[];
+};
+export type CondicionesInicial = {
+  vendedorId: string; condicionPagoId: string; transporteId: string; direccionEntrega: string; descuentos: [string, string, string];
+  origenVentaId: string; bultos: string; kilos: string; prontoPago: [string, string, string, string];
+};
 
-export const CONDICIONES_VACIAS: CondicionesInicial = { vendedorId: "", condicionPagoId: "", transporteId: "", direccionEntrega: "", descuentos: ["0", "0", "0"] };
+export const CONDICIONES_VACIAS: CondicionesInicial = {
+  vendedorId: "", condicionPagoId: "", transporteId: "", direccionEntrega: "", descuentos: ["0", "0", "0"],
+  origenVentaId: "", bultos: "", kilos: "", prontoPago: ["0", "0", "0", "0"],
+};
 
 const num = (s: string) => {
   const n = Number(s.replace(",", "."));
@@ -35,6 +45,10 @@ export function useCondiciones(inicial: CondicionesInicial | undefined, datos: D
   const [transporteId, setTransporteId] = useState(ini.transporteId);
   const [direccionEntrega, setDireccionEntrega] = useState(ini.direccionEntrega);
   const [descuentos, setDescuentos] = useState<[string, string, string]>(ini.descuentos);
+  const [origenVentaId, setOrigenVentaId] = useState(ini.origenVentaId);
+  const [bultos, setBultos] = useState(ini.bultos);
+  const [kilos, setKilos] = useState(ini.kilos);
+  const [prontoPago, setProntoPago] = useState<[string, string, string, string]>(ini.prontoPago);
   const [clienteId, setClienteId] = useState(clienteInicial);
 
   const info = datos?.clientes[clienteId];
@@ -50,11 +64,13 @@ export function useCondiciones(inicial: CondicionesInicial | undefined, datos: D
     setTransporteId(c.transporteId);
     setDireccionEntrega(c.direccionEnvio);
     setDescuentos(c.descuentos);
+    setProntoPago(datos?.condiciones.find((x) => x.valor === c.condicionPagoId)?.prontoPago ?? ["0", "0", "0", "0"]);
     return c.diasCondicion;
   }
 
   return {
     vendedorId, setVendedorId, condicionPagoId, setCondicionPagoId, transporteId, setTransporteId, direccionEntrega, setDireccionEntrega, descuentos, setDescuentos,
+    origenVentaId, setOrigenVentaId, bultos, setBultos, kilos, setKilos, prontoPago, setProntoPago,
     /// Lista de precios del cliente elegido.
     lista: info?.lista ?? "A",
     /// Descuento global combinado (%), para la vista previa.
@@ -64,6 +80,10 @@ export function useCondiciones(inicial: CondicionesInicial | undefined, datos: D
     encabezado: () => ({
       vendedorId: vendedorId || null, condicionPagoId: condicionPagoId || null, transporteId: transporteId || null, direccionEntrega: direccionEntrega.trim() || null,
       descuentos: descuentos.map(num) as [number, number, number],
+      origenVentaId: origenVentaId || null,
+      bultos: bultos.trim() === "" ? null : Math.trunc(num(bultos)),
+      kilos: kilos.trim() === "" ? null : num(kilos),
+      prontoPago: prontoPago.map(num) as [number, number, number, number],
     }),
   };
 }
@@ -87,7 +107,10 @@ export function CondicionesVenta({ cond, datos, onCondicion }: { cond: Condicion
           <label htmlFor="condicionPagoId" className={etiqueta}>Condición de pago <span className="font-normal text-gris-500">(opcional)</span></label>
           <select
             id="condicionPagoId" value={cond.condicionPagoId}
-            onChange={(e) => { cond.setCondicionPagoId(e.target.value); onCondicion?.(datos.condiciones.find((c) => c.valor === e.target.value)?.dias ?? 0); }}
+            onChange={(e) => {
+              const c = datos.condiciones.find((x) => x.valor === e.target.value);
+              cond.setCondicionPagoId(e.target.value); cond.setProntoPago(c?.prontoPago ?? ["0", "0", "0", "0"]); onCondicion?.(c?.dias ?? 0);
+            }}
             className={`${claseControl} pr-9`}
           >
             <option value="">Sin condición</option>
@@ -114,6 +137,31 @@ export function CondicionesVenta({ cond, datos, onCondicion }: { cond: Condicion
             />
           </div>
         ))}
+        <div className={campo}>
+          <label htmlFor="origenVentaId" className={etiqueta}>Origen de la venta <span className="font-normal text-gris-500">(opcional)</span></label>
+          <select id="origenVentaId" value={cond.origenVentaId} onChange={(e) => cond.setOrigenVentaId(e.target.value)} className={`${claseControl} pr-9`}>
+            <option value="">Sin origen</option>
+            {datos.origenes.map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>)}
+          </select>
+        </div>
+        <div className={campo}>
+          <label htmlFor="bultos" className={etiqueta}>Bultos <span className="font-normal text-gris-500">(opcional)</span></label>
+          <input id="bultos" inputMode="numeric" value={cond.bultos} onChange={(e) => cond.setBultos(e.target.value)} className={claseControl} />
+        </div>
+        <div className={campo}>
+          <label htmlFor="kilos" className={etiqueta}>Kilos <span className="font-normal text-gris-500">(opcional)</span></label>
+          <input id="kilos" inputMode="decimal" value={cond.kilos} onChange={(e) => cond.setKilos(e.target.value)} className={claseControl} />
+        </div>
+        <div className="flex flex-col gap-1.5 md:col-span-2 xl:col-span-4">
+          <span className={etiqueta}>Pronto pago <span className="font-normal text-gris-500">(descuento si el cliente paga dentro de estos días; viene de la condición de pago)</span></span>
+          <div className="grid gap-3 md:grid-cols-4">
+            {([["Días 1", 0], ["% 1", 1], ["Días 2", 2], ["% 2", 3]] as const).map(([t, i]) => (
+              <label key={t} className="flex flex-col gap-1 text-[12.5px] text-gris-600">{t}
+                <input aria-label={`Pronto pago ${t}`} inputMode="decimal" value={cond.prontoPago[i]} onChange={(e) => cond.setProntoPago((p) => p.map((x, k) => (k === i ? e.target.value : x)) as [string, string, string, string])} className={claseControl} />
+              </label>
+            ))}
+          </div>
+        </div>
         <div className={`${campo} justify-end`}>
           <p className="text-[12.5px] text-gris-500">
             Descuento global combinado: <span className="font-semibold text-tinta">{cond.global.toLocaleString("es-VE", { maximumFractionDigits: 4 })} %</span>. Se suma al de cada línea y la lista de precios
