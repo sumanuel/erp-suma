@@ -2,7 +2,7 @@ import "server-only";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import { aplicarMovimiento, MovimientoRechazado, type Actor } from "@/lib/inventario/movimientos";
-import { calcularTotales } from "@/lib/pedidos/calculos";
+import { calcularTotales, numeroPedido } from "@/lib/pedidos/calculos";
 import { VentaError, encabezadoDe, validarEncabezado, verificarCredito, type EncabezadoVenta } from "@/lib/ventas/condiciones";
 import { disponibles, prepararLineasVenta, PedidoError, type LineaPedido, type Tx } from "@/lib/pedidos/servicio";
 import { numeroFactura } from "./estados";
@@ -26,10 +26,12 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoFactura<T>>): Promise
   }
 }
 
+/** Aprobación de excepciones de crédito: la da quien emite (permiso) o, si el pedido ya la tenía, el gerente que lo aprobó (`por`). */
+type Aprobacion = { motivo: string; por?: { id: string | null; nombre: string } };
 type LineaLista = { productoCodigo: string; descripcion: string; cantidad: number; precioUnitario: number; descuento: number; descuentoLinea?: number | null; ivaPorcentaje: number; total: number; bonificacion?: boolean; almacenId?: string | null; presentacionId?: string | null; factor?: number };
 
 /** Crea la factura y descuenta el inventario, todo dentro de la transacción recibida. */
-async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedidoId: string | null; almacenId: string; observaciones: string | null; diasCredito: number; lineas: LineaLista[]; encabezado: Awaited<ReturnType<typeof validarEncabezado>>["columnas"]; aprobacion?: { motivo: string } }) {
+async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedidoId: string | null; almacenId: string; observaciones: string | null; diasCredito: number; lineas: LineaLista[]; encabezado: Awaited<ReturnType<typeof validarEncabezado>>["columnas"]; aprobacion?: Aprobacion }) {
   const tasa = await tasaVigente(tx as unknown as Db, "USD");
   if (!tasa) throw new FacturaError("No hay tasa del dólar cargada: regístrala en Tasa de cambio antes de facturar.");
   const almacen = await tx.almacen.findUnique({ where: { id: d.almacenId }, select: { activo: true } });
@@ -40,7 +42,7 @@ async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedido
   if (!Number.isInteger(d.diasCredito) || d.diasCredito < 0 || d.diasCredito > 365) throw new FacturaError("Los días de crédito deben ser un número entero entre 0 y 365.");
   // Bloqueo, crédito, límite y vencimientos del cliente (a crédito) antes de crear nada.
   const excepcion = await verificarCredito(tx, d.clienteId, t.total, d.diasCredito, d.aprobacion);
-  const aprobacion = excepcion && d.aprobacion ? { aprobadoPorId: actor.id, aprobadoPorNombre: actor.nombre, aprobacionMotivo: `${d.aprobacion.motivo} (excepción: ${excepcion})`.slice(0, 500) } : {};
+  const aprobacion = excepcion && d.aprobacion ? { aprobadoPorId: d.aprobacion.por ? d.aprobacion.por.id : actor.id, aprobadoPorNombre: d.aprobacion.por?.nombre ?? actor.nombre, aprobacionMotivo: `${d.aprobacion.motivo} (excepción: ${excepcion})`.slice(0, 500) } : {};
   const almacenesLinea = [...new Set(d.lineas.map((l) => l.almacenId).filter((x): x is string => !!x && x !== d.almacenId))];
   if (almacenesLinea.length && (await tx.almacen.count({ where: { id: { in: almacenesLinea }, activo: true } })) !== almacenesLinea.length) throw new FacturaError("Hay un almacén de línea que no existe o está inactivo.");
   const fecha = hoyCaracas();
@@ -100,7 +102,7 @@ export async function emitirFactura(db: Db, actor: Actor, d: DatosFactura): Prom
 }
 
 /** Factura un pedido confirmado con sus mismas líneas y precios. La reserva del pedido se consume con la salida de inventario. */
-export async function emitirFacturaDePedido(db: Db, actor: Actor, pedidoId: string, almacenId: string, observaciones: string | null, diasCredito: number, aprobacion?: { motivo: string }): Promise<ResultadoFactura<{ id: string; numero: number }>> {
+export async function emitirFacturaDePedido(db: Db, actor: Actor, pedidoId: string, almacenId: string, observaciones: string | null, diasCredito: number, aprobacion?: Aprobacion): Promise<ResultadoFactura<{ id: string; numero: number }>> {
   return ejecutar(async () => {
     const r = await db.$transaction(async (tx) => {
       // El estado se cambia primero y solo si sigue CONFIRMADO: dos personas no pueden facturar el mismo pedido.
@@ -112,7 +114,9 @@ export async function emitirFacturaDePedido(db: Db, actor: Actor, pedidoId: stri
         descuento: Number(l.descuento), descuentoLinea: l.descuentoLinea === null ? null : Number(l.descuentoLinea), ivaPorcentaje: Number(l.ivaPorcentaje), total: Number(l.total), bonificacion: l.bonificacion, almacenId: l.almacenId, presentacionId: l.presentacionId, factor: Number(l.factor),
       }));
       const enc = await validarEncabezado(tx, encabezadoDe(p));
-      return crearFactura(tx, actor, { clienteId: p.clienteId, pedidoId, almacenId, observaciones, diasCredito, lineas, encabezado: enc.columnas, aprobacion });
+      // Un pedido que la gerencia aprobó (reglas de aprobación) pasa también el control de crédito de la factura, a nombre de quien lo aprobó.
+      const deGerencia: Aprobacion | undefined = p.aprobacionEstado === "APROBADO" ? { motivo: `Pedido ${numeroPedido(p.numero)} aprobado por gerencia`, por: { id: p.aprobadoPorId, nombre: p.aprobadoPorNombre ?? "Gerencia" } } : undefined;
+      return crearFactura(tx, actor, { clienteId: p.clienteId, pedidoId, almacenId, observaciones, diasCredito, lineas, encabezado: enc.columnas, aprobacion: aprobacion ?? deGerencia });
     });
     await auditarEmision(db, actor, r, pedidoId);
     return { ok: true, id: r.id, numero: r.numero };

@@ -173,7 +173,7 @@ Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédi
 | **Serie fiscal / serial / IP de la impresora** (`frmSerieFiscal`) | Falta (llega con la impresora fiscal) | A |
 | «Cambiar precio» (permiso de cambiar el precio en la línea) | ✅ 2026-11-22: permiso especial; sin él solo se vende al precio de la lista (falta en el POS) | M |
 | **Pago contado/mixto en la propia factura:** efectivo, tarjetas, **cheques (banco, número)**, cambio, monto a abonar | Falta (llega con el POS; hoy se cobra aparte) | A |
-| Aprobación gerencial (`frmAprobacionGerencial`, `pFlagAprob`, `pLoginAprob`) | ✅ 2026-11-22: permiso especial que aprueba excepciones de crédito con motivo (falta el flujo de pedir aprobación a otro gerente) | M |
+| Aprobación gerencial (`frmAprobacionGerencial`, `pFlagAprob`, `pLoginAprob`) | ✅ 2026-11-22: pedido por aprobar según reglas y decisión del gerente (aprobar/rechazar); se mantiene la aprobación de excepciones de crédito en factura directa | M |
 | Tipo de pedido, nota de entrega (`pNroNotaEntrega`), «genera giro», «grava comisión especial», pre-lista | Falta ¿? | B |
 | Documentos no impresos (`frmDocumentosNoImpresos`), reimpresión | Falta | M |
 | Cierre de caja (`cierreCaja`: facturas, devoluciones, punto de venta, cheque, efectivo, tarjetas, IVA, cuadre) | Falta (llega con el POS) | A |

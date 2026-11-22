@@ -2,7 +2,7 @@ import "server-only";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import type { Actor } from "@/lib/inventario/movimientos";
-import { tasaVigente } from "@/lib/tasas";
+import { hoyCaracas, tasaVigente } from "@/lib/tasas";
 import { calcularLinea, calcularTotales, descuentoEfectivo, descuentoGlobal, numeroPedido } from "./calculos";
 import { VentaError, validarEncabezado, type EncabezadoVenta } from "@/lib/ventas/condiciones";
 import type { OpcionesUnidad } from "@/lib/ventas/presentaciones";
@@ -118,7 +118,8 @@ export async function guardarPedido(db: Db, actor: Actor, id: string | null, d: 
       const lineas = await prepararLineasVenta(tx, { ...d, descuentos: enc.descuentos });
       const t = calcularTotales(lineas.map((l) => l._e));
       const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total, bonificacion: l.bonificacion, almacenId: l.almacenId, presentacionId: l.presentacionId, factor: l.factor }));
-      const base = { clienteId: d.clienteId, fecha: d.fecha, observaciones: d.observaciones, ...enc.columnas, ...t };
+      // Editar el pedido borra la decisión de gerencia anterior: lo que se aprobó ya no es lo que hay.
+      const base = { clienteId: d.clienteId, fecha: d.fecha, observaciones: d.observaciones, ...enc.columnas, ...t, reglaRechazoId: null, aprobacionEstado: null, aprobadoPorId: null, aprobadoPorNombre: null, aprobadoEn: null, aprobacionMotivo: null };
       if (id) {
         // Se edita solo si sigue en borrador: la condición va en el mismo UPDATE para que no se pisen dos personas.
         const u = await tx.pedidoVenta.updateMany({ where: { id, estado: "BORRADOR" }, data: base });
@@ -139,14 +140,47 @@ export async function guardarPedido(db: Db, actor: Actor, id: string | null, d: 
   });
 }
 
-/** Confirma el pedido: valida disponibilidad (con candado por producto), congela la tasa del dólar y reserva. */
-export async function confirmarPedido(db: Db, actor: Actor, id: string): Promise<ResultadoPedido> {
-  return ejecutar(async () => {
+/**
+ * Aprobación gerencial (original: admaprobgerent). Con el interruptor (regla 1) activo, al cerrar el pedido se revisan las reglas activas: condición de pago del cliente
+ * (2), mora (3), límite de crédito (4) y descuento máximo (5). Devuelve la primera que se incumple, o null.
+ */
+export async function reglaIncumplida(tx: Tx, p: { clienteId: string; condicionPagoId: string | null; total: unknown; lineas: { descuento: unknown; descuentoLinea: unknown; bonificacion: boolean }[] }) {
+  const reglas = await tx.reglaAprobacion.findMany({ orderBy: { id: "asc" } });
+  if (!reglas.find((r) => r.id === 1)?.activa) return null;
+  for (const r of reglas.filter((x) => x.id > 1 && x.activa)) {
+    const monto = Number(r.monto);
+    if (r.id === 2) {
+      const c = p.condicionPagoId ? await tx.condicionPago.findUnique({ where: { id: p.condicionPagoId }, select: { codigo: true } }) : null;
+      if (c && c.codigo === String(Math.trunc(monto))) return r;
+    } else if (r.id === 3) {
+      const vencidas = await tx.factura.count({ where: { clienteId: p.clienteId, estado: "EMITIDA", saldo: { gt: 0 }, fechaVencimiento: { lt: hoyCaracas() } } });
+      if (vencidas > 0) return r;
+    } else if (r.id === 4) {
+      const limite = Number((await tx.cliente.findUnique({ where: { id: p.clienteId }, select: { limiteCredito: true } }))?.limiteCredito ?? 0);
+      if (limite > 0 && Number(p.total) > limite + 1e-9) return r;
+    } else if (r.id === 5) {
+      const mayor = Math.max(0, ...p.lineas.filter((l) => !l.bonificacion).map((l) => Number(l.descuentoLinea ?? l.descuento)));
+      if (mayor > monto + 1e-9) return r;
+    }
+  }
+  return null;
+}
+
+/** Confirma el pedido: valida disponibilidad (con candado por producto), congela la tasa del dólar y reserva. Si incumple una regla de aprobación gerencial queda POR_APROBAR (`porAprobar` trae el motivo). */
+export async function confirmarPedido(db: Db, actor: Actor, id: string): Promise<ResultadoPedido<{ porAprobar?: string }>> {
+  return ejecutar<{ porAprobar?: string }>(async () => {
     const r = await db.$transaction(async (tx) => {
       const p = await tx.pedidoVenta.findUnique({ where: { id }, include: { lineas: true } });
       if (!p) throw new PedidoError("El pedido ya no existe.");
       if (p.estado !== "BORRADOR") throw new PedidoError("El pedido cambió de estado mientras lo veías. Recarga la página.");
       if (p.lineas.length === 0) throw new PedidoError("El pedido no tiene líneas.");
+      if (p.aprobacionEstado !== "APROBADO") {
+        const regla = await reglaIncumplida(tx, p);
+        if (regla) {
+          await tx.pedidoVenta.update({ where: { id }, data: { estado: "POR_APROBAR", reglaRechazoId: regla.id, aprobacionEstado: null } });
+          return { numero: p.numero, regla: regla.descripcion };
+        }
+      }
       const codigos = p.lineas.map((l) => l.productoCodigo).sort();
       for (const c of codigos) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"reserva:" + c}))`;
       const libre = await disponibles(tx, codigos, id);
@@ -160,6 +194,10 @@ export async function confirmarPedido(db: Db, actor: Actor, id: string): Promise
       if (u.count === 0) throw new PedidoError("El pedido cambió de estado mientras lo veías. Recarga la página.");
       return { numero: p.numero, tasa: tasa.valor };
     });
+    if ("regla" in r) {
+      await registrarCambio(db, actor, { modulo: "pedidos", entidad: "pedido_venta", entidadId: id, descripcion: numeroPedido(r.numero), accion: "otro", despues: { estado: "POR_APROBAR", operacion: "Pasa a aprobación gerencial", regla: r.regla } });
+      return { ok: true, porAprobar: `Pedido no aprobado: ${r.regla}. Quedó por aprobar por gerencia.` };
+    }
     await registrarCambio(db, actor, { modulo: "pedidos", entidad: "pedido_venta", entidadId: id, descripcion: numeroPedido(r.numero), accion: "otro", despues: { estado: "CONFIRMADO", operacion: "Confirmado y reservado", tasaUsd: r.tasa } });
     return { ok: true };
   });
@@ -171,11 +209,32 @@ export async function anularPedido(db: Db, actor: Actor, id: string): Promise<Re
     const numero = await db.$transaction(async (tx) => {
       const p = await tx.pedidoVenta.findUnique({ where: { id }, select: { numero: true } });
       if (!p) throw new PedidoError("El pedido ya no existe.");
-      const u = await tx.pedidoVenta.updateMany({ where: { id, estado: { in: ["BORRADOR", "CONFIRMADO"] } }, data: { estado: "ANULADO" } });
+      const u = await tx.pedidoVenta.updateMany({ where: { id, estado: { in: ["BORRADOR", "POR_APROBAR", "CONFIRMADO"] } }, data: { estado: "ANULADO" } });
       if (u.count === 0) throw new PedidoError("El pedido ya está facturado o anulado. Recarga la página.");
       return p.numero;
     });
     await registrarCambio(db, actor, { modulo: "pedidos", entidad: "pedido_venta", entidadId: id, descripcion: numeroPedido(numero), accion: "otro", despues: { estado: "ANULADO", operacion: "Anulado" } });
+    return { ok: true };
+  });
+}
+
+/**
+ * Decisión del gerente sobre un pedido POR_APROBAR (original: cmdAprobar / cmdRechazar de frmPedido). Ambas lo devuelven a BORRADOR con la decisión registrada:
+ * aprobado, al cerrarlo de nuevo ya no se revisan las reglas; rechazado, queda para corregir (volverá a revisarse al cerrar).
+ */
+export async function resolverAprobacion(db: Db, actor: Actor, id: string, decision: "APROBADO" | "RECHAZADO", motivo: string | null): Promise<ResultadoPedido> {
+  return ejecutar(async () => {
+    const m = motivo?.trim() || null;
+    if (m && m.length > 300) throw new PedidoError("El motivo admite máximo 300 caracteres.");
+    if (decision === "RECHAZADO" && !m) throw new PedidoError("Indica el motivo del rechazo.");
+    const numero = await db.$transaction(async (tx) => {
+      const p = await tx.pedidoVenta.findUnique({ where: { id }, select: { numero: true } });
+      if (!p) throw new PedidoError("El pedido ya no existe.");
+      const u = await tx.pedidoVenta.updateMany({ where: { id, estado: "POR_APROBAR" }, data: { estado: "BORRADOR", aprobacionEstado: decision, aprobadoPorId: actor.id, aprobadoPorNombre: actor.nombre, aprobadoEn: new Date(), aprobacionMotivo: m } });
+      if (u.count === 0) throw new PedidoError("El pedido ya no está por aprobar. Recarga la página.");
+      return p.numero;
+    });
+    await registrarCambio(db, actor, { modulo: "pedidos", entidad: "pedido_venta", entidadId: id, descripcion: numeroPedido(numero), accion: "otro", despues: { operacion: decision === "APROBADO" ? "Aprobado por gerencia" : "Rechazado por gerencia", motivo: m } });
     return { ok: true };
   });
 }

@@ -32,7 +32,7 @@ export const permiso = (modulo: string, accion: Accion) => `${modulo}.${accion}`
 /** Permisos especiales que no son de un módulo y una acción: controles puntuales dentro de un proceso. */
 export const PERMISOS_ESPECIALES = [
   { id: "ventas.cambiar_precio", nombre: "Cambiar el precio de venta", ayuda: "Escribir en una cotización, pedido, factura o venta del mostrador un precio distinto al de la lista del cliente." },
-  { id: "ventas.aprobar", nombre: "Aprobación gerencial de ventas", ayuda: "Autorizar al emitir una factura las excepciones de crédito: cliente moroso o sin crédito, límite superado o facturas vencidas." },
+  { id: "ventas.aprobar", nombre: "Aprobación gerencial de ventas", ayuda: "Aprobar o rechazar los pedidos que quedan por aprobar (reglas de aprobación gerencial) y autorizar excepciones de crédito al emitir una factura." },
 ] as const;
 export type PermisoEspecial = (typeof PERMISOS_ESPECIALES)[number]["id"];
 export const esPermisoEspecial = (p: string) => PERMISOS_ESPECIALES.some((x) => x.id === p);

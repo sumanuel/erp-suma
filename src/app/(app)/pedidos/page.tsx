@@ -22,6 +22,7 @@ export default async function ListaPedidos({ searchParams }: { searchParams: Pro
     take: 200,
   });
   const puedeCrear = tienePermiso(ctx, "pedidos", "crear");
+  const porAprobar = await ctx.db.pedidoVenta.count({ where: { estado: "POR_APROBAR" } });
   return (
     <Tarjeta>
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
@@ -33,6 +34,7 @@ export default async function ListaPedidos({ searchParams }: { searchParams: Pro
           </select>
           <button type="submit" className={clasesBoton("secundario")}>Filtrar</button>
         </form>
+        {porAprobar > 0 ? <Link href="/pedidos?estado=POR_APROBAR" className={clasesBoton("secundario")}>Por aprobar ({porAprobar})</Link> : null}
         {puedeCrear ? <Link href="/pedidos/nuevo" className={clasesBoton("primario")}><Plus className="size-4" aria-hidden />Nuevo pedido</Link> : null}
       </div>
       <div className="overflow-x-auto">

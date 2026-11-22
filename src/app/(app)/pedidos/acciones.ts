@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion, tienePermisoEspecial } from "@/lib/dal";
 import { EncabezadoVentaZ } from "@/lib/ventas/esquemas";
-import { anularPedido, buscarProductosVenta, confirmarPedido, guardarPedido, type ProductoVenta } from "@/lib/pedidos/servicio";
+import { anularPedido, buscarProductosVenta, confirmarPedido, guardarPedido, resolverAprobacion, type ProductoVenta } from "@/lib/pedidos/servicio";
 
 export type EstadoPedidoForm = { error?: string };
 
@@ -41,13 +41,33 @@ export async function guardarPedidoVenta(id: string | null, datos: unknown): Pro
   redirect(`/pedidos/${res.id}`);
 }
 
-async function cambiar(id: string, accion: "editar" | "eliminar", f: typeof confirmarPedido): Promise<string | null> {
-  const ctx = await requerirPermisoAccion("pedidos", accion);
-  const r = await f(ctx.db, ctx.usuario, id);
+/** Resultado de una acción sobre el pedido: error, o un aviso (el pedido quedó por aprobar por gerencia). */
+export type ResultadoAccionPedido = { error?: string; aviso?: string };
+
+function refrescar(id: string) {
   revalidatePath("/pedidos");
   revalidatePath(`/pedidos/${id}`);
-  return r.ok ? null : r.error;
 }
 
-export const confirmarPedidoVenta = async (id: string) => cambiar(id, "editar", confirmarPedido);
-export const anularPedidoVenta = async (id: string) => cambiar(id, "eliminar", anularPedido);
+export async function confirmarPedidoVenta(id: string): Promise<ResultadoAccionPedido> {
+  const ctx = await requerirPermisoAccion("pedidos", "editar");
+  const r = await confirmarPedido(ctx.db, ctx.usuario, id);
+  refrescar(id);
+  return r.ok ? { aviso: r.porAprobar } : { error: r.error };
+}
+
+export async function anularPedidoVenta(id: string): Promise<ResultadoAccionPedido> {
+  const ctx = await requerirPermisoAccion("pedidos", "eliminar");
+  const r = await anularPedido(ctx.db, ctx.usuario, id);
+  refrescar(id);
+  return r.ok ? {} : { error: r.error };
+}
+
+/** Aprobar o rechazar un pedido por aprobar: solo quien tiene el permiso especial «ventas.aprobar». */
+export async function decidirPedidoVenta(id: string, decision: "APROBADO" | "RECHAZADO", motivo: string): Promise<ResultadoAccionPedido> {
+  const ctx = await requerirPermisoAccion("pedidos", "editar");
+  if (!tienePermisoEspecial(ctx, "ventas.aprobar")) return { error: "No tienes permiso para aprobar pedidos." };
+  const r = await resolverAprobacion(ctx.db, ctx.usuario, id, decision, motivo);
+  refrescar(id);
+  return r.ok ? {} : { error: r.error };
+}

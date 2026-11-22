@@ -6,6 +6,7 @@ export const numeroPedido = (n: number) => `PED-${String(n).padStart(6, "0")}`;
 
 export const ESTADOS_PEDIDO = {
   BORRADOR: { etiqueta: "Borrador", tono: "neutro" },
+  POR_APROBAR: { etiqueta: "Por aprobar", tono: "aviso" },
   CONFIRMADO: { etiqueta: "Confirmado", tono: "marca" },
   FACTURADO: { etiqueta: "Facturado", tono: "exito" },
   ANULADO: { etiqueta: "Anulado", tono: "error" },

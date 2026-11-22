@@ -12,7 +12,7 @@ model PedidoVenta {
   cotizacionId    String?           @map("cotizacion_id") @db.Uuid
   cotizacion      Cotizacion?       @relation(fields: [cotizacionId], references: [id])
   fecha           DateTime          @db.Date
-  /// BORRADOR, CONFIRMADO, FACTURADO, ANULADO
+  /// BORRADOR, POR_APROBAR, CONFIRMADO, FACTURADO, ANULADO
   estado          String            @default("BORRADOR")
   /// Condiciones comerciales (vienen del cliente y se pueden cambiar en el documento).
   vendedorId      String?  @map("vendedor_id") @db.Uuid
@@ -31,6 +31,14 @@ model PedidoVenta {
   descuentoGlobal1 Decimal @default(0) @map("descuento_global_1") @db.Decimal(7, 4)
   descuentoGlobal2 Decimal @default(0) @map("descuento_global_2") @db.Decimal(7, 4)
   descuentoGlobal3 Decimal @default(0) @map("descuento_global_3") @db.Decimal(7, 4)
+  /// Aprobación gerencial: regla que lo dejó POR_APROBAR y la decisión del gerente (APROBADO/RECHAZADO).
+  reglaRechazoId  Int?     @map("regla_rechazo_id") @db.SmallInt
+  reglaRechazo    ReglaAprobacion? @relation(fields: [reglaRechazoId], references: [id])
+  aprobacionEstado String? @map("aprobacion_estado")
+  aprobadoPorId   String?  @map("aprobado_por_id") @db.Uuid
+  aprobadoPorNombre String? @map("aprobado_por_nombre")
+  aprobadoEn      DateTime? @map("aprobado_en") @db.Timestamptz(6)
+  aprobacionMotivo String? @map("aprobacion_motivo")
   observaciones   String?
   subtotal        Decimal           @default(0) @db.Decimal(18, 4)
   descuento       Decimal           @default(0) @db.Decimal(18, 4)
@@ -78,4 +86,16 @@ model PedidoVentaLinea {
   @@unique([pedidoId, linea])
   @@index([productoCodigo])
   @@map("pedido_venta_linea")
+}
+
+/// Reglas de aprobación gerencial (original: admaprobgerent). La 1 es el interruptor general; las demás se evalúan al cerrar un pedido.
+model ReglaAprobacion {
+  id            Int      @id @db.SmallInt
+  descripcion   String
+  monto         Decimal  @default(0) @db.Decimal(18, 4)
+  activa        Boolean  @default(false)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  pedidos       PedidoVenta[]
+
+  @@map("regla_aprobacion")
 }

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil } from "lucide-react";
-import { Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
+import { Aviso, Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
 import { FilasCondiciones } from "@/components/ventas/filas-condiciones";
-import { requerirSesion, tienePermiso } from "@/lib/dal";
+import { requerirSesion, tienePermiso, tienePermisoEspecial } from "@/lib/dal";
 import { ESTADOS_PEDIDO, numeroPedido, type EstadoPedido } from "@/lib/pedidos/calculos";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { aBolivares, textoTasa } from "@/lib/tasas";
@@ -24,7 +24,9 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const e = ESTADOS_PEDIDO[p.estado as EstadoPedido];
   const puedeEditar = tienePermiso(ctx, "pedidos", "editar");
   const borrador = p.estado === "BORRADOR";
-  const anulable = p.estado === "BORRADOR" || p.estado === "CONFIRMADO";
+  const anulable = p.estado === "BORRADOR" || p.estado === "POR_APROBAR" || p.estado === "CONFIRMADO";
+  const regla = p.reglaRechazoId ? await ctx.db.reglaAprobacion.findUnique({ where: { id: p.reglaRechazoId }, select: { descripcion: true } }) : null;
+  const puedeDecidir = p.estado === "POR_APROBAR" && tienePermisoEspecial(ctx, "ventas.aprobar");
   const tasa = p.tasaUsd ? Number(p.tasaUsd) : null;
   const total = Number(p.total);
 
@@ -42,9 +44,11 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           <div className="flex flex-wrap items-center gap-2">
             {p.estado === "CONFIRMADO" && tienePermiso(ctx, "facturacion", "crear") ? <Link href={`/facturacion/nueva?pedido=${id}`} className={clasesBoton("primario")}>Facturar</Link> : null}
             {borrador && puedeEditar ? <Link href={`/pedidos/${id}/editar`} className={clasesBoton("secundario")}><Pencil className="size-4" aria-hidden />Editar</Link> : null}
-            <BotonesEstado id={id} puedeConfirmar={borrador && puedeEditar} puedeAnular={anulable && tienePermiso(ctx, "pedidos", "eliminar")} />
+            <BotonesEstado id={id} puedeConfirmar={borrador && puedeEditar} puedeAnular={anulable && tienePermiso(ctx, "pedidos", "eliminar")} puedeDecidir={puedeDecidir} />
           </div>
         </div>
+        {p.estado === "POR_APROBAR" ? <div className="mt-4"><Aviso tono="aviso">Pedido no aprobado por: {regla?.descripcion ?? "una regla de aprobación gerencial"}. Espera la decisión de gerencia.</Aviso></div> : null}
+        {p.aprobacionEstado ? <div className="mt-4"><Aviso tono={p.aprobacionEstado === "APROBADO" ? "exito" : "error"}>{p.aprobacionEstado === "APROBADO" ? "Aprobado" : "Rechazado"} por {p.aprobadoPorNombre ?? "gerencia"}{p.aprobadoEn ? ` · ${formatoFechaHora(p.aprobadoEn)}` : ""}{p.aprobacionMotivo ? `: ${p.aprobacionMotivo}` : ""}</Aviso></div> : null}
         <dl className="mt-4 grid gap-3 text-[13.5px] sm:grid-cols-2 xl:grid-cols-4">
           <div><dt className="text-gris-500">Fecha</dt><dd>{formatoFecha(p.fecha)}</dd></div>
           <div><dt className="text-gris-500">Creado por</dt><dd>{p.creadoPorNombre ?? "—"} · {formatoFechaHora(p.creadoEn)}</dd></div>

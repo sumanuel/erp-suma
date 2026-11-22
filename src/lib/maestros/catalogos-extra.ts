@@ -37,6 +37,21 @@ export const actividadesEconomicas = sencillo("actividades-economicas", "/catalo
 export const clasificacionesCliente = sencillo("clasificaciones-cliente", "/catalogos/clasificacion-clientes", "clasificacion_cliente", "clasificación de clientes", "clasificaciones de clientes", "la", (db) => db.clasificacionCliente as unknown as Delegado, { campoNota: "observaciones", dependientes: "No se puede eliminar: hay clientes con esta clasificación. Márcala como inactiva en su lugar." });
 export const clasificacionesProveedor = sencillo("clasificaciones-proveedor", "/catalogos/clasificacion-proveedores", "clasificacion_proveedor", "clasificación de proveedores", "clasificaciones de proveedores", "la", (db) => db.clasificacionProveedor as unknown as Delegado, { campoNota: "observaciones", dependientes: "No se puede eliminar: hay proveedores con esta clasificación. Márcala como inactiva en su lugar." });
 export const divisiones = sencillo("divisiones", "/catalogos/divisiones", "division", "división", "divisiones", "la", (db) => db.division as unknown as Delegado, { campoNota: "comentario", dependientes: "No se puede eliminar: hay productos en esta división. Márcala como inactiva en su lugar." });
+/** Reglas de aprobación gerencial (original: admaprobgerent). Son fijas: solo se activan y se les cambia el monto. */
+export const reglasAprobacion: Maestro = {
+  id: "reglas-aprobacion", modulo: "catalogos", ruta: "/catalogos/reglas-aprobacion", entidad: "regla_aprobacion", singular: "regla de aprobación", plural: "reglas de aprobación", genero: "la",
+  delegado: (db) => db.reglaAprobacion as unknown as Delegado, clave: { campo: "id", numerica: true }, sinEliminar: true,
+  campos: [
+    { nombre: "id", etiqueta: "Número", tipo: "entero", requerido: true, soloCrear: true },
+    { nombre: "descripcion", etiqueta: "Regla", tipo: "texto", max: 120, requerido: true, soloCrear: true, ancho: 2 },
+    { nombre: "monto", etiqueta: "Monto", tipo: "decimal", requerido: true, ayuda: "Regla 2: código de la condición de pago · regla 5: porcentaje máximo de descuento. Las demás no lo usan." },
+    { nombre: "activa", etiqueta: "Activa", tipo: "booleano", ayuda: "La regla 1 es el interruptor general: sin ella activa no se revisa ninguna." },
+  ],
+  validar: async (_db, _d, editando) => (editando ? null : { descripcion: "Las reglas son fijas: edita una existente (activarla y su monto)." }),
+  columnas: [{ id: "id", titulo: "N.º", campo: "id", fija: true }, { id: "descripcion", titulo: "Regla", campo: "descripcion" }, { id: "monto", titulo: "Monto", campo: "monto", alinear: "derecha" }, { id: "activa", titulo: "Estado", campo: "activa", etiqueta: (v) => (v === true || v === "Sí" ? { texto: "Activa", tono: "exito" } : { texto: "Inactiva", tono: "neutro" }) }],
+  busqueda: { texto: "Buscar por descripción", campos: ["descripcion"] }, orden: { columna: "id", dir: "asc" },
+  titulo: (f) => String(f.descripcion ?? ""), descripcion: (f) => `Regla ${f.id}`, mensajeDuplicado: "Ya existe una regla con ese número.",
+};
 export const origenesVenta = sencillo("origenes-venta", "/catalogos/origenes-venta", "origen_venta", "origen de venta", "orígenes de venta", "el", (db) => db.origenVenta as unknown as Delegado, { campoNota: "observaciones", dependientes: "No se puede eliminar: hay documentos de venta con este origen. Márcalo como inactivo en su lugar." });
 export const colores = sencillo("colores", "/catalogos/colores", "color", "color", "colores", "el", (db) => db.color as unknown as Delegado);
 export const tallas = sencillo("tallas", "/catalogos/tallas", "talla", "talla", "tallas", "la", (db) => db.talla as unknown as Delegado);
