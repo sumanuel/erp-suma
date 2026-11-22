@@ -1,6 +1,6 @@
 import type { Maestro, ModuloMaestros } from "./tipos";
 import { alicuotas, aranceles, categorias, marcas, subcategorias, unidades } from "./catalogos";
-import { presentaciones, preciosLista, productos, promociones, proveedoresProducto } from "./productos";
+import { presentaciones, preciosLista, productos, promociones, proveedoresProducto, relacionesProducto } from "./productos";
 import { clientes, proveedores } from "./terceros";
 import { actividadesEconomicas, clasificacionesCliente, clasificacionesProveedor, colores, contactosCliente, contactosProveedor, divisiones, seriesFiscales, sucursales, sucursalesCliente, tallas, ubicacionesFisicas } from "./catalogos-extra";
 import { almacenes, existencias, movimientos } from "./existencias";
@@ -33,7 +33,9 @@ export const modulosMaestros: ModuloMaestros[] = [
       { slug: "precios", titulo: "Precios por lista", maestro: preciosLista },
       { slug: "promociones", titulo: "Promociones", maestro: promociones },
       { slug: "proveedores", titulo: "Proveedores por producto", maestro: proveedoresProducto },
+      { slug: "relacionados", titulo: "Sustitutos y componentes", maestro: relacionesProducto },
     ],
+    paginas: [{ slug: "cambio-precios", titulo: "Cambio de precios" }],
   },
   {
     modulo: "existencias",

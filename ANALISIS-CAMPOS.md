@@ -123,10 +123,10 @@ Ya está: código, descripción, categoría/subcategoría, alícuota de IVA, ara
 | «Promoción» (bandera) | Falta; y no hay promociones | M |
 | Fecha de creación, 3 observaciones y memo | Una observación | B |
 | **Listas de precio múltiples** (`admpreciotip`, `admprecios`: lista A, B, C…, con utilidad %, descuento, descuento máximo, **precio en dólares**, **vencimiento del precio**, usuario) | **Falta.** Hoy hay un solo precio de lista y el precio de venta por presentación | **A** |
-| **Cambio masivo de precios** (`frmCambioPrecio`) | Falta | M |
+| **Cambio masivo de precios** (`frmCambioPrecio`) | ✅ 2026-11-22 (por lista, con vista previa y auditoría; falta aplicarlo a presentaciones) | M |
 | **Promociones** (`frmPromociones`: precio, % descuento, vigencia, lista, **cantidad requerida / otorgada / múltiplo**) | Falta | M |
 | Unidad por producto con **signo** (× o ÷) y banderas «visible en ventas / en compras» (`ime_compra`, `ime_venta`, `ime_signo`) | Hay presentaciones, sin signo ni visibilidad por operación | M |
-| Productos sustitutos, asociados, componentes (`admsustituto`, `admproasociados`, `admcomponentes`, `admcompproduc`) | Falta | B |
+| Productos sustitutos, asociados, componentes (`admsustituto`, `admproasociados`, `admcomponentes`, `admcompproduc`) | ✅ 2026-11-22 (se registran; falta usarlos al vender) | B |
 | Seriales, tallas, colores (`admseriales`, `admtallas`, `admcolor`) | Falta | B |
 | Etiquetas de góndola (`frmEtiq*`, 4 formatos) | Falta | B |
 | Ubicación física (`admubicafis`, `admubicacfis`) | Falta | B |

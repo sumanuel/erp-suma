@@ -106,6 +106,8 @@ model Producto {
   /// Precio máximo de venta al público (productos con precio regulado). 0 = sin tope.
   precioMaximoPublico Decimal  @default(0) @map("precio_maximo_publico") @db.Decimal(18, 4)
   divisionId          String?  @map("division_id") @db.Uuid
+  /// Dirección de la foto del producto (por ahora un enlace; la carga de archivos queda para después).
+  imagenUrl           String?  @map("imagen_url")
   marcaId             String?  @map("marca_id") @db.Uuid
   marca               Marca?   @relation(fields: [marcaId], references: [id])
   /// PROMEDIO (costo promedio ponderado) o ULTIMO (el de la última compra): cuál se usa como costo del producto.
@@ -119,6 +121,8 @@ model Producto {
   /// No se vuelve a comprar, pero se sigue vendiendo hasta agotar existencias.
   descontinuado       Boolean  @default(false)
   precios             ProductoPrecio[]
+  relaciones          ProductoRelacion[] @relation("ProductoRelacionOrigen")
+  relacionadoEn       ProductoRelacion[] @relation("ProductoRelacionDestino")
   promociones         Promocion[]
   observaciones       String?
   activo              Boolean  @default(true)
@@ -243,4 +247,24 @@ model Promocion {
 
   @@index([productoCodigo, desde, hasta])
   @@map("promocion")
+}
+
+/// Relación entre dos productos: SUSTITUTO (se ofrece si no hay existencia), ASOCIADO (se sugiere junto con) o COMPONENTE (forma parte de un kit, con su cantidad).
+model ProductoRelacion {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productoCodigo   String   @map("producto_codigo")
+  producto         Producto @relation("ProductoRelacionOrigen", fields: [productoCodigo], references: [codigo], onDelete: Cascade)
+  relacionadoCodigo String  @map("relacionado_codigo")
+  relacionado      Producto @relation("ProductoRelacionDestino", fields: [relacionadoCodigo], references: [codigo], onDelete: Restrict)
+  tipo             String
+  /// Unidades del relacionado por cada unidad del producto (solo importa en los componentes).
+  cantidad         Decimal  @default(1) @db.Decimal(18, 4)
+  observaciones    String?
+  activo           Boolean  @default(true)
+  creadoEn         DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([productoCodigo, relacionadoCodigo, tipo])
+  @@index([relacionadoCodigo])
+  @@map("producto_relacion")
 }

@@ -81,7 +81,8 @@ export const productos: Maestro = {
       { nombre: "alto", etiqueta: "Alto (cm)", tipo: "decimal", requerido: true },
       { nombre: "ancho", etiqueta: "Ancho (cm)", tipo: "decimal", requerido: true },
 
-      { nombre: "observaciones", etiqueta: "Observaciones", tipo: "textoLargo", max: 1000, ancho: 3, seccion: "Otros datos" },
+      { nombre: "imagenUrl", etiqueta: "Imagen (enlace)", tipo: "texto", max: 500, ancho: 3, seccion: "Otros datos", ayuda: "Dirección de la foto del producto (https://…)." },
+      { nombre: "observaciones", etiqueta: "Observaciones", tipo: "textoLargo", max: 1000, ancho: 3 },
       { nombre: "descontinuado", etiqueta: "Descontinuado (no se vuelve a comprar)", tipo: "booleano" },
       { nombre: "activo", etiqueta: "Activo", tipo: "booleano" },
     ];
@@ -206,6 +207,66 @@ export const proveedoresProducto: Maestro = {
     return null;
   },
   mensajeDuplicado: "Ese proveedor ya está asignado a este producto.",
+};
+
+const TIPOS_RELACION = [{ valor: "SUSTITUTO", etiqueta: "Sustituto (se ofrece si no hay existencia)" }, { valor: "ASOCIADO", etiqueta: "Asociado (se sugiere junto con)" }, { valor: "COMPONENTE", etiqueta: "Componente (parte de un kit)" }];
+
+export const relacionesProducto: Maestro = {
+  id: "relaciones-producto",
+  modulo: "productos",
+  ruta: "/productos/relacionados",
+  entidad: "producto_relacion",
+  singular: "producto relacionado",
+  plural: "productos relacionados",
+  genero: "el",
+  delegado: (db) => db.productoRelacion as unknown as Delegado,
+  clave: { campo: "id", autogenerada: true },
+  incluir: { producto: { select: { descripcion: true } }, relacionado: { select: { descripcion: true } } },
+  campos: [
+    { nombre: "productoCodigo", etiqueta: "Código del producto", tipo: "texto", max: 30, requerido: true, soloCrear: true, ayuda: "El producto debe existir. No se puede cambiar después." },
+    { nombre: "tipo", etiqueta: "Tipo de relación", tipo: "seleccion", requerido: true, soloCrear: true, opciones: TIPOS_RELACION },
+    { nombre: "relacionadoCodigo", etiqueta: "Código del producto relacionado", tipo: "texto", max: 30, requerido: true, soloCrear: true },
+    { nombre: "cantidad", etiqueta: "Cantidad", tipo: "decimal", requerido: true, ayuda: "Unidades del relacionado por cada unidad del producto (importa en los componentes)." },
+    { nombre: "observaciones", etiqueta: "Observaciones (opcional)", tipo: "textoLargo", max: 300, ancho: 3 },
+    { nombre: "activo", etiqueta: "Activo", tipo: "booleano" },
+  ],
+  valoresIniciales: { activo: true, cantidad: "1", tipo: "SUSTITUTO" },
+  columnas: [
+    { id: "producto", titulo: "Producto", valor: (f) => `${f.productoCodigo} · ${rel(f, "producto", "descripcion") ?? ""}`, fija: true },
+    { id: "tipo", titulo: "Relación", valor: (f) => TIPOS_RELACION.find((t) => t.valor === f.tipo)?.etiqueta.split(" (")[0] },
+    { id: "relacionado", titulo: "Relacionado", valor: (f) => `${f.relacionadoCodigo} · ${rel(f, "relacionado", "descripcion") ?? ""}` },
+    { id: "cantidad", titulo: "Cantidad", campo: "cantidad", alinear: "derecha" },
+    { id: "activo", titulo: "Estado", campo: "activo", etiqueta: etiquetaActivo },
+  ],
+  busqueda: { texto: "Buscar por código de producto", campos: ["productoCodigo", "relacionadoCodigo"] },
+  filtros: [
+    { id: "tipo", etiqueta: "Relación", todos: "Todas", opciones: TIPOS_RELACION.map((t) => ({ valor: t.valor.toLowerCase(), etiqueta: t.etiqueta.split(" (")[0], donde: { tipo: t.valor } })) },
+    filtroActivo,
+  ],
+  orden: { columna: "producto", dir: "asc" },
+  titulo: (f) => `${f.productoCodigo} → ${f.relacionadoCodigo}`,
+  preparar: (d) => mayus(mayus(d, "productoCodigo"), "relacionadoCodigo"),
+  validar: async (db, d, editando) => {
+    const errores: Record<string, string> = { ...(typeof d.cantidad === "number" && d.cantidad <= 0 ? { cantidad: "Debe ser mayor que cero." } : {}) };
+    if (editando) return Object.keys(errores).length ? errores : null;
+    const { productoCodigo: a, relacionadoCodigo: b, tipo } = d;
+    if (typeof a === "string" && a === b) errores.relacionadoCodigo = "Un producto no puede relacionarse consigo mismo.";
+    if (typeof a === "string" && !(await db.producto.findUnique({ where: { codigo: a }, select: { id: true } }))) errores.productoCodigo = "No existe un producto con este código.";
+    if (typeof b === "string" && !(await db.producto.findUnique({ where: { codigo: b }, select: { id: true } }))) errores.relacionadoCodigo = "No existe un producto con este código.";
+    // Un kit no puede contenerse a sí mismo, ni directa ni indirectamente.
+    if (tipo === "COMPONENTE" && typeof a === "string" && typeof b === "string" && !errores.relacionadoCodigo && a !== b) {
+      const visto = new Set<string>([b]);
+      let frente = [b];
+      while (frente.length) {
+        const hijos = await db.productoRelacion.findMany({ where: { productoCodigo: { in: frente }, tipo: "COMPONENTE" }, select: { relacionadoCodigo: true } });
+        frente = hijos.map((h) => h.relacionadoCodigo).filter((c) => !visto.has(c));
+        frente.forEach((c) => visto.add(c));
+      }
+      if (visto.has(a)) errores.relacionadoCodigo = "Ese producto ya contiene a este kit: se formaría un ciclo.";
+    }
+    return Object.keys(errores).length ? errores : null;
+  },
+  mensajeDuplicado: "Esa relación ya existe.",
 };
 
 const LISTAS = ["A", "B", "C", "D", "E", "F"].map((l) => ({ valor: l, etiqueta: `Lista ${l}` }));

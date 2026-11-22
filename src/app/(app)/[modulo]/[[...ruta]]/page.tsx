@@ -6,6 +6,10 @@ import { requerirPermiso } from "@/lib/dal";
 import type { Busqueda } from "@/lib/listados";
 import { itemsMenu } from "@/lib/menu";
 import { buscarModulo } from "@/lib/maestros/registro";
+import { PaginaCambioPrecios } from "@/components/productos/pagina-cambio-precios";
+
+// Pantallas propias de un módulo (declaradas en `paginas` del registro).
+const paginasPropias: Record<string, () => Promise<React.JSX.Element>> = { "productos/cambio-precios": PaginaCambioPrecios };
 
 // Una sola ruta atiende todos los módulos:
 //   /<módulo>                      listado de la primera sección
@@ -35,6 +39,11 @@ export default async function PaginaModulo({
         </Tarjeta>
       </div>
     );
+  }
+
+  if (ruta.length === 1 && mod.paginas?.some((p) => p.slug === ruta[0])) {
+    await requerirPermiso(mod.modulo, "ver");
+    return paginasPropias[`${modulo}/${ruta[0]}`]();
   }
 
   // La sección es el primer segmento solo si coincide con una sección con nombre; si no, pertenece a la sección principal.

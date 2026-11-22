@@ -85,7 +85,9 @@ export type Maestro = {
 };
 
 export type Seccion = { slug: string; titulo: string; maestro: Maestro };
-export type ModuloMaestros = { modulo: string; secciones: Seccion[] };
+/** Pantalla propia de un módulo (no es un maestro): aparece como pestaña y la dibuja la ruta del módulo. */
+export type PaginaPropia = { slug: string; titulo: string };
+export type ModuloMaestros = { modulo: string; secciones: Seccion[]; paginas?: PaginaPropia[] };
 
 export const SINO = [
   { valor: "1", etiqueta: "Sí" },
