@@ -16,6 +16,8 @@ const Pago = z.object({
   moneda: z.enum(["USD", "VES"]),
   cuentaId: z.string().uuid("Elige la cuenta de la que sale el dinero"),
   referencia: z.string().trim().max(100).transform((v) => v || null),
+  portador: z.string().trim().max(120).transform((v) => v || null).optional(),
+  comprobante: z.string().trim().max(50).transform((v) => v || null).optional(),
   observaciones: z.string().trim().max(1000).transform((v) => v || null),
   aplicaciones: z.array(z.object({ facturaId: z.string().uuid(), montoUsd: z.number().finite() })).max(200),
 });

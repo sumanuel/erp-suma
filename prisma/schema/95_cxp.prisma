@@ -68,6 +68,12 @@ model PagoProveedor {
   /// Cuenta de tesorería de la que salió el dinero (nulo solo en pagos anteriores a Tesorería).
   cuentaId         String?          @map("cuenta_id") @db.Uuid
   cuenta           CuentaTesoreria? @relation(fields: [cuentaId], references: [id])
+  /// Pago con cheque: número tomado de la chequera activa de la cuenta y a nombre de quién se giró.
+  numeroCheque     Int?             @map("numero_cheque")
+  chequeraId       String?          @map("chequera_id") @db.Uuid
+  portador         String?
+  /// Número del comprobante de egreso (voucher).
+  comprobante      String?
   referencia       String?
   observaciones    String?
   creadoPorId      String?          @map("creado_por_id") @db.Uuid

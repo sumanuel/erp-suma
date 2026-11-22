@@ -21,6 +21,8 @@ export function FormularioPago({ proveedorId, proveedorNombre, facturas, tasa, c
   const [moneda, setMoneda] = useState<"USD" | "VES">("USD");
   const [cuentaId, setCuentaId] = useState("");
   const [referencia, setReferencia] = useState("");
+  const [portador, setPortador] = useState("");
+  const [comprobante, setComprobante] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
@@ -32,7 +34,7 @@ export function FormularioPago({ proveedorId, proveedorNombre, facturas, tasa, c
     setError(null);
     iniciar(async () => {
       const r = await registrarPagoProveedor({
-        proveedorId, formaPago, moneda, cuentaId, referencia, observaciones,
+        proveedorId, formaPago, moneda, cuentaId, referencia, observaciones, comprobante, ...(formaPago === "CHEQUE" ? { portador } : {}),
         aplicaciones: facturas.map((f) => ({ facturaId: f.id, montoUsd: num(montos[f.id] ?? "") })).filter((a) => a.montoUsd > 0),
       });
       if (r?.error) setError(r.error);
@@ -65,6 +67,17 @@ export function FormularioPago({ proveedorId, proveedorNombre, facturas, tasa, c
               {cuentas.filter((c) => c.moneda === moneda).map((c) => <option key={c.id} value={c.id}>{c.etiqueta}</option>)}
             </select>
             {cuentas.every((c) => c.moneda !== moneda) ? <p className="text-[12.5px] text-error">No hay una cuenta activa en esta moneda: créala en Tesorería.</p> : null}
+          </div>
+          {formaPago === "CHEQUE" ? (
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <label htmlFor="portador" className="text-[13px] font-medium">Cheque a nombre de <span className="font-normal text-gris-500">(opcional: el proveedor)</span></label>
+              <input id="portador" value={portador} onChange={(e) => setPortador(e.target.value)} maxLength={120} className={claseControl} />
+              <p className="text-[12.5px] text-gris-500">El número sale solo de la chequera activa de la cuenta.</p>
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="comprobante" className="text-[13px] font-medium">Comprobante de egreso <span className="font-normal text-gris-500">(opcional)</span></label>
+            <input id="comprobante" value={comprobante} onChange={(e) => setComprobante(e.target.value)} maxLength={50} className={claseControl} />
           </div>
           <div className="flex flex-col gap-1.5 md:col-span-2">
             <label htmlFor="referencia" className="text-[13px] font-medium">Referencia (banco, nº de operación)</label>

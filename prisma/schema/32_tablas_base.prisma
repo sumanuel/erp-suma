@@ -94,6 +94,8 @@ model Banco {
   actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
 
   proveedores   Proveedor[]
+  cuentas       CuentaTesoreria[]
+
   @@map("banco")
 }
 

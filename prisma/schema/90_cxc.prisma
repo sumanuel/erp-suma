@@ -24,6 +24,16 @@ model Cobro {
   /// Cuenta de tesorería a la que entró el dinero (nulo solo en cobros anteriores a Tesorería).
   cuentaId        String?           @map("cuenta_id") @db.Uuid
   cuenta          CuentaTesoreria?  @relation(fields: [cuentaId], references: [id])
+  /// Recibo de ingreso al que pertenece cuando el cliente paga con varias formas de pago a la vez (cada forma es un cobro).
+  reciboId        String?           @map("recibo_id") @db.Uuid
+  recibo          ReciboCobro?      @relation(fields: [reciboId], references: [id])
+  cobradorId      String?           @map("cobrador_id") @db.Uuid
+  /// Pago con cheque: banco emisor, número y fecha del cheque.
+  bancoChequeId   String?           @map("banco_cheque_id") @db.Uuid
+  numeroCheque    String?           @map("numero_cheque")
+  fechaCheque     DateTime?         @map("fecha_cheque") @db.Date
+  /// Comprobante contable o de caja del cobro.
+  numeroComprobante String?         @map("numero_comprobante")
   referencia      String?
   observaciones   String?
   creadoPorId     String?           @map("creado_por_id") @db.Uuid
@@ -51,4 +61,22 @@ model CobroAplicacion {
   @@unique([cobroId, facturaId])
   @@index([facturaId])
   @@map("cobro_aplicacion")
+}
+
+/// Recibo de ingreso: agrupa los cobros de una misma operación (por ejemplo, 50 USD en efectivo + el resto por transferencia). Equivale a admreciboingre.
+model ReciboCobro {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número correlativo (se muestra como REC-000123).
+  numero          Int      @unique @default(autoincrement())
+  clienteId       String   @map("cliente_id") @db.Uuid
+  fecha           DateTime @db.Date
+  cobradorId      String?  @map("cobrador_id") @db.Uuid
+  observaciones   String?
+  creadoPorId     String?  @map("creado_por_id") @db.Uuid
+  creadoPorNombre String?  @map("creado_por_nombre")
+  creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  cobros          Cobro[]
+
+  @@index([clienteId, fecha(sort: Desc)])
+  @@map("recibo_cobro")
 }

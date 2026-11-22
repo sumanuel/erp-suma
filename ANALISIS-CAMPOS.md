@@ -227,6 +227,8 @@ Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédi
 | Retención de IVA del cliente (`frmRetIvaCli`): número fiscal, % retención, número de retención, **fecha recibido**, fecha de la retención, monto, estado | ✔️ salvo la **fecha de recepción** del comprobante | B |
 | Retención de ISLR del cliente (`admcliislr`) | ✔️ (módulo de retenciones); falta el **concepto** (tarifas, 3.x) | M |
 
+> **✅ Avance 2026-11-22 (cobros):** cobrador, varias formas de pago en un recibo (RC-), datos del cheque, comprobante y fecha del recibo. **⬜ Pendiente:** anticipos y saldo a favor.
+
 ### 5.2 Pagos (`admpagos`, `frmProcesoPago`, `frmProcesoPagoManual`)
 
 | Campo original | En el nuevo | Prio |
@@ -237,6 +239,8 @@ Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédi
 | Varios documentos en un pago | ✔️ | — |
 | Pago manual con asientos adicionales | Falta | M |
 | Estado del pago | ✔️ | — |
+
+> **✅ Avance 2026-11-22 (pagos):** cheque con número tomado de la chequera activa, portador y comprobante de egreso. **⬜ Pendiente:** pago manual con asientos adicionales.
 
 ### 5.3 Bancos y cuentas bancarias (`admbancos`, `admcuentasbanc`, `admcuentascaja`)
 
@@ -252,6 +256,8 @@ Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédi
 | Cuenta contable (mayor y auxiliar) | ✔️ cuenta contable (sin auxiliar) | — |
 | **Conciliación bancaria** (`admmovban`, `adminstrumenban`) | Hay marca de conciliado por movimiento ✔️; falta el proceso con estado de cuenta | M |
 | Cajas: trabaja, recibe/paga, **cuentas contables por concepto** (IVA débito/crédito, ventas, cuentas por cobrar, devoluciones contado/crédito, pronto pago) | ✔️ la configuración contable por concepto cubre esto | — |
+
+> **✅ Avance 2026-11-22 (bancos y cuentas):** banco del catálogo, titular, sucursal, descripción, tipo de cuenta, acepta depósitos/pagos, ITF (porcentaje, desde, hasta; se carga a pagos y egresos), chequeras (rangos, último cheque, una activa) y formato de cheque. **⬜ Pendiente:** impresión del cheque y conciliación con estado de cuenta.
 
 ### 5.4 Contabilidad (`admcuentascontables`, `frmPlanCuentas`, `frmAuxiliarContable`, `frmComprobanteContable`, `parametrosContables`)
 

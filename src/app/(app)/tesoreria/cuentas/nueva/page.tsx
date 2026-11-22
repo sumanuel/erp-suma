@@ -7,7 +7,8 @@ export default async function NuevaCuenta() {
     db.cuentaContable.findMany({ where: { posteable: true, activo: true }, select: { id: true, codigo: true, nombre: true } }),
     db.configContable.findUnique({ where: { id: 1 } }),
   ]);
+  const bancos = (await db.banco.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } })).map((b) => ({ valor: b.id, etiqueta: b.nombre }));
   const clave = (x: string) => x.split(".").map((n) => n.padStart(6, "0")).join(".");
   contables.sort((a, b) => clave(a.codigo).localeCompare(clave(b.codigo)));
-  return <FormularioCuenta cuentasContables={contables.map((x) => ({ valor: x.id, etiqueta: `${x.codigo} ${x.nombre}` }))} automatica={cfg?.automatica ?? false} id={null} inicial={{ cuentaContableId: "", contrapartidaId: "", codigo: "", nombre: "", tipo: "BANCO", moneda: "VES", banco: "", numeroCuenta: "", saldoInicial: "0", permiteSobregiro: false, activo: true }} />;
+  return <FormularioCuenta cuentasContables={contables.map((x) => ({ valor: x.id, etiqueta: `${x.codigo} ${x.nombre}` }))} automatica={cfg?.automatica ?? false} bancos={bancos} id={null} inicial={{ cuentaContableId: "", contrapartidaId: "", codigo: "", nombre: "", tipo: "BANCO", moneda: "VES", banco: "", numeroCuenta: "", saldoInicial: "0", permiteSobregiro: false, activo: true, bancoId: "", titular: "", sucursal: "", descripcion: "", tipoCuentaBancaria: "", aceptaDepositos: true, aceptaPagos: true, itfPorcentaje: "0", itfDesde: "", itfHasta: "", formatoCheque: "" }} />;
 }

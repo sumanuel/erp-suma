@@ -5,6 +5,7 @@ import { registrarCambio } from "@/lib/auditoria";
 import type { Actor, Tx } from "@/lib/inventario/movimientos";
 import { contabilizarMovimientoTesoreria, contabilizarTransferencia } from "@/lib/contabilidad/automatico";
 import { ContaError } from "@/lib/contabilidad/servicio";
+import { hoyCaracas } from "@/lib/tasas";
 import { TIPOS_MOVIMIENTO_TESORERIA, type TipoMovimientoTesoreria } from "./tipos";
 
 // ÚNICO lugar que modifica el saldo de una cuenta. Cada cambio se escribe junto con su línea del libro en la misma transacción, con descuento atómico:
@@ -31,8 +32,10 @@ export async function aplicarMovimientoCuenta(
   const err = validarMonto(m.monto);
   if (err) throw new TesoreriaRechazada(err);
   const { signo, anulacion } = TIPOS_MOVIMIENTO_TESORERIA[m.tipo];
-  const cuenta = await tx.cuentaTesoreria.findUnique({ where: { id: m.cuentaId }, select: { codigo: true, activo: true } });
+  const cuenta = await tx.cuentaTesoreria.findUnique({ where: { id: m.cuentaId }, select: { codigo: true, activo: true, aceptaDepositos: true, aceptaPagos: true } });
   if (!cuenta) throw new TesoreriaRechazada("La cuenta no existe.");
+  if ((m.tipo === "COBRO" || m.tipo === "INGRESO") && !cuenta.aceptaDepositos) throw new TesoreriaRechazada(`La cuenta ${cuenta.codigo} no acepta depósitos.`);
+  if (m.tipo === "PAGO" && !cuenta.aceptaPagos) throw new TesoreriaRechazada(`La cuenta ${cuenta.codigo} no acepta pagos.`);
   // Una cuenta inactiva no recibe operaciones nuevas, pero sí las anulaciones (para poder revertir lo que ya se hizo).
   if (!cuenta.activo && !anulacion && m.tipo !== "SALDO_INICIAL") throw new TesoreriaRechazada(`La cuenta ${cuenta.codigo} está inactiva.`);
 
@@ -68,7 +71,29 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoTesoreria<T>>): Promi
   }
 }
 
-export type DatosCuenta = { codigo: string; nombre: string; tipo: string; moneda: string; banco: string | null; numeroCuenta: string | null; saldoInicial: number; permiteSobregiro: boolean; activo: boolean; cuentaContableId?: string | null; contrapartidaId?: string | null };
+export type DatosBancarios = { bancoId?: string | null; titular?: string | null; sucursal?: string | null; descripcion?: string | null; tipoCuentaBancaria?: string | null; aceptaDepositos?: boolean; aceptaPagos?: boolean; itfPorcentaje?: number; itfDesde?: Date | null; itfHasta?: Date | null; formatoCheque?: string | null };
+
+/** Valida los datos bancarios y devuelve las columnas; el texto `banco` se llena con el nombre del banco del catálogo. */
+async function columnasBancarias(tx: Pick<Tx, "banco">, d: DatosBancarios) {
+  const pct = d.itfPorcentaje ?? 0;
+  if (!Number.isFinite(pct) || pct < 0 || pct > 100 || decimales(pct) > 4) throw new TesoreriaRechazada("El ITF debe estar entre 0 y 100 % (hasta 4 decimales).");
+  if (d.itfDesde && d.itfHasta && d.itfHasta < d.itfDesde) throw new TesoreriaRechazada("El ITF termina antes de empezar.");
+  if (d.tipoCuentaBancaria && d.tipoCuentaBancaria !== "CORRIENTE" && d.tipoCuentaBancaria !== "AHORRO") throw new TesoreriaRechazada("Tipo de cuenta bancaria inválido.");
+  let nombreBanco: string | null | undefined;
+  if (d.bancoId) {
+    const b = await tx.banco.findUnique({ where: { id: d.bancoId }, select: { nombre: true, activo: true } });
+    if (!b?.activo) throw new TesoreriaRechazada("El banco no existe o está inactivo.");
+    nombreBanco = b.nombre;
+  }
+  return {
+    bancoId: d.bancoId || null, titular: d.titular?.trim() || null, sucursal: d.sucursal?.trim() || null, descripcion: d.descripcion?.trim() || null,
+    tipoCuentaBancaria: d.tipoCuentaBancaria || null, aceptaDepositos: d.aceptaDepositos ?? true, aceptaPagos: d.aceptaPagos ?? true,
+    itfPorcentaje: pct, itfDesde: d.itfDesde ?? null, itfHasta: d.itfHasta ?? null, formatoCheque: d.formatoCheque?.trim() || null,
+    ...(nombreBanco ? { banco: nombreBanco } : {}),
+  };
+}
+
+export type DatosCuenta = DatosBancarios & { codigo: string; nombre: string; tipo: string; moneda: string; banco: string | null; numeroCuenta: string | null; saldoInicial: number; permiteSobregiro: boolean; activo: boolean; cuentaContableId?: string | null; contrapartidaId?: string | null };
 
 export async function crearCuenta(db: Db, actor: Actor, d: DatosCuenta): Promise<ResultadoTesoreria<{ id: string }>> {
   return ejecutar(async () => {
@@ -77,7 +102,7 @@ export async function crearCuenta(db: Db, actor: Actor, d: DatosCuenta): Promise
     if (!Number.isFinite(d.saldoInicial) || d.saldoInicial < 0 || decimales(d.saldoInicial) > 2 || d.saldoInicial > 1e12) throw new TesoreriaRechazada("Saldo inicial inválido (hasta 2 decimales).");
     const id = await db.$transaction(async (tx) => {
       if (await tx.cuentaTesoreria.findUnique({ where: { codigo: d.codigo }, select: { id: true } })) throw new TesoreriaRechazada("Ya existe una cuenta con ese código.");
-      const c = await tx.cuentaTesoreria.create({ data: { codigo: d.codigo, nombre: d.nombre, tipo: d.tipo, moneda: d.moneda, banco: d.banco, numeroCuenta: d.numeroCuenta, permiteSobregiro: d.permiteSobregiro, activo: d.activo, cuentaContableId: d.cuentaContableId || null }, select: { id: true } });
+      const c = await tx.cuentaTesoreria.create({ data: { codigo: d.codigo, nombre: d.nombre, tipo: d.tipo, moneda: d.moneda, banco: d.banco, numeroCuenta: d.numeroCuenta, permiteSobregiro: d.permiteSobregiro, activo: d.activo, cuentaContableId: d.cuentaContableId || null, ...(await columnasBancarias(tx, d)) }, select: { id: true } });
       if (d.saldoInicial > 0) {
         const movId = await aplicarMovimientoCuenta(tx, actor, { cuentaId: c.id, tipo: "SALDO_INICIAL", monto: d.saldoInicial, descripcion: "Saldo inicial" });
         await contabilizarMovimientoTesoreria(tx, actor, { movimientoId: movId, cuentaId: c.id, tipo: "SALDO_INICIAL", monto: d.saldoInicial, contrapartidaId: d.contrapartidaId ?? null, descripcion: "Saldo inicial" });
@@ -90,12 +115,13 @@ export async function crearCuenta(db: Db, actor: Actor, d: DatosCuenta): Promise
 }
 
 /** Edita los datos de la cuenta. La moneda y el saldo no se tocan: el saldo solo cambia con movimientos. */
-export async function editarCuenta(db: Db, actor: Actor, id: string, d: Pick<DatosCuenta, "nombre" | "banco" | "numeroCuenta" | "permiteSobregiro" | "activo" | "cuentaContableId">): Promise<ResultadoTesoreria> {
+export async function editarCuenta(db: Db, actor: Actor, id: string, d: Pick<DatosCuenta, "nombre" | "banco" | "numeroCuenta" | "permiteSobregiro" | "activo" | "cuentaContableId"> & DatosBancarios): Promise<ResultadoTesoreria> {
   return ejecutar(async () => {
     const antes = await db.cuentaTesoreria.findUnique({ where: { id } });
     if (!antes) throw new TesoreriaRechazada("La cuenta ya no existe.");
     if (!d.permiteSobregiro && Number(antes.saldo) < 0) throw new TesoreriaRechazada("La cuenta tiene saldo negativo: no se puede quitar el sobregiro.");
-    await db.cuentaTesoreria.update({ where: { id }, data: { nombre: d.nombre, banco: d.banco, numeroCuenta: d.numeroCuenta, permiteSobregiro: d.permiteSobregiro, activo: d.activo, cuentaContableId: d.cuentaContableId || null } });
+    const bancarias = await columnasBancarias(db, d);
+    await db.cuentaTesoreria.update({ where: { id }, data: { nombre: d.nombre, banco: d.banco, numeroCuenta: d.numeroCuenta, permiteSobregiro: d.permiteSobregiro, activo: d.activo, cuentaContableId: d.cuentaContableId || null, ...bancarias } });
     await registrarCambio(db, actor, {
       modulo: "tesoreria", entidad: "cuenta_tesoreria", entidadId: id, descripcion: antes.codigo, accion: "editar",
       antes: { nombre: antes.nombre, banco: antes.banco, numeroCuenta: antes.numeroCuenta, permiteSobregiro: antes.permiteSobregiro, activo: antes.activo }, despues: d,
@@ -111,6 +137,7 @@ export async function registrarMovimientoManual(db: Db, actor: Actor, d: { cuent
     if (d.descripcion.trim().length < 3) throw new TesoreriaRechazada("Indica el concepto del movimiento.");
     await db.$transaction(async (tx) => {
       const movId = await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.cuentaId, tipo: d.tipo as TipoMovimientoTesoreria, monto: d.monto, descripcion: d.descripcion.trim(), documento: d.documento });
+      if (d.tipo === "EGRESO") await aplicarItf(tx, actor, d.cuentaId, d.monto, d.documento);
       await contabilizarMovimientoTesoreria(tx, actor, { movimientoId: movId, cuentaId: d.cuentaId, tipo: d.tipo as "INGRESO" | "EGRESO", monto: d.monto, contrapartidaId: d.contrapartidaId ?? null, descripcion: d.descripcion.trim() });
     });
     await registrarCambio(db, actor, { modulo: "tesoreria", entidad: "movimiento_tesoreria", entidadId: d.cuentaId, descripcion: d.descripcion.trim(), accion: "otro", despues: { operacion: d.tipo, monto: d.monto } });
@@ -159,4 +186,22 @@ export async function intercambioVuelto(tx: Tx, actor: Actor, d: { recibeId: str
   const salida = await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.entregaId, tipo: "VUELTO_SALIDA", monto: d.montoEntrega, documento: d.documento, descripcion: "Vuelto entregado en otra moneda", grupo });
   await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.recibeId, tipo: "VUELTO_ENTRADA", monto: d.montoRecibe, documento: d.documento, descripcion: "Excedente recibido (vuelto en otra moneda)", grupo });
   await contabilizarTransferencia(tx, actor, { movimientoId: salida, origenId: d.entregaId, destinoId: d.recibeId, monto: d.montoEntrega });
+}
+
+/**
+ * Cargo del impuesto a las transacciones financieras (ITF): si la cuenta tiene un porcentaje vigente hoy, se carga sobre lo que sale (pagos y egresos)
+ * como un movimiento propio con su asiento (gastos financieros). Devuelve lo cargado (0 si no aplica). Dentro de la transacción del movimiento.
+ */
+export async function aplicarItf(tx: Tx, actor: Actor, cuentaId: string, base: number, documento: string | null) {
+  const c = await tx.cuentaTesoreria.findUniqueOrThrow({ where: { id: cuentaId }, select: { itfPorcentaje: true, itfDesde: true, itfHasta: true } });
+  const pct = Number(c.itfPorcentaje);
+  if (!(pct > 0)) return 0;
+  const hoy = hoyCaracas();
+  if ((c.itfDesde && hoy < c.itfDesde) || (c.itfHasta && hoy > c.itfHasta)) return 0;
+  const monto = Math.round((base * pct) / 100 * 100) / 100;
+  if (!(monto > 0)) return 0;
+  const id = await aplicarMovimientoCuenta(tx, actor, { cuentaId, tipo: "IMPUESTO_ITF", monto, documento, descripcion: `ITF ${pct} % sobre ${base}` });
+  const k = await tx.cuentaConcepto.findUnique({ where: { concepto: "GASTOS_FINANCIEROS" }, select: { cuentaId: true } });
+  await contabilizarMovimientoTesoreria(tx, actor, { movimientoId: id, cuentaId, tipo: "EGRESO", monto, contrapartidaId: k?.cuentaId ?? null, descripcion: "Impuesto a las transacciones financieras" });
+  return monto;
 }

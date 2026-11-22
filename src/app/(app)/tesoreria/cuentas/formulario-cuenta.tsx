@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { crearCuentaTesoreria, editarCuentaTesoreria } from "../acciones";
 
-export type InicialCuenta = { cuentaContableId: string; contrapartidaId: string; codigo: string; nombre: string; tipo: string; moneda: string; banco: string; numeroCuenta: string; saldoInicial: string; permiteSobregiro: boolean; activo: boolean };
+export type InicialCuenta = { cuentaContableId: string; contrapartidaId: string; codigo: string; nombre: string; tipo: string; moneda: string; banco: string; numeroCuenta: string; saldoInicial: string; permiteSobregiro: boolean; activo: boolean; bancoId: string; titular: string; sucursal: string; descripcion: string; tipoCuentaBancaria: string; aceptaDepositos: boolean; aceptaPagos: boolean; itfPorcentaje: string; itfDesde: string; itfHasta: string; formatoCheque: string };
 
 const num = (s: string) => {
   const n = Number(s.replace(",", "."));
@@ -13,7 +13,7 @@ const num = (s: string) => {
 };
 
 /** Alta (con moneda, tipo y saldo inicial) o edición (solo datos descriptivos: la moneda y el saldo no se editan). */
-export function FormularioCuenta({ id, inicial, cuentasContables, automatica }: { id: string | null; inicial: InicialCuenta; cuentasContables: { valor: string; etiqueta: string }[]; automatica: boolean }) {
+export function FormularioCuenta({ id, inicial, cuentasContables, automatica, bancos }: { id: string | null; inicial: InicialCuenta; cuentasContables: { valor: string; etiqueta: string }[]; automatica: boolean; bancos: { valor: string; etiqueta: string }[] }) {
   const [v, setV] = useState(inicial);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
@@ -23,7 +23,7 @@ export function FormularioCuenta({ id, inicial, cuentasContables, automatica }: 
   function guardar() {
     setError(null);
     iniciar(async () => {
-      const datos = { ...v, saldoInicial: num(v.saldoInicial) };
+      const datos = { ...v, saldoInicial: num(v.saldoInicial), itfPorcentaje: num(v.itfPorcentaje) };
       const r = edicion ? await editarCuentaTesoreria(id, datos) : await crearCuentaTesoreria(datos);
       if (r?.error) setError(r.error);
     });
@@ -61,7 +61,31 @@ export function FormularioCuenta({ id, inicial, cuentasContables, automatica }: 
             </div>
           )}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="banco" className="text-[13px] font-medium">Banco</label>
+            <label htmlFor="bancoId" className="text-[13px] font-medium">Banco <span className="font-normal text-gris-500">(catálogo)</span></label>
+            <select id="bancoId" value={v.bancoId} onChange={(e) => set("bancoId", e.target.value)} className={`${claseControl} pr-9`}>
+              <option value="">Sin banco</option>{bancos.map((b) => <option key={b.valor} value={b.valor}>{b.etiqueta}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="tipoCuentaBancaria" className="text-[13px] font-medium">Tipo de cuenta bancaria</label>
+            <select id="tipoCuentaBancaria" value={v.tipoCuentaBancaria} onChange={(e) => set("tipoCuentaBancaria", e.target.value)} className={`${claseControl} pr-9`}>
+              <option value="">—</option><option value="CORRIENTE">Corriente</option><option value="AHORRO">Ahorro</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="titular" className="text-[13px] font-medium">Titular</label>
+            <input id="titular" value={v.titular} onChange={(e) => set("titular", e.target.value)} maxLength={100} className={claseControl} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="sucursal" className="text-[13px] font-medium">Sucursal</label>
+            <input id="sucursal" value={v.sucursal} onChange={(e) => set("sucursal", e.target.value)} maxLength={60} className={claseControl} />
+          </div>
+          <div className="flex flex-col gap-1.5 md:col-span-2 xl:col-span-1">
+            <label htmlFor="descripcion" className="text-[13px] font-medium">Descripción</label>
+            <input id="descripcion" value={v.descripcion} onChange={(e) => set("descripcion", e.target.value)} maxLength={300} className={claseControl} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="banco" className="text-[13px] font-medium">Banco (texto libre) <span className="font-normal text-gris-500">— si no está en el catálogo</span></label>
             <input id="banco" value={v.banco} onChange={(e) => set("banco", e.target.value)} maxLength={80} className={claseControl} />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -82,6 +106,30 @@ export function FormularioCuenta({ id, inicial, cuentasContables, automatica }: 
               </select>
             </div>
           )}
+        </div>
+        <h3 className="mb-3 mt-6 border-b border-linea pb-1.5 text-[13px] font-semibold uppercase tracking-wide text-gris-600">Impuesto a las transacciones financieras (ITF) y cheques</h3>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="itfPorcentaje" className="text-[13px] font-medium">ITF (%)</label>
+            <input id="itfPorcentaje" inputMode="decimal" value={v.itfPorcentaje} onChange={(e) => set("itfPorcentaje", e.target.value)} className={claseControl} />
+            <p className="text-[12.5px] text-gris-500">Se carga a los pagos y egresos de la cuenta. 0 = no aplica.</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="itfDesde" className="text-[13px] font-medium">ITF desde <span className="font-normal text-gris-500">(opcional)</span></label>
+            <input id="itfDesde" type="date" value={v.itfDesde} onChange={(e) => set("itfDesde", e.target.value)} className={claseControl} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="itfHasta" className="text-[13px] font-medium">ITF hasta <span className="font-normal text-gris-500">(opcional)</span></label>
+            <input id="itfHasta" type="date" value={v.itfHasta} onChange={(e) => set("itfHasta", e.target.value)} className={claseControl} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="formatoCheque" className="text-[13px] font-medium">Formato de cheque <span className="font-normal text-gris-500">(opcional)</span></label>
+            <input id="formatoCheque" value={v.formatoCheque} onChange={(e) => set("formatoCheque", e.target.value)} maxLength={100} className={claseControl} />
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-6">
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.aceptaDepositos} onChange={(e) => set("aceptaDepositos", e.target.checked)} className="size-4 accent-marca-fuerte" /> Acepta depósitos y cobros</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.aceptaPagos} onChange={(e) => set("aceptaPagos", e.target.checked)} className="size-4 accent-marca-fuerte" /> Acepta pagos</label>
         </div>
         <div className="mt-4 flex flex-wrap gap-6">
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.permiteSobregiro} onChange={(e) => set("permiteSobregiro", e.target.checked)} className="size-4 accent-marca-fuerte" /> Permite sobregiro (saldo negativo)</label>

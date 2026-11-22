@@ -3,7 +3,8 @@ import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import type { Actor } from "@/lib/inventario/movimientos";
 import { hoyCaracas, tasaVigente } from "@/lib/tasas";
-import { aplicarMovimientoCuenta, TesoreriaRechazada } from "@/lib/tesoreria/movimientos";
+import { siguienteCheque } from "@/lib/tesoreria/chequeras";
+import { aplicarItf, aplicarMovimientoCuenta, TesoreriaRechazada } from "@/lib/tesoreria/movimientos";
 import { contabilizarFacturaCompra, contabilizarPago, revertirFacturaCompra, revertirPago } from "@/lib/contabilidad/automatico";
 import { ContaError } from "@/lib/contabilidad/servicio";
 import { FORMAS_PAGO, numeroFacturaCompra, numeroPago } from "./estados";
@@ -97,6 +98,10 @@ export async function anularFacturaCompra(db: Db, actor: Actor, id: string, moti
 }
 
 export type DatosPago = {
+  /// Con forma de pago CHEQUE: a nombre de quién se gira (por omisión, el proveedor). El número sale de la chequera activa de la cuenta.
+  portador?: string | null;
+  /// Número del comprobante de egreso (voucher).
+  comprobante?: string | null;
   proveedorId: string;
   formaPago: string;
   moneda: string;
@@ -118,7 +123,7 @@ export async function registrarPago(db: Db, actor: Actor, d: DatosPago): Promise
     for (const a of aplic) if (!Number.isFinite(a.montoUsd) || decimales(a.montoUsd) > 4 || a.montoUsd > 1e12) throw new CxpError("Los montos admiten hasta 4 decimales.");
 
     const r = await db.$transaction(async (tx) => {
-      const prov = await tx.proveedor.findUnique({ where: { id: d.proveedorId }, select: { id: true } });
+      const prov = await tx.proveedor.findUnique({ where: { id: d.proveedorId }, select: { id: true, razonSocial: true } });
       if (!prov) throw new CxpError("El proveedor no existe.");
       const montoUsd = Math.round(aplic.reduce((s, a) => s + a.montoUsd, 0) * 10000) / 10000;
       let tasa: number | null = null;
@@ -141,15 +146,23 @@ export async function registrarPago(db: Db, actor: Actor, d: DatosPago): Promise
       const cuenta = await tx.cuentaTesoreria.findUnique({ where: { id: d.cuentaId }, select: { moneda: true, activo: true, codigo: true } });
       if (!cuenta || !cuenta.activo) throw new CxpError("Elige una cuenta de tesorería activa.");
       if (cuenta.moneda !== d.moneda) throw new CxpError(`La cuenta ${cuenta.codigo} es en ${cuenta.moneda}: no sirve para un pago en ${d.moneda}.`);
+      // Con cheque se toma el siguiente número de la chequera activa (atómico) y se anota a nombre de quién se giró.
+      let cheque: { numero: number; chequeraId: string } | null = null;
+      if (d.formaPago === "CHEQUE") {
+        cheque = await siguienteCheque(tx, d.cuentaId);
+        if (!cheque) throw new CxpError(`La cuenta ${cuenta.codigo} no tiene una chequera activa con cheques disponibles: registra una en Tesorería.`);
+      }
       const p = await tx.pagoProveedor.create({
         data: {
+          numeroCheque: cheque?.numero ?? null, chequeraId: cheque?.chequeraId ?? null, portador: d.formaPago === "CHEQUE" ? (d.portador?.trim().slice(0, 120) || prov.razonSocial) : null, comprobante: d.comprobante?.trim().slice(0, 50) || null,
           cuentaId: d.cuentaId, proveedorId: d.proveedorId, fecha: hoyCaracas(), formaPago: d.formaPago, moneda: d.moneda, montoMoneda, tasaUsd: tasa, montoUsd,
           referencia: d.referencia, observaciones: d.observaciones, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
           aplicaciones: { create: aplic.map((a) => ({ facturaId: a.facturaId, montoUsd: a.montoUsd })) },
         },
         select: { id: true, numero: true },
       });
-      await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.cuentaId, tipo: "PAGO", monto: montoMoneda, documento: numeroPago(p.numero), descripcion: `Pago a proveedor${d.referencia ? ` · ref. ${d.referencia}` : ""}` });
+      await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.cuentaId, tipo: "PAGO", monto: montoMoneda, documento: numeroPago(p.numero), descripcion: `Pago a proveedor${d.referencia ? ` · ref. ${d.referencia}` : ""}${cheque ? ` · cheque ${cheque.numero}` : ""}` });
+      await aplicarItf(tx, actor, d.cuentaId, montoMoneda, numeroPago(p.numero));
       await contabilizarPago(tx, actor, p.id);
       return { ...p, montoUsd, montoMoneda };
     });

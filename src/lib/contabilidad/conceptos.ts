@@ -12,6 +12,7 @@ export const CONCEPTOS = {
   RET_ISLR_PAGAR: { etiqueta: "Retenciones de ISLR por pagar", sugerida: "2.1.04", uso: "ISLR que retenemos a proveedores y debemos enterar" },
   RET_IVA_SUFRIDA: { etiqueta: "IVA retenido por clientes (a favor)", sugerida: "1.1.05", uso: "IVA que un cliente nos retuvo al pagarnos" },
   RET_ISLR_SUFRIDA: { etiqueta: "ISLR retenido por clientes (anticipo)", sugerida: "1.1.06", uso: "ISLR que un cliente nos retuvo al pagarnos" },
+  GASTOS_FINANCIEROS: { etiqueta: "Gastos financieros (ITF y comisiones)", sugerida: "6.1.03", uso: "Cargo del impuesto a las transacciones financieras de las cuentas" },
   DIFERENCIAL_CAMBIARIO: { etiqueta: "Diferencial cambiario", sugerida: "6.1.04", uso: "Ganancia o pérdida por cobrar/pagar a una tasa distinta de la de la factura" },
 } as const;
 export type Concepto = keyof typeof CONCEPTOS;

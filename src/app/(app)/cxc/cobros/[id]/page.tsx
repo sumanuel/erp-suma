@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Etiqueta, Tarjeta } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
-import { ESTADOS_COBRO, FORMAS_PAGO, numeroCobro, type EstadoCobro } from "@/lib/cxc/estados";
+import { ESTADOS_COBRO, FORMAS_PAGO, numeroCobro, numeroRecibo, type EstadoCobro } from "@/lib/cxc/estados";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { textoTasa } from "@/lib/tasas";
 import { formatoFecha, formatoFechaHora, formatoUsd } from "../../formato";
@@ -19,6 +19,11 @@ export default async function DetalleCobro({ params }: { params: Promise<{ id: s
     include: { cuenta: { select: { id: true, codigo: true, nombre: true } }, cliente: { select: { id: true, razonSocial: true, documento: true } }, aplicaciones: { include: { factura: { select: { id: true, numero: true } } }, orderBy: { factura: { numero: "asc" } } } },
   });
   if (!c) notFound();
+  const [cobrador, bancoCheque, recibo] = await Promise.all([
+    c.cobradorId ? ctx.db.vendedor.findUnique({ where: { id: c.cobradorId }, select: { nombre: true } }) : null,
+    c.bancoChequeId ? ctx.db.banco.findUnique({ where: { id: c.bancoChequeId }, select: { nombre: true } }) : null,
+    c.reciboId ? ctx.db.reciboCobro.findUnique({ where: { id: c.reciboId }, select: { id: true, numero: true } }) : null,
+  ]);
   const e = ESTADOS_COBRO[c.estado as EstadoCobro];
   const puedeAnular = c.estado === "REGISTRADO" && tienePermiso(ctx, "cxc", "eliminar");
   return (
@@ -41,6 +46,10 @@ export default async function DetalleCobro({ params }: { params: Promise<{ id: s
           <div><dt className="text-gris-500">Aplicado USD</dt><dd className="font-semibold">{formatoUsd(Number(c.montoUsd))}</dd></div>
           <div><dt className="text-gris-500">Cuenta</dt><dd>{c.cuenta ? <Link href={`/tesoreria/cuentas/${c.cuenta.id}`} className="text-marca-texto hover:underline">{c.cuenta.codigo}</Link> : "—"}</dd></div>
           <div><dt className="text-gris-500">Referencia</dt><dd>{c.referencia ?? "—"}</dd></div>
+          <div><dt className="text-gris-500">Cobrador</dt><dd>{cobrador?.nombre ?? "—"}</dd></div>
+          <div><dt className="text-gris-500">N.º de comprobante</dt><dd>{c.numeroComprobante ?? "—"}</dd></div>
+          {c.numeroCheque ? <div><dt className="text-gris-500">Cheque</dt><dd>N.º {c.numeroCheque}{bancoCheque ? ` · ${bancoCheque.nombre}` : ""}{c.fechaCheque ? ` · ${formatoFecha(c.fechaCheque)}` : ""}</dd></div> : null}
+          {recibo ? <div><dt className="text-gris-500">Recibo</dt><dd><Link href={`/cxc/recibos/${recibo.id}`} className="text-marca-texto hover:underline">{numeroRecibo(recibo.numero)}</Link></dd></div> : null}
           <div><dt className="text-gris-500">Registrado por</dt><dd>{c.creadoPorNombre ?? "—"} · {formatoFechaHora(c.creadoEn)}</dd></div>
           <div className="sm:col-span-2"><dt className="text-gris-500">Observaciones</dt><dd>{c.observaciones ?? "—"}</dd></div>
           {c.estado === "ANULADO" ? <div className="sm:col-span-2 xl:col-span-4"><dt className="text-gris-500">Anulado</dt><dd>{c.anuladoPorNombre ?? "—"} · {formatoFechaHora(c.anuladoEn)} · {c.motivoAnulacion}</dd></div> : null}

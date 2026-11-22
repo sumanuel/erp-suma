@@ -41,6 +41,8 @@ export default async function DetallePago({ params }: { params: Promise<{ id: st
           <div><dt className="text-gris-500">Aplicado USD</dt><dd className="font-semibold">{formatoUsd(Number(c.montoUsd))}</dd></div>
           <div><dt className="text-gris-500">Cuenta</dt><dd>{c.cuenta ? <Link href={`/tesoreria/cuentas/${c.cuenta.id}`} className="text-marca-texto hover:underline">{c.cuenta.codigo}</Link> : "—"}</dd></div>
           <div><dt className="text-gris-500">Referencia</dt><dd>{c.referencia ?? "—"}</dd></div>
+          {c.numeroCheque ? <div><dt className="text-gris-500">Cheque</dt><dd>N.º {c.numeroCheque} a nombre de {c.portador ?? "—"}</dd></div> : null}
+          <div><dt className="text-gris-500">Comprobante de egreso</dt><dd>{c.comprobante ?? "—"}</dd></div>
           <div><dt className="text-gris-500">Registrado por</dt><dd>{c.creadoPorNombre ?? "—"} · {formatoFechaHora(c.creadoEn)}</dd></div>
           <div className="sm:col-span-2"><dt className="text-gris-500">Observaciones</dt><dd>{c.observaciones ?? "—"}</dd></div>
           {c.estado === "ANULADO" ? <div className="sm:col-span-2 xl:col-span-4"><dt className="text-gris-500">Anulado</dt><dd>{c.anuladoPorNombre ?? "—"} · {formatoFechaHora(c.anuladoEn)} · {c.motivoAnulacion}</dd></div> : null}

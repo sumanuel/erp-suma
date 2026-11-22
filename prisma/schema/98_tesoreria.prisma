@@ -16,6 +16,22 @@ model CuentaTesoreria {
   saldo            Decimal                @default(0) @db.Decimal(18, 2)
   /// Si permite que el saldo quede negativo (sobregiro).
   permiteSobregiro Boolean                @default(false) @map("permite_sobregiro")
+  /// Banco del catálogo (el texto `banco` se conserva por compatibilidad y se llena con su nombre).
+  bancoId          String?                @map("banco_id") @db.Uuid
+  bancoCatalogo    Banco?                 @relation(fields: [bancoId], references: [id])
+  titular          String?
+  sucursal         String?
+  descripcion      String?
+  /// CORRIENTE o AHORRO
+  tipoCuentaBancaria String?              @map("tipo_cuenta_bancaria")
+  aceptaDepositos  Boolean                @default(true) @map("acepta_depositos")
+  aceptaPagos      Boolean                @default(true) @map("acepta_pagos")
+  /// Impuesto a las transacciones financieras: % que se carga a los pagos y egresos de la cuenta, dentro del período indicado.
+  itfPorcentaje    Decimal                @default(0) @map("itf_porcentaje") @db.Decimal(7, 4)
+  itfDesde         DateTime?              @map("itf_desde") @db.Date
+  itfHasta         DateTime?              @map("itf_hasta") @db.Date
+  /// Formato de impresión del cheque (referencia a la plantilla).
+  formatoCheque    String?                @map("formato_cheque")
   /// Cuenta contable (caja o banco) donde se contabilizan sus movimientos.
   cuentaContableId String?                @map("cuenta_contable_id") @db.Uuid
   cuentaContable   CuentaContable?        @relation(fields: [cuentaContableId], references: [id])
@@ -26,6 +42,7 @@ model CuentaTesoreria {
   cobros           Cobro[]
   pagos            PagoProveedor[]
   enteros          EnteroRetencion[]
+  chequeras        Chequera[]
 
   @@map("cuenta_tesoreria")
 }
@@ -54,3 +71,20 @@ model MovimientoTesoreria {
   @@index([grupo])
   @@map("movimiento_tesoreria")
 }
+
+/// Talonario de cheques de una cuenta: rango de numeración y último cheque usado. Una sola chequera activa por cuenta (índice único parcial).
+model Chequera {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId     String          @map("cuenta_id") @db.Uuid
+  cuenta       CuentaTesoreria @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+  desde        Int
+  hasta        Int
+  /// Último número usado (desde − 1 si aún no se usó ninguno).
+  ultimoCheque Int             @map("ultimo_cheque")
+  activa       Boolean         @default(false)
+  creadoEn     DateTime        @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@map("chequera")
+}
+
