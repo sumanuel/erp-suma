@@ -66,7 +66,7 @@ async function aplicar(
   m: { tipo: TipoMovimiento; almacenId: string; productoCodigo: string; cantidad: number; costoUnitario?: number | null; documento?: string | null; motivo?: string | null; grupo?: string },
 ): Promise<Errores | null> {
   const { signo } = TIPOS_MOVIMIENTO[m.tipo];
-  const producto = await tx.producto.findUnique({ where: { codigo: m.productoCodigo }, select: { activo: true, costoPromedio: true } });
+  const producto = await tx.producto.findUnique({ where: { codigo: m.productoCodigo }, select: { activo: true, costoPromedio: true, metodoCosto: true } });
   if (!producto) return { productoCodigo: "No existe un producto con este código." };
   if (!producto.activo) return { productoCodigo: "El producto está inactivo." };
   const almacen = await tx.almacen.findUnique({ where: { id: m.almacenId }, select: { activo: true } });
@@ -80,7 +80,9 @@ async function aplicar(
     // Costo promedio ponderado con el saldo total de todos los almacenes, antes de sumar esta entrada.
     if (m.tipo === "ENTRADA" && m.costoUnitario != null && m.costoUnitario > 0) {
       const total = Number((await tx.existencia.aggregate({ where: { productoCodigo: m.productoCodigo }, _sum: { cantidad: true } }))._sum.cantidad ?? 0);
-      const nuevo = total + m.cantidad > 0 ? (total * promedio + m.cantidad * m.costoUnitario) / (total + m.cantidad) : m.costoUnitario;
+      // Con el método «último costo» el costo del producto es el de esta compra; con «promedio», el ponderado con lo que ya había.
+      const ponderado = total + m.cantidad > 0 ? (total * promedio + m.cantidad * m.costoUnitario) / (total + m.cantidad) : m.costoUnitario;
+      const nuevo = producto.metodoCosto === "ULTIMO" ? m.costoUnitario : ponderado;
       await tx.producto.update({ where: { codigo: m.productoCodigo }, data: { ultimoCosto: m.costoUnitario, costoPromedio: redondear(nuevo) } });
       costo = m.costoUnitario;
     }

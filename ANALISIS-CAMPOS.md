@@ -21,7 +21,7 @@
 |---|---|---|---|
 | **Clientes** | 49 columnas · 36 etiquetas en pantalla | ~55 | **✅ Completado el 2026-11-21** (faltan contactos, sucursales y cuenta contable) |
 | **Proveedores** | 42 columnas · 50 etiquetas | ~45 | **✅ Completado el 2026-11-21** (falta varios contactos y cuentas contables) |
-| **Productos** | 31 columnas + presentaciones, precios por lista, promociones | ~26 | **Parcial**: falta marca, listas de precio, promociones, método de costo |
+| **Productos** | 31 columnas + presentaciones, precios por lista, promociones | ~40 + precios y promociones | **✅ Campos completados el 2026-11-21** (falta usarlos en ventas, cambio masivo e imagen) |
 | **Pedido / Prefactura / Factura** | 46–47 columnas · ~40 etiquetas | cliente, almacén, observaciones, días de crédito y líneas | **Incompleto** (vendedor, condiciones, descuentos, entrega, pago mixto…) |
 | **Orden de compra** | 29 columnas | proveedor, fechas, observaciones, líneas | **Incompleto** (moneda/cambio, condición, 3 descuentos, arancel) |
 | **Documento del proveedor** | 45 columnas | 8 | **Incompleto** (fechas, desglose por alícuota, tipo de documento) |
@@ -128,6 +128,10 @@ Ya está: código, descripción, categoría/subcategoría, alícuota de IVA, ara
 | Seriales, tallas, colores (`admseriales`, `admtallas`, `admcolor`) | Falta | B |
 | Etiquetas de góndola (`frmEtiq*`, 4 formatos) | Falta | B |
 | Ubicación física (`admubicafis`, `admubicacfis`) | Falta | B |
+
+
+> **✅ Avance 2026-11-21 (productos):** hecho: **marca** (catálogo nuevo en Catálogos), **método de costo** (promedio ponderado o último costo; el inventario ya lo aplica al recibir mercancía), «descripción editable», utilización, «requiere medida», **capacidad o contenido**, **descontinuado**, **listas de precio A–F** por producto o por presentación (precio en USD, utilidad, descuento, **descuento máximo**, **vencimiento**), **promociones** (precio o descuento por fechas, lista, **cantidad requerida / otorgada / múltiplo**) y **visible en ventas / compras** por presentación. Formulario del producto por secciones; reglas en la base y pruebas.
+> **⬜ Sigue pendiente:** que el pedido y la factura **tomen el precio de la lista del cliente** y apliquen promociones y descuento máximo (paso 5); **cambio masivo de precios**; imagen del producto; división; «impuesto patente» (¿?); productos sustitutos, asociados y componentes; seriales, tallas y colores; etiquetas de góndola; ubicación física.
 
 ### 3.4 Almacenes (`admalmacenes`) y catálogos de producto
 

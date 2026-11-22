@@ -180,3 +180,34 @@ export const unidades: Maestro = {
   mensajeDuplicado: "Ya existe una unidad con este código.",
   mensajeDependientes: "No se puede eliminar: hay presentaciones con esta unidad. Márcala como inactiva en su lugar.",
 };
+
+export const marcas: Maestro = {
+  id: "marcas",
+  modulo: "catalogos",
+  ruta: "/catalogos/marcas",
+  entidad: "marca",
+  singular: "marca",
+  plural: "marcas",
+  genero: "la",
+  delegado: (db) => db.marca as unknown as Delegado,
+  clave: { campo: "id", autogenerada: true },
+  campos: [
+    { nombre: "codigo", etiqueta: "Código", tipo: "texto", max: 20, requerido: true, soloCrear: true, ayuda: "No se puede cambiar después." },
+    { nombre: "nombre", etiqueta: "Nombre", tipo: "texto", max: 100, requerido: true, ancho: 2 },
+    { nombre: "activo", etiqueta: "Activa", tipo: "booleano" },
+  ],
+  valoresIniciales: { activo: true },
+  columnas: [
+    { id: "nombre", titulo: "Nombre", campo: "nombre", fija: true },
+    { id: "codigo", titulo: "Código", campo: "codigo" },
+    { id: "activo", titulo: "Estado", campo: "activo", etiqueta: etiquetaActivo },
+  ],
+  busqueda: { texto: "Buscar por código o nombre", campos: ["codigo", "nombre"] },
+  filtros: [filtroActivo],
+  orden: { columna: "nombre", dir: "asc" },
+  titulo: (f) => String(f.nombre ?? ""),
+  descripcion: (f) => `Código ${f.codigo}`,
+  preparar: (d) => ({ ...d, codigo: typeof d.codigo === "string" ? d.codigo.toUpperCase() : d.codigo }),
+  mensajeDuplicado: "Ya existe una marca con este código.",
+  mensajeDependientes: "No se puede eliminar: hay productos de esta marca. Márcala como inactiva en su lugar.",
+};

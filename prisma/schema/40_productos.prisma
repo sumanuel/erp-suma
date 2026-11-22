@@ -105,6 +105,20 @@ model Producto {
   precioLista         Decimal  @default(0) @map("precio_lista") @db.Decimal(18, 4)
   /// Precio máximo de venta al público (productos con precio regulado). 0 = sin tope.
   precioMaximoPublico Decimal  @default(0) @map("precio_maximo_publico") @db.Decimal(18, 4)
+  marcaId             String?  @map("marca_id") @db.Uuid
+  marca               Marca?   @relation(fields: [marcaId], references: [id])
+  /// PROMEDIO (costo promedio ponderado) o ULTIMO (el de la última compra): cuál se usa como costo del producto.
+  metodoCosto         String   @default("PROMEDIO") @map("metodo_costo")
+  /// Si al vender se puede cambiar el texto de la descripción (productos «a la medida», servicios).
+  descripcionEditable Boolean  @default(false) @map("descripcion_editable")
+  utilizacion         String?
+  requiereMedida      Boolean  @default(false) @map("requiere_medida")
+  /// Capacidad o contenido por unidad (litros, kilos, piezas…).
+  contenido           Decimal  @default(0) @db.Decimal(14, 4)
+  /// No se vuelve a comprar, pero se sigue vendiendo hasta agotar existencias.
+  descontinuado       Boolean  @default(false)
+  precios             ProductoPrecio[]
+  promociones         Promocion[]
   observaciones       String?
   activo              Boolean  @default(true)
   creadoEn            DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
@@ -139,6 +153,10 @@ model ProductoPresentacion {
   precioCompra   Decimal      @default(0) @map("precio_compra") @db.Decimal(18, 4)
   precioVenta    Decimal      @default(0) @map("precio_venta") @db.Decimal(18, 4)
   principal      Boolean      @default(false)
+  visibleVentas  Boolean      @default(true) @map("visible_ventas")
+  visibleCompras Boolean      @default(true) @map("visible_compras")
+  precios        ProductoPrecio[]
+  promociones    Promocion[]
   creadoEn       DateTime     @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn  DateTime     @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
 
@@ -160,4 +178,68 @@ model ProductoProveedor {
 
   @@unique([productoCodigo, proveedorId])
   @@map("producto_proveedor")
+}
+
+/// Marcas de producto (admmarcas del sistema anterior).
+model Marca {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String     @unique
+  nombre        String
+  activo        Boolean    @default(true)
+  creadoEn      DateTime   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime   @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  productos     Producto[]
+
+  @@map("marca")
+}
+
+/// Precio de un producto (o de una de sus presentaciones) en una lista de precios (A, B, C…), en USD. El de la lista A reemplaza al precio de lista único.
+/// Equivale a admprecios y admpreciotip. Un mismo producto/presentación/lista tiene un solo precio (índice único en la migración).
+model ProductoPrecio {
+  id             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productoCodigo String                @map("producto_codigo")
+  producto       Producto              @relation(fields: [productoCodigo], references: [codigo])
+  /// Sin presentación = precio base del producto.
+  presentacionId String?               @map("presentacion_id") @db.Uuid
+  presentacion   ProductoPresentacion? @relation(fields: [presentacionId], references: [id], onDelete: Cascade)
+  lista          String
+  precioUsd      Decimal               @map("precio_usd") @db.Decimal(18, 4)
+  /// Margen sobre el costo con que se fijó el precio (informativo).
+  utilidadPct    Decimal               @default(0) @map("utilidad_pct") @db.Decimal(9, 4)
+  descuentoPct   Decimal               @default(0) @map("descuento_pct") @db.Decimal(7, 4)
+  descuentoMaxPct Decimal              @default(0) @map("descuento_max_pct") @db.Decimal(7, 4)
+  /// Hasta cuándo rige este precio (vacío = sin vencimiento).
+  venceEn        DateTime?             @map("vence_en") @db.Date
+  activo         Boolean               @default(true)
+  creadoEn       DateTime              @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn  DateTime              @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@index([productoCodigo])
+  @@map("producto_precio")
+}
+
+/// Promociones: un precio o descuento por tiempo limitado, o «compra N y llévate M» (cantidad requerida / otorgada, con múltiplo). Equivale a admpromociones.
+model Promocion {
+  id               String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productoCodigo   String                @map("producto_codigo")
+  producto         Producto              @relation(fields: [productoCodigo], references: [codigo])
+  presentacionId   String?               @map("presentacion_id") @db.Uuid
+  presentacion     ProductoPresentacion? @relation(fields: [presentacionId], references: [id], onDelete: Cascade)
+  /// Lista de precios a la que aplica (vacío = todas).
+  lista            String?
+  precioUsd        Decimal?              @map("precio_usd") @db.Decimal(18, 4)
+  descuentoPct     Decimal?              @map("descuento_pct") @db.Decimal(7, 4)
+  cantidadRequerida Decimal              @default(0) @map("cantidad_requerida") @db.Decimal(18, 4)
+  cantidadOtorgada Decimal               @default(0) @map("cantidad_otorgada") @db.Decimal(18, 4)
+  /// La promoción se otorga por cada múltiplo de esta cantidad (0 = una sola vez).
+  multiplo         Decimal               @default(0) @db.Decimal(18, 4)
+  desde            DateTime              @db.Date
+  hasta            DateTime              @db.Date
+  observaciones    String?
+  activo           Boolean               @default(true)
+  creadoEn         DateTime              @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime              @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@index([productoCodigo, desde, hasta])
+  @@map("promocion")
 }

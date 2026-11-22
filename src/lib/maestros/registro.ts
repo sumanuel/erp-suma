@@ -1,6 +1,6 @@
 import type { Maestro, ModuloMaestros } from "./tipos";
-import { alicuotas, aranceles, categorias, subcategorias, unidades } from "./catalogos";
-import { presentaciones, productos, proveedoresProducto } from "./productos";
+import { alicuotas, aranceles, categorias, marcas, subcategorias, unidades } from "./catalogos";
+import { presentaciones, preciosLista, productos, promociones, proveedoresProducto } from "./productos";
 import { clientes, proveedores } from "./terceros";
 import { almacenes, existencias, movimientos } from "./existencias";
 import { monedas, tasas } from "./tasas";
@@ -16,6 +16,8 @@ export const modulosMaestros: ModuloMaestros[] = [
     secciones: [
       { slug: "", titulo: "Productos", maestro: productos },
       { slug: "presentaciones", titulo: "Presentaciones y precios", maestro: presentaciones },
+      { slug: "precios", titulo: "Precios por lista", maestro: preciosLista },
+      { slug: "promociones", titulo: "Promociones", maestro: promociones },
       { slug: "proveedores", titulo: "Proveedores por producto", maestro: proveedoresProducto },
     ],
   },
@@ -54,6 +56,7 @@ export const modulosMaestros: ModuloMaestros[] = [
     secciones: [
       { slug: "", titulo: "Categorías", maestro: categorias },
       { slug: "subcategorias", titulo: "Subcategorías", maestro: subcategorias },
+      { slug: "marcas", titulo: "Marcas", maestro: marcas },
       { slug: "alicuotas", titulo: "Alícuotas de IVA", maestro: alicuotas },
       { slug: "aranceles", titulo: "Aranceles", maestro: aranceles },
       { slug: "unidades", titulo: "Unidades de medida", maestro: unidades },
