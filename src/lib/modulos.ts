@@ -12,6 +12,7 @@ export const MODULOS = [
   { id: "importaciones", nombre: "Importaciones" },
   { id: "productos", nombre: "Productos" },
   { id: "catalogos", nombre: "Catálogos de producto" },
+  { id: "tablas", nombre: "Tablas base" },
   { id: "existencias", nombre: "Existencias" },
   { id: "tasas", nombre: "Tasa de cambio" },
   { id: "cxc", nombre: "Cuentas por cobrar" },

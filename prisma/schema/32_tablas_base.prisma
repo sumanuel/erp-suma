@@ -1,0 +1,170 @@
+// Tablas base comerciales y financieras que usan clientes, proveedores y documentos. Equivalen a admcondpago, admvendedor, admtiponegocio,
+// admtransporte, admbancos, admtarifasreten y a la geografía (admpais/admestado/admmunicipio/admparroquia) del sistema anterior.
+
+model CondicionPago {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  /// Días de plazo que da la condición (0 = contado).
+  dias          Int      @default(0)
+  /// Días de gracia antes de que el saldo se considere en mora.
+  diasMora      Int      @default(0) @map("dias_mora")
+  observaciones String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("condicion_pago")
+}
+
+/// Vendedores y cobradores: una persona puede ser una, otra o ambas cosas.
+model Vendedor {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  cedula        String?
+  cargo         String?
+  grupo         String?
+  esVendedor    Boolean  @default(true) @map("es_vendedor")
+  esCobrador    Boolean  @default(false) @map("es_cobrador")
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("vendedor")
+}
+
+/// Clasificación del negocio del cliente: topes de descuento y las dos «leyendas» de pronto pago (días y porcentaje).
+model TipoNegocio {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo             String   @unique
+  nombre             String
+  descuento1         Decimal  @default(0) @map("descuento_1") @db.Decimal(7, 4)
+  descuento2         Decimal  @default(0) @map("descuento_2") @db.Decimal(7, 4)
+  descuento3         Decimal  @default(0) @map("descuento_3") @db.Decimal(7, 4)
+  primeraLeyendaDias Int      @default(0) @map("primera_leyenda_dias")
+  primeraLeyendaPct  Decimal  @default(0) @map("primera_leyenda_pct") @db.Decimal(7, 4)
+  segundaLeyendaDias Int      @default(0) @map("segunda_leyenda_dias")
+  segundaLeyendaPct  Decimal  @default(0) @map("segunda_leyenda_pct") @db.Decimal(7, 4)
+  observaciones      String?
+  activo             Boolean  @default(true)
+  creadoEn           DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn      DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("tipo_negocio")
+}
+
+/// Empresas de transporte o fletes. Pueden ser también un proveedor (para pagarles).
+model Transporte {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String     @unique
+  nombre        String
+  proveedorId   String?    @map("proveedor_id") @db.Uuid
+  proveedor     Proveedor? @relation(fields: [proveedorId], references: [id])
+  observaciones String?
+  activo        Boolean    @default(true)
+  creadoEn      DateTime   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime   @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@index([proveedorId])
+  @@map("transporte")
+}
+
+/// Catálogo de bancos. La clave y el usuario de banca en línea NO se guardan aquí.
+model Banco {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  direccion     String?
+  contacto      String?
+  telefono1     String?
+  telefono2     String?
+  telefono3     String?
+  web           String?
+  casillero     String?
+  observaciones String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("banco")
+}
+
+/// Conceptos de retención de ISLR (decreto 1808): descripción, numeral, tipo de persona, residencia y tarifa.
+model TarifaRetencion {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Número del concepto (el del sistema anterior y el del archivo del SENIAT).
+  codigo        Int      @unique
+  descripcion   String
+  /// Código del concepto en el XML de retenciones del SENIAT.
+  conceptoXml   String?  @map("concepto_xml")
+  numeral       String?
+  /// NATURAL, JURIDICA o AMBAS
+  tipoPersona   String   @default("AMBAS") @map("tipo_persona")
+  /// SI, NO o AMBOS
+  residente     String   @default("AMBOS")
+  /// Si la base se acumula en el mes para aplicar el sustraendo.
+  acumulable    Boolean  @default(false)
+  porcentaje    Decimal  @default(0) @db.Decimal(7, 4)
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("tarifa_retencion")
+}
+
+model Pais {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  estados       Estado[]
+
+  @@map("pais")
+}
+
+model Estado {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paisId        String      @map("pais_id") @db.Uuid
+  pais          Pais        @relation(fields: [paisId], references: [id])
+  codigo        String
+  nombre        String
+  activo        Boolean     @default(true)
+  creadoEn      DateTime    @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime    @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  municipios    Municipio[]
+
+  @@unique([paisId, codigo])
+  @@map("estado")
+}
+
+model Municipio {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  estadoId      String      @map("estado_id") @db.Uuid
+  estado        Estado      @relation(fields: [estadoId], references: [id])
+  codigo        String
+  nombre        String
+  activo        Boolean     @default(true)
+  creadoEn      DateTime    @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime    @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  parroquias    Parroquia[]
+
+  @@unique([estadoId, codigo])
+  @@map("municipio")
+}
+
+model Parroquia {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  municipioId   String    @map("municipio_id") @db.Uuid
+  municipio     Municipio @relation(fields: [municipioId], references: [id])
+  codigo        String
+  nombre        String
+  activo        Boolean   @default(true)
+  creadoEn      DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime  @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@unique([municipioId, codigo])
+  @@map("parroquia")
+}

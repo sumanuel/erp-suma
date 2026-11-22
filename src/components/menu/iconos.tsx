@@ -8,7 +8,7 @@ import type { IconoMenu } from "@/lib/menu";
 export const iconos: Record<IconoMenu, LucideIcon> = {
   inicio: House, comercial: Briefcase, compras: ShoppingCart, inventario: Boxes, finanzas: Wallet, analisis: ChartColumn,
   configuracion: SlidersVertical, clientes: Users, cotizaciones: FileText, pedidos: ClipboardList, facturacion: ReceiptText,
-  proveedores: Store, ordenes: FileSpreadsheet, importaciones: Globe, productos: Package, catalogos: Layers, existencias: Warehouse,
+  proveedores: Store, ordenes: FileSpreadsheet, importaciones: Globe, productos: Package, catalogos: Layers, tablas: Layers, existencias: Warehouse,
   cxc: Banknote, tasas: ArrowLeftRight, cxp: Scale, tesoreria: Landmark, contabilidad: BookOpenCheck, reportes: ChartColumn, seguridad: ShieldCheck, auditoria: History,
 };
 // Truck se reserva para logística futura.

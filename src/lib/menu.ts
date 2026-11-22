@@ -4,7 +4,7 @@ import type { ModuloId } from "./modulos";
 export type IconoMenu =
   | "inicio" | "comercial" | "compras" | "inventario" | "finanzas" | "analisis" | "configuracion"
   | "clientes" | "cotizaciones" | "pedidos" | "facturacion" | "proveedores" | "ordenes" | "importaciones"
-  | "productos" | "catalogos" | "existencias" | "tasas" | "cxc" | "cxp" | "tesoreria" | "contabilidad" | "reportes" | "seguridad" | "auditoria";
+  | "productos" | "catalogos" | "tablas" | "existencias" | "tasas" | "cxc" | "cxp" | "tesoreria" | "contabilidad" | "reportes" | "seguridad" | "auditoria";
 
 export type ItemMenu = {
   href: string;
@@ -60,7 +60,8 @@ export const areas: AreaMenu[] = [
   },
   {
     id: "configuracion", etiqueta: "Configuración", icono: "configuracion", alPie: true,
-    items: [{ href: "/seguridad", etiqueta: "Usuarios y perfiles", descripcion: "Quién entra al sistema y qué puede hacer en cada módulo.", icono: "seguridad", modulo: "seguridad" },
+    items: [{ href: "/tablas", etiqueta: "Tablas base", descripcion: "Condiciones de pago, vendedores, bancos, transportes, retenciones de ISLR y geografía.", icono: "tablas", modulo: "tablas" },
+      { href: "/seguridad", etiqueta: "Usuarios y perfiles", descripcion: "Quién entra al sistema y qué puede hacer en cada módulo.", icono: "seguridad", modulo: "seguridad" },
       { href: "/auditoria", etiqueta: "Auditoría", descripcion: "Ingresos al sistema y cambios hechos por los usuarios.", icono: "auditoria", modulo: "auditoria" },
     ],
   },

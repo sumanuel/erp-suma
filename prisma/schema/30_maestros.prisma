@@ -47,6 +47,7 @@ model Proveedor {
   facturasCompra  FacturaCompra[]
   pagos           PagoProveedor[]
   notasCompra     NotaCompra[]
+  transportes     Transporte[]
   retenciones     Retencion[]
 
   @@index([razonSocial])

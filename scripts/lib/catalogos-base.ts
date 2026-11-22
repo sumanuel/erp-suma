@@ -32,4 +32,8 @@ export async function sembrarCatalogosBase(c: Client) {
   for (const [codigo, nombre] of [["UND", "Unidad"], ["CJ", "Caja"], ["PQ", "Paquete"], ["KG", "Kilogramo"], ["MT", "Metro"], ["LT", "Litro"], ["GL", "Galón"]] as const) {
     await c.query("INSERT INTO unidad_medida (codigo, nombre) VALUES ($1,$2) ON CONFLICT (codigo) DO NOTHING", [codigo, nombre]);
   }
+  // Condiciones de pago comunes; cada cliente agrega o cambia las suyas en Tablas base.
+  for (const [codigo, nombre, dias] of [["CONTADO", "Contado", 0], ["8D", "8 días", 8], ["15D", "15 días", 15], ["30D", "30 días", 30], ["45D", "45 días", 45], ["60D", "60 días", 60]] as const) {
+    await c.query("INSERT INTO condicion_pago (codigo, nombre, dias) VALUES ($1,$2,$3) ON CONFLICT (codigo) DO NOTHING", [codigo, nombre, dias]);
+  }
 }

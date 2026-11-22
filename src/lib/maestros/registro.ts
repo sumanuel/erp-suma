@@ -4,6 +4,7 @@ import { presentaciones, productos, proveedoresProducto } from "./productos";
 import { clientes, proveedores } from "./terceros";
 import { almacenes, existencias, movimientos } from "./existencias";
 import { monedas, tasas } from "./tasas";
+import { bancos, condicionesPago, estados, municipios, paises, parroquias, tarifasRetencion, tiposNegocio, transportes, vendedores } from "./tablas";
 
 // Módulos cuyas pantallas las arma el motor de maestros. La primera sección de cada módulo es la que se abre en /<módulo>;
 // las demás van en /<módulo>/<slug>. Un módulo que no esté aquí muestra la pantalla "en construcción".
@@ -31,6 +32,21 @@ export const modulosMaestros: ModuloMaestros[] = [
     secciones: [
       { slug: "", titulo: "Tasas", maestro: tasas },
       { slug: "monedas", titulo: "Monedas", maestro: monedas },
+    ],
+  },
+  {
+    modulo: "tablas",
+    secciones: [
+      { slug: "", titulo: "Condiciones de pago", maestro: condicionesPago },
+      { slug: "vendedores", titulo: "Vendedores y cobradores", maestro: vendedores },
+      { slug: "tipos-negocio", titulo: "Tipos de negocio", maestro: tiposNegocio },
+      { slug: "transportes", titulo: "Transportes", maestro: transportes },
+      { slug: "bancos", titulo: "Bancos", maestro: bancos },
+      { slug: "tarifas-islr", titulo: "Retenciones de ISLR", maestro: tarifasRetencion },
+      { slug: "geografia", titulo: "Países", maestro: paises },
+      { slug: "estados", titulo: "Estados", maestro: estados },
+      { slug: "municipios", titulo: "Municipios", maestro: municipios },
+      { slug: "parroquias", titulo: "Parroquias", maestro: parroquias },
     ],
   },
   {

@@ -256,18 +256,20 @@ Ya cubiertos: libros de ventas y compras, resumen de IVA, retenciones, balance, 
 
 ## 6. Catálogos que existen en el original y no en el nuevo
 
+> **Avance (2026-11-21):** los catálogos marcados con ✅ ya existen en `Tablas base` (menú Configuración), con pruebas en `tests/tablas.test.ts`. **Aún no están enlazados** a clientes, proveedores, documentos ni cuentas bancarias: eso se hace al completar cada formulario (sección 7, pasos 3 a 6). Las cifras de «catálogos que faltan» de la sección 2 bajan de 25 a ~17.
+
 | Catálogo (tabla) | Contenido | Prio |
 |---|---|---|
-| **Condición de pago** (`admcondpago`) | código, descripción, observación, estado, días de mora | **A** |
-| **Vendedores** (`admvendedor`) | código, nombre, cédula, estado, grupo, cargo | **A** |
-| **Cobradores** (en trabajadores/vendedores) | ídem | A |
-| **Tipo de negocio** (`admtiponegocio`, `frmTipoNegocio`) | código, descripción, topes de descuento 1–3, días y % de «leyendas», observaciones | M |
-| **Transporte** (`admtransporte`) | código, descripción, proveedor, estado, memo | M |
-| **Bancos** (`admbancos`) | ver 5.3 | M |
+| **Condición de pago** (`admcondpago`) | código, descripción, observación, estado, días de mora | **A** **✅ Hecho 2026-11-21: pantalla `Tablas base › Condiciones de pago`; 6 condiciones comunes sembradas** |
+| **Vendedores** (`admvendedor`) | código, nombre, cédula, estado, grupo, cargo | **A** **✅ Hecho 2026-11-21: una persona puede ser vendedor, cobrador o ambos** |
+| **Cobradores** (en trabajadores/vendedores) | ídem | A **✅ Hecho 2026-11-21: van en Vendedores y cobradores** |
+| **Tipo de negocio** (`admtiponegocio`, `frmTipoNegocio`) | código, descripción, topes de descuento 1–3, días y % de «leyendas», observaciones | M **✅ Hecho 2026-11-21: con topes de descuento y leyendas** |
+| **Transporte** (`admtransporte`) | código, descripción, proveedor, estado, memo | M **✅ Hecho 2026-11-21: con proveedor opcional** |
+| **Bancos** (`admbancos`) | ver 5.3 | M **✅ Hecho 2026-11-21: catálogo; sin clave de banca en línea a propósito** |
 | **Sucursales** (`admsucursal`) | código, descripción, dirección, teléfonos, RIF, correo, fechas, geografía | M |
-| **Geografía** (país, región, estado, municipio, parroquia) | catálogos encadenados | M |
+| **Geografía** (país, región, estado, municipio, parroquia) | catálogos encadenados | M **✅ Hecho 2026-11-21: país, estado, municipio y parroquia; falta cargar los datos (importación)** |
 | **Actividad económica / clasificación** (`admactividadeco`, `admclasiclient`, `admclasiprovee`) | para ISLR y reportes | M |
-| **Tarifas de retención de ISLR** (`admtarifasreten`, `admconcepretenc`) | concepto, numeral, tipo de persona, residente, tarifa, acumulable | **A** |
+| **Tarifas de retención de ISLR** (`admtarifasreten`, `admconcepretenc`) | concepto, numeral, tipo de persona, residente, tarifa, acumulable | **A** **✅ Hecho 2026-11-21: catálogo de conceptos; falta cargar tarifas y usarlas en las retenciones** |
 | **Marcas, colores, tallas, divisiones, grupos de productos** | catálogos de producto | M/B |
 | **Series fiscales** (`admseriefiscal`) | serie, serial, IP, documento, caja, punto activo | A (con la impresora) |
 | **Centros de costo, departamentos, cargos, trabajadores** | administración | M/B |
