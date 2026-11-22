@@ -9,10 +9,10 @@ describe("Cuentas contables propias del cliente y del almacén al asentar", () =
   after(async () => { await automatica(e.db, false); });
 
   it("la factura usa la cuenta por cobrar del cliente y la de inventario del almacén cuando las tienen", async () => {
-    const mayor = await e.db.cuentaContable.findUniqueOrThrow({ where: { codigo: "1.1.02" } });
-    const cxcCli = await e.db.cuentaContable.create({ data: { codigo: unico("1.1.02.9").slice(0, 20).replace(/[^0-9.]/g, "") + "1", nombre: "CxC cliente propio", tipo: "ACTIVO", padreId: mayor.id, nivel: 4, posteable: true } });
+    // Se usan cuentas que ya existen (no se crean cuentas: las pruebas corren en paralelo y los reportes leen el plan de cuentas).
+    const cxcCli = await e.db.cuentaContable.findUniqueOrThrow({ where: { codigo: "1.1.05" } });
+    const invAlm = await e.db.cuentaContable.findUniqueOrThrow({ where: { codigo: "1.1.06" } });
     const almacen = await e.db.almacen.create({ data: { codigo: unico("AL"), nombre: "Con cuenta propia" } });
-    const invAlm = await e.db.cuentaContable.create({ data: { codigo: "1.1.03" + "." + String(Math.floor(Math.random() * 9e5) + 1e5), nombre: "Inventario del almacén", tipo: "ACTIVO", padreId: (await e.db.cuentaContable.findUniqueOrThrow({ where: { codigo: "1.1.03" } })).id, nivel: 4, posteable: true } });
     await e.db.almacen.update({ where: { id: almacen.id }, data: { cuentaInventarioId: invAlm.id } });
     const cli = await crearCliente(e.db);
     await e.db.cliente.update({ where: { id: cli.id }, data: { cuentaContableId: cxcCli.id } });

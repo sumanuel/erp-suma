@@ -79,6 +79,8 @@ model PedidoVentaLinea {
   /// Línea regalada por una promoción «compra N, llévate M» (precio 0); la genera el sistema y se recalcula al editar el documento.
   bonificacion   Boolean  @default(false)
   presentacionId String?  @map("presentacion_id") @db.Uuid
+  /// Bulto (caja, paquete) en que va la línea al empacar el pedido.
+  bulto          Int?
   factor         Decimal  @default(1) @db.Decimal(18, 4)
   /// Almacén del que sale esta línea al facturar (vacío = el del documento).
   almacenId      String?  @map("almacen_id") @db.Uuid

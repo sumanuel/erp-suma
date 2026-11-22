@@ -33,6 +33,7 @@ export function FormularioFacturaProveedor({ hoy, catalogos }: { hoy: string; ca
   const [ordenId, setOrdenId] = useState("");
   const [documento, setDocumento] = useState("");
   const [numeroControl, setNumeroControl] = useState("");
+  const [tipoDocumento, setTipoDocumento] = useState("FACTURA");
   const [fecha, setFecha] = useState(hoy);
   const [fechaRecepcion, setFechaRecepcion] = useState("");
   const [fechaLibro, setFechaLibro] = useState("");
@@ -68,7 +69,7 @@ export function FormularioFacturaProveedor({ hoy, catalogos }: { hoy: string; ca
     setError(null);
     iniciar(async () => {
       const r = await registrarFacturaProveedor({
-        proveedorId, ordenId, documento, numeroControl, fecha, fechaRecepcion, fechaLibro, diasCredito: Math.trunc(num(diasCredito)), observaciones, recibidoPor, planillaImportacion,
+        proveedorId, ordenId, documento, tipoDocumento, numeroControl, fecha, fechaRecepcion, fechaLibro, diasCredito: Math.trunc(num(diasCredito)), observaciones, recibidoPor, planillaImportacion,
         condicionPagoId, transporteId, centroCostoId, cuentaGastoId,
         desglose: filas.map((f) => ({ porcentaje: num(f.porcentaje), base: num(f.base), iva: num(f.iva) })).filter((f) => f.base > 0 || f.iva > 0),
       });
@@ -97,6 +98,7 @@ export function FormularioFacturaProveedor({ hoy, catalogos }: { hoy: string; ca
             </select>
           </div>
           <div className={campo}><label htmlFor="documento" className={et}>Nº de factura del proveedor</label><input id="documento" value={documento} onChange={(e) => setDocumento(e.target.value)} required maxLength={60} className={claseControl} /></div>
+          <div className={campo}><label htmlFor="tipoDocumento" className={et}>Tipo de documento</label><select id="tipoDocumento" value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)} className={`${claseControl} pr-9`}><option value="FACTURA">Factura</option><option value="PAGARE">Pagaré</option><option value="OTRO">Otro documento por pagar</option></select></div>
           <div className={campo}><label htmlFor="numeroControl" className={et}>Nº de control{opc}</label><input id="numeroControl" value={numeroControl} onChange={(e) => setNumeroControl(e.target.value)} maxLength={60} className={claseControl} /></div>
           <div className={campo}><label htmlFor="fecha" className={et}>Fecha de emisión</label><input id="fecha" type="date" value={fecha} max={hoy} onChange={(e) => setFecha(e.target.value)} required className={claseControl} /></div>
           <div className={campo}><label htmlFor="fechaRecepcion" className={et}>Fecha de recepción{opc}</label><input id="fechaRecepcion" type="date" value={fechaRecepcion} min={fecha} max={hoy} onChange={(e) => setFechaRecepcion(e.target.value)} className={claseControl} /></div>

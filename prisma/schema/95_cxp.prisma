@@ -13,6 +13,8 @@ model FacturaCompra {
   orden            OrdenCompra?        @relation(fields: [ordenId], references: [id])
   /// Número de la factura del proveedor.
   documento        String
+  /// FACTURA, PAGARE u OTRO (documento por pagar sin mercancía).
+  tipoDocumento    String              @default("FACTURA") @map("tipo_documento")
   numeroControl    String?             @map("numero_control")
   fecha            DateTime            @db.Date
   /// Bolívares por 1 USD a la fecha de la factura (8 decimales): con ella se contabiliza.

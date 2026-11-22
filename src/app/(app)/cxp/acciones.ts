@@ -59,6 +59,7 @@ const FacturaProveedor = z.object({
   fechaLibro: z.union([Fecha, z.literal("")]).transform((v) => (v === "" ? null : v)).optional(),
   recibidoPor: z.string().trim().max(60).transform((v) => v || null).optional(),
   planillaImportacion: z.string().trim().max(30).transform((v) => v || null).optional(),
+  tipoDocumento: z.enum(["FACTURA", "PAGARE", "OTRO"]).optional(),
   condicionPagoId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null).optional(),
   transporteId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null).optional(),
   centroCostoId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null).optional(),

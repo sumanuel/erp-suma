@@ -32,6 +32,7 @@ export type DatosFacturaCompra = {
   ordenId: string | null;
   documento: string;
   numeroControl: string | null;
+  tipoDocumento?: "FACTURA" | "PAGARE" | "OTRO";
   fecha: Date;
   diasCredito: number;
   subtotal: number;
@@ -98,7 +99,7 @@ export async function registrarFacturaCompra(db: Db, actor: Actor, d: DatosFactu
       if (!tasa) throw new CxpError("No hay tasa del dólar cargada a la fecha de la factura: regístrala en Tasa de cambio.");
       const creada = await tx.facturaCompra.create({
         data: {
-          tasaUsd: tasa.valor, proveedorId: d.proveedorId, ordenId: d.ordenId, documento: d.documento, numeroControl: d.numeroControl, fecha: d.fecha, diasCredito: d.diasCredito,
+          tasaUsd: tasa.valor, proveedorId: d.proveedorId, ordenId: d.ordenId, documento: d.documento, tipoDocumento: d.tipoDocumento ?? "FACTURA", numeroControl: d.numeroControl, fecha: d.fecha, diasCredito: d.diasCredito,
           fechaVencimiento: vence, subtotal: d.subtotal, iva: d.iva, total, saldo: total, observaciones: d.observaciones, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
           fechaRecepcion: d.fechaRecepcion ?? null, fechaLibro: d.fechaLibro ?? null, recibidoPor: d.recibidoPor?.trim().slice(0, 60) || null, planillaImportacion: d.planillaImportacion?.trim().slice(0, 30) || null,
           condicionPagoId: d.condicionPagoId || null, transporteId: d.transporteId || null, centroCostoId: d.centroCostoId || null, cuentaGastoId: d.cuentaGastoId || null,

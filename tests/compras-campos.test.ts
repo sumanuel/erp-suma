@@ -77,6 +77,17 @@ describe("Orden de compra y documento del proveedor con sus campos completos", (
   const factura = (proveedorId: string, extra: Record<string, unknown>) =>
     registrarFacturaCompra(e.db, e.actor, { proveedorId, ordenId: null, documento: unico("F"), numeroControl: null, fecha: hoy(), diasCredito: 0, subtotal: 0, iva: 0, observaciones: null, ...extra });
 
+  it("tipo de documento: un pagaré es un documento por pagar sin IVA que se paga como cualquier factura", async () => {
+    const prov = await crearProveedor(e.db);
+    const f = await factura(prov.id, { tipoDocumento: "PAGARE", subtotal: 250 });
+    assert.ok(f.ok, JSON.stringify(f));
+    const d = await e.db.facturaCompra.findUniqueOrThrow({ where: { id: f.id } });
+    assert.deepEqual([d.tipoDocumento, Number(d.total), Number(d.saldo)], ["PAGARE", 250, 250]);
+    const normal = await factura(prov.id, { subtotal: 10 });
+    assert.ok(normal.ok);
+    assert.equal((await e.db.facturaCompra.findUniqueOrThrow({ where: { id: normal.id } })).tipoDocumento, "FACTURA");
+  });
+
   it("documento con desglose por alícuota (exento + reducida + general): totales, libro y asiento coinciden", async () => {
     const prov = await crearProveedor(e.db);
     const f = await factura(prov.id, { desglose: [{ porcentaje: 0, base: 100, iva: 0 }, { porcentaje: 8, base: 200, iva: 16 }, { porcentaje: 16, base: 300, iva: 48 }] });

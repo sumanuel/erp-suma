@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion, tienePermisoEspecial } from "@/lib/dal";
 import { EncabezadoVentaZ } from "@/lib/ventas/esquemas";
-import { anularPedido, buscarProductosVenta, confirmarPedido, guardarPedido, resolverAprobacion, type ProductoVenta } from "@/lib/pedidos/servicio";
+import { asignarBultos, anularPedido, buscarProductosVenta, confirmarPedido, guardarPedido, resolverAprobacion, type ProductoVenta } from "@/lib/pedidos/servicio";
 
 export type EstadoPedidoForm = { error?: string };
 
@@ -61,6 +61,15 @@ export async function anularPedidoVenta(id: string): Promise<ResultadoAccionPedi
   const r = await anularPedido(ctx.db, ctx.usuario, id);
   refrescar(id);
   return r.ok ? {} : { error: r.error };
+}
+
+export async function asignarBultosPedido(id: string, asignaciones: { lineaId: string; bulto: number | null }[]): Promise<string | null> {
+  const ctx = await requerirPermisoAccion("pedidos", "editar");
+  const r = z.array(z.object({ lineaId: z.string().uuid(), bulto: z.number().int().nullable() })).max(500).safeParse(asignaciones);
+  if (!r.success) return "Datos inválidos";
+  const res = await asignarBultos(ctx.db, ctx.usuario, id, r.data);
+  refrescar(id);
+  return res.ok ? null : res.error;
 }
 
 /** Aprobar o rechazar un pedido por aprobar: solo quien tiene el permiso especial «ventas.aprobar». */

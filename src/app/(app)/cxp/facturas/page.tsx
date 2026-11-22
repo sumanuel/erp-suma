@@ -51,7 +51,7 @@ export default async function ListaFacturasProveedor({ searchParams }: { searchP
               return (
                 <tr key={f.id} className="border-b border-linea last:border-0">
                   <td className="px-4 py-3 font-semibold"><Link href={`/cxp/facturas/${f.id}`} className="hover:underline">{numeroFacturaCompra(f.numero)}</Link></td>
-                  <td className="px-3 py-3">{f.documento}</td>
+                  <td className="px-3 py-3">{f.documento}{f.tipoDocumento !== "FACTURA" ? <span className="ml-2 text-[12px] text-gris-500">{f.tipoDocumento === "PAGARE" ? "Pagaré" : "Otro"}</span> : null}</td>
                   <td className="px-3 py-3">{f.proveedor.razonSocial}</td>
                   <td className="px-3 py-3">{formatoFecha(f.fecha)}</td>
                   <td className="px-3 py-3">{formatoFecha(f.fechaVencimiento)}</td>

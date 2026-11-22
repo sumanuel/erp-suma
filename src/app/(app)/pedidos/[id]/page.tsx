@@ -9,6 +9,7 @@ import { numeroFactura } from "@/lib/facturacion/estados";
 import { aBolivares, textoTasa } from "@/lib/tasas";
 import { formatoCantidad, formatoFecha, formatoFechaHora, formatoUsd } from "../formato";
 import { BotonesEstado } from "./botones";
+import { Empaque } from "./empaque";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -89,6 +90,13 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           {tasa ? <div className="flex justify-between text-gris-700"><dt>Total Bs.</dt><dd className="tabular-nums">{formatoUsd(aBolivares(total, tasa))}</dd></div> : null}
         </dl>
       </Tarjeta>
+
+      {p.estado !== "ANULADO" ? (
+        <Tarjeta>
+          <h3 className="px-4 pt-4 text-base font-semibold">Empaque (bultos){p.bultos ? ` · ${p.bultos} bulto${p.bultos === 1 ? "" : "s"}` : ""}</h3>
+          <Empaque pedidoId={id} puedeEditar={p.estado !== "FACTURADO" && puedeEditar} lineas={p.lineas.map((l) => ({ id: l.id, producto: `${l.productoCodigo} · ${l.descripcion}`, cantidad: Number(l.cantidad), bulto: l.bulto }))} />
+        </Tarjeta>
+      ) : null}
     </div>
   );
 }

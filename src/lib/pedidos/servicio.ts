@@ -280,3 +280,28 @@ export async function presentacionesVenta(db: Pick<Db, "productoPresentacion" | 
   }
   return r;
 }
+
+/**
+ * Asigna cada línea del pedido a un bulto (lista de empaque, original: lbxBultos). Se puede mientras el pedido no esté facturado ni anulado; el número de bultos del
+ * pedido pasa a ser el mayor asignado. Una línea sin bulto (null) queda sin asignar.
+ */
+export async function asignarBultos(db: Db, actor: Actor, pedidoId: string, asignaciones: { lineaId: string; bulto: number | null }[]): Promise<ResultadoPedido> {
+  return ejecutar(async () => {
+    for (const a of asignaciones) if (a.bulto !== null && (!Number.isInteger(a.bulto) || a.bulto < 1 || a.bulto > 9999)) throw new PedidoError("El bulto debe ser un entero entre 1 y 9999.");
+    const numero = await db.$transaction(async (tx) => {
+      const p = await tx.pedidoVenta.findUnique({ where: { id: pedidoId }, include: { lineas: { select: { id: true } } } });
+      if (!p) throw new PedidoError("El pedido ya no existe.");
+      if (p.estado === "FACTURADO" || p.estado === "ANULADO") throw new PedidoError("Un pedido facturado o anulado ya no se empaca aquí.");
+      const propias = new Set(p.lineas.map((l) => l.id));
+      for (const a of asignaciones) {
+        if (!propias.has(a.lineaId)) throw new PedidoError("Una línea no pertenece a este pedido.");
+        await tx.pedidoVentaLinea.update({ where: { id: a.lineaId }, data: { bulto: a.bulto } });
+      }
+      const mayor = await tx.pedidoVentaLinea.aggregate({ where: { pedidoId }, _max: { bulto: true } });
+      if (mayor._max.bulto) await tx.pedidoVenta.update({ where: { id: pedidoId }, data: { bultos: mayor._max.bulto } });
+      return p.numero;
+    });
+    await registrarCambio(db, actor, { modulo: "pedidos", entidad: "pedido_venta", entidadId: pedidoId, descripcion: numeroPedido(numero), accion: "otro", despues: { operacion: "Bultos asignados", lineas: asignaciones.length } });
+    return { ok: true };
+  });
+}
