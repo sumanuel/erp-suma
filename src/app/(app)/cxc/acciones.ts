@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
 import { anularRetencion, registrarRetencionSufrida } from "@/lib/retenciones/servicio";
-import { anularCobro, registrarCobro, registrarRecibo } from "@/lib/cxc/servicio";
+import { anularAplicacionAnticipo, anularCobro, aplicarAnticipo, registrarCobro, registrarRecibo } from "@/lib/cxc/servicio";
 
 export type EstadoCobroForm = { error?: string };
 
@@ -87,7 +87,30 @@ const Recibo = z.object({
     fechaCheque: FechaCheque,
   })).min(1, "Indica al menos una forma de pago").max(10),
   aplicaciones: z.array(z.object({ facturaId: z.string().uuid(), montoUsd: z.number().finite() })).max(200),
+  anticipo: z.boolean().optional(),
 });
+
+/** Aplica el saldo a favor de un cobro a facturas del cliente. */
+export async function aplicarAnticipoCliente(cobroId: string, clienteId: string, datos: unknown): Promise<{ error?: string }> {
+  const ctx = await requerirPermisoAccion("cxc", "crear");
+  const r = z.array(z.object({ facturaId: z.string().uuid(), montoUsd: z.number().finite() })).max(200).safeParse(datos);
+  if (!r.success) return { error: "Datos inválidos" };
+  const res = await aplicarAnticipo(ctx.db, ctx.usuario, cobroId, r.data);
+  if (!res.ok) return { error: res.error };
+  revalidatePath(`/cxc/cliente/${clienteId}`);
+  revalidatePath("/cxc");
+  revalidatePath("/facturacion");
+  return {};
+}
+
+export async function anularAplicacionAnticipoCliente(id: string, clienteId: string, motivo: string): Promise<{ error?: string }> {
+  const ctx = await requerirPermisoAccion("cxc", "eliminar");
+  const res = await anularAplicacionAnticipo(ctx.db, ctx.usuario, id, motivo);
+  if (!res.ok) return { error: res.error };
+  revalidatePath(`/cxc/cliente/${clienteId}`);
+  revalidatePath("/cxc");
+  return {};
+}
 
 /** Recibo de ingreso con una o varias formas de pago. */
 export async function registrarReciboCliente(datos: unknown): Promise<EstadoCobroForm> {

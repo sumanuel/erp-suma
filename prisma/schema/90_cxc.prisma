@@ -32,6 +32,11 @@ model Cobro {
   bancoChequeId   String?           @map("banco_cheque_id") @db.Uuid
   numeroCheque    String?           @map("numero_cheque")
   fechaCheque     DateTime?         @map("fecha_cheque") @db.Date
+  /// Lo recibido de más (o sin facturas): saldo a favor del cliente (anticipo) en USD, su valor en bolívares al recibirlo y lo que aún no se aplica.
+  anticipoUsd      Decimal          @default(0) @map("anticipo_usd") @db.Decimal(18, 4)
+  anticipoBs       Decimal          @default(0) @map("anticipo_bs") @db.Decimal(18, 2)
+  anticipoSaldoUsd Decimal          @default(0) @map("anticipo_saldo_usd") @db.Decimal(18, 4)
+  anticipoAplicaciones AnticipoAplicacion[]
   /// Comprobante contable o de caja del cobro.
   numeroComprobante String?         @map("numero_comprobante")
   referencia      String?
@@ -79,4 +84,28 @@ model ReciboCobro {
 
   @@index([clienteId, fecha(sort: Desc)])
   @@map("recibo_cobro")
+}
+
+/// Aplicación de un anticipo (saldo a favor de un cobro) a una factura. Baja el saldo de la factura sin mover dinero. Se muestra como AA-000123.
+model AnticipoAplicacion {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  numero           Int      @unique @default(autoincrement())
+  cobroId          String   @map("cobro_id") @db.Uuid
+  cobro            Cobro    @relation(fields: [cobroId], references: [id])
+  facturaId        String   @map("factura_id") @db.Uuid
+  factura          Factura  @relation(fields: [facturaId], references: [id])
+  fecha            DateTime @db.Date
+  montoUsd         Decimal  @map("monto_usd") @db.Decimal(18, 4)
+  /// ACTIVA o ANULADA
+  estado           String   @default("ACTIVA")
+  creadoPorId      String?  @map("creado_por_id") @db.Uuid
+  creadoPorNombre  String?  @map("creado_por_nombre")
+  creadoEn         DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  anuladoEn        DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPorNombre String?  @map("anulado_por_nombre")
+  motivoAnulacion  String?  @map("motivo_anulacion")
+
+  @@index([cobroId])
+  @@index([facturaId])
+  @@map("anticipo_aplicacion")
 }

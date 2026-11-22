@@ -23,7 +23,6 @@ export default async function NuevoCobro({ searchParams }: { searchParams: Promi
     tasaVigente(db, "USD"),
     db.cuentaTesoreria.findMany({ where: { activo: true }, orderBy: [{ moneda: "asc" }, { nombre: "asc" }], select: { id: true, codigo: true, nombre: true, moneda: true, saldo: true } }),
   ]);
-  if (facturas.length === 0) redirect(`/cxc/cliente/${id}`);
   return (
     <FormularioCobro
       clienteId={id}

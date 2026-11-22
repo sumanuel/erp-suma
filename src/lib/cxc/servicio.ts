@@ -5,9 +5,9 @@ import type { Actor, Tx } from "@/lib/inventario/movimientos";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { hoyCaracas, tasaVigente } from "@/lib/tasas";
 import { aplicarMovimientoCuenta, TesoreriaRechazada } from "@/lib/tesoreria/movimientos";
-import { contabilizarCobro, revertirCobro } from "@/lib/contabilidad/automatico";
+import { contabilizarAplicacionAnticipo, contabilizarCobro, revertirAplicacionAnticipo, revertirCobro } from "@/lib/contabilidad/automatico";
 import { ContaError } from "@/lib/contabilidad/servicio";
-import { FORMAS_PAGO, numeroCobro, type FormaPago } from "./estados";
+import { FORMAS_PAGO, numeroAplicacionAnticipo, numeroCobro, type FormaPago } from "./estados";
 
 // Servicio de cuentas por cobrar. Un cobro baja el saldo de sus facturas con un UPDATE atómico condicionado (nadie puede cobrar más de lo que
 // se debe, ni dos cobros simultáneos pasarse del saldo). Anular un cobro restituye exactamente lo que aplicó.
@@ -51,7 +51,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoCobro<T>>): Promise<R
  * Registra un cobro DENTRO de la transacción recibida (la usa el punto de venta para cobrar y facturar a la vez). `aplic` ya viene filtrada y validada.
  * `montoMoneda` fija el monto exacto recibido en la moneda del pago (por ejemplo, los bolívares que se contaron) en vez de recalcularlo desde USD.
  */
-export async function cobrarEnTx(tx: Tx, actor: Actor, d: DatosCobro, aplic: { facturaId: string; montoUsd: number }[], opc: { montoMoneda?: number } = {}) {
+export async function cobrarEnTx(tx: Tx, actor: Actor, d: DatosCobro, aplic: { facturaId: string; montoUsd: number }[], opc: { montoMoneda?: number; anticipoUsd?: number } = {}) {
       const cliente = await tx.cliente.findUnique({ where: { id: d.clienteId }, select: { activo: true } });
       if (!cliente) throw new CobroError("El cliente no existe.");
       const total = aplic.reduce((s, a) => s + a.montoUsd, 0);
@@ -64,6 +64,14 @@ export async function cobrarEnTx(tx: Tx, actor: Actor, d: DatosCobro, aplic: { f
       }
       const montoMoneda = opc.montoMoneda ?? (d.moneda === "VES" ? redondear2(montoUsd * (tasa as number)) : redondear2(montoUsd));
       if (!(montoMoneda > 0)) throw new CobroError("El monto es demasiado pequeño.");
+      // Anticipo: lo recibido que no se aplica a facturas. Se guarda su valor en bolívares al recibirlo.
+      const anticipoUsd = Math.round((opc.anticipoUsd ?? 0) * 10000) / 10000;
+      let anticipoBs = 0;
+      if (anticipoUsd > 0) {
+        const tasaAnticipo = tasa ?? (await tasaVigente(tx as unknown as Db, "USD"))?.valor;
+        if (!tasaAnticipo) throw new CobroError("No hay tasa del dólar cargada para registrar el anticipo.");
+        anticipoBs = d.moneda === "VES" ? redondear2((montoMoneda * anticipoUsd) / (montoUsd + anticipoUsd)) : redondear2(anticipoUsd * tasaAnticipo);
+      }
 
       for (const a of aplic) {
         // Baja el saldo solo si la factura es de este cliente, está emitida y todavía debe al menos esto.
@@ -87,7 +95,7 @@ export async function cobrarEnTx(tx: Tx, actor: Actor, d: DatosCobro, aplic: { f
         data: {
           reciboId: d.reciboId ?? null, cobradorId: d.cobradorId || null, bancoChequeId: d.bancoChequeId || null, numeroCheque: d.numeroCheque?.trim().slice(0, 30) || null,
           fechaCheque: d.fechaCheque ?? null, numeroComprobante: d.numeroComprobante?.trim().slice(0, 50) || null,
-          cuentaId: d.cuentaId, clienteId: d.clienteId, fecha: d.fecha ?? hoy, formaPago: d.formaPago, moneda: d.moneda, montoMoneda, tasaUsd: tasa, montoUsd,
+          cuentaId: d.cuentaId, clienteId: d.clienteId, fecha: d.fecha ?? hoy, formaPago: d.formaPago, moneda: d.moneda, montoMoneda, tasaUsd: tasa, montoUsd, anticipoUsd, anticipoBs, anticipoSaldoUsd: anticipoUsd,
           referencia: d.referencia, observaciones: d.observaciones, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
           aplicaciones: { create: aplic.map((a) => ({ facturaId: a.facturaId, montoUsd: a.montoUsd })) },
         },
@@ -95,7 +103,7 @@ export async function cobrarEnTx(tx: Tx, actor: Actor, d: DatosCobro, aplic: { f
       });
       await aplicarMovimientoCuenta(tx, actor, { cuentaId: d.cuentaId, tipo: "COBRO", monto: montoMoneda, documento: numeroCobro(c.numero), descripcion: `Cobro a cliente${d.referencia ? ` · ref. ${d.referencia}` : ""}` });
       await contabilizarCobro(tx, actor, c.id);
-      return { ...c, montoUsd, montoMoneda };
+      return { ...c, montoUsd, montoMoneda, anticipoUsd };
 }
 
 export async function registrarCobro(db: Db, actor: Actor, d: DatosCobro): Promise<ResultadoCobro<{ id: string; numero: number }>> {
@@ -126,6 +134,9 @@ export async function anularCobro(db: Db, actor: Actor, id: string, motivo: stri
       const u = await tx.cobro.updateMany({ where: { id, estado: "REGISTRADO" }, data: { estado: "ANULADO", anuladoEn: new Date(), anuladoPorNombre: actor.nombre, motivoAnulacion: m.slice(0, 500) } });
       if (u.count === 0) throw new CobroError("El cobro ya está anulado o no existe. Recarga la página.");
       const c = await tx.cobro.findUniqueOrThrow({ where: { id }, include: { aplicaciones: true } });
+      // Un anticipo ya aplicado a facturas no se anula: primero se anulan esas aplicaciones.
+      if (Number(c.anticipoSaldoUsd) < Number(c.anticipoUsd) - 1e-9) throw new CobroError("El anticipo de este cobro ya se aplicó a facturas: anula primero esas aplicaciones.");
+      if (Number(c.anticipoUsd) > 0) await tx.cobro.update({ where: { id }, data: { anticipoSaldoUsd: 0 } });
       for (const a of c.aplicaciones) await tx.factura.update({ where: { id: a.facturaId }, data: { saldo: { increment: a.montoUsd } } });
       // El dinero que entró vuelve a salir de la cuenta; si ya se gastó y no alcanza, la anulación se rechaza completa.
       if (c.cuentaId) await aplicarMovimientoCuenta(tx, actor, { cuentaId: c.cuentaId, tipo: "ANULACION_COBRO", monto: Number(c.montoMoneda), documento: numeroCobro(c.numero), descripcion: `Anulación: ${m.slice(0, 120)}` });
@@ -152,7 +163,7 @@ export type PagoRecibo = {
   numeroCheque?: string | null;
   fechaCheque?: Date | null;
 };
-export type DatosRecibo = { clienteId: string; fecha?: Date; cobradorId?: string | null; numeroComprobante?: string | null; observaciones: string | null; pagos: PagoRecibo[]; aplicaciones: { facturaId: string; montoUsd: number }[] };
+export type DatosRecibo = { /** El excedente de lo pagado sobre lo aplicado queda como anticipo (saldo a favor) en vez de rechazarse. */ anticipo?: boolean; clienteId: string; fecha?: Date; cobradorId?: string | null; numeroComprobante?: string | null; observaciones: string | null; pagos: PagoRecibo[]; aplicaciones: { facturaId: string; montoUsd: number }[] };
 
 /**
  * Recibo de ingreso: el cliente paga con varias formas (50 USD en efectivo, el resto por transferencia en Bs.) y se reparte entre las facturas elegidas.
@@ -161,7 +172,7 @@ export type DatosRecibo = { clienteId: string; fecha?: Date; cobradorId?: string
 export async function registrarRecibo(db: Db, actor: Actor, d: DatosRecibo): Promise<ResultadoCobro<{ id: string; numero: number; cobros: { id: string; numero: number }[] }>> {
   return ejecutar(async () => {
     const aplic = d.aplicaciones.filter((a) => a.montoUsd > 0);
-    if (aplic.length === 0) throw new CobroError("Indica cuánto se aplica al menos a una factura.");
+    if (aplic.length === 0 && !d.anticipo) throw new CobroError("Indica cuánto se aplica al menos a una factura.");
     if (d.pagos.length === 0) throw new CobroError("Indica al menos una forma de pago.");
     if (d.pagos.length > 10) throw new CobroError("Máximo 10 formas de pago por recibo.");
     for (const p of d.pagos) {
@@ -183,7 +194,9 @@ export async function registrarRecibo(db: Db, actor: Actor, d: DatosRecibo): Pro
       const pagado = Math.round(d.pagos.reduce((s, p) => s + aUsd(p), 0) * 10000) / 10000;
       // Tolerancia de un centavo de bolívar: lo que se cuenta no tiene más precisión.
       const tolerancia = tasa ? 0.01 / tasa : 0.005;
-      if (Math.abs(pagado - aplicado) > tolerancia) {
+      if (d.anticipo && pagado - aplicado < -tolerancia) throw new CobroError(`Los pagos (${pagado} USD) no cubren lo aplicado a las facturas (${aplicado} USD).`);
+      if (d.anticipo && aplic.length === 0 && pagado <= tolerancia) throw new CobroError("Indica el monto del anticipo.");
+      if (!d.anticipo && Math.abs(pagado - aplicado) > tolerancia) {
         throw new CobroError(pagado > aplicado
           ? `Los pagos (${pagado} USD) superan lo aplicado a las facturas (${aplicado} USD): aplica el resto a otra factura o reduce el pago.`
           : `Los pagos (${pagado} USD) no cubren lo aplicado a las facturas (${aplicado} USD).`);
@@ -200,7 +213,10 @@ export async function registrarRecibo(db: Db, actor: Actor, d: DatosRecibo): Pro
       const cobros: { id: string; numero: number }[] = [];
       for (const [i, p] of d.pagos.entries()) {
         const ultimo = i === d.pagos.length - 1;
-        let porCubrir = ultimo ? Math.round(cola.reduce((s, c) => s + c.resto, 0) * 10000) / 10000 : aUsd(p);
+        const disponible = aUsd(p);
+        const pendiente = Math.round(cola.reduce((s, c) => s + c.resto, 0) * 10000) / 10000;
+        // El último pago absorbe el redondeo: cubre todo lo que falte aplicar (con anticipo, lo que le sobre del pago es el anticipo).
+        let porCubrir = ultimo ? (d.anticipo ? (pendiente - disponible <= tolerancia ? pendiente : disponible) : pendiente) : disponible;
         const partes: { facturaId: string; montoUsd: number }[] = [];
         for (const c of cola) {
           if (porCubrir <= 0) break;
@@ -211,11 +227,13 @@ export async function registrarRecibo(db: Db, actor: Actor, d: DatosRecibo): Pro
             porCubrir = Math.round((porCubrir - t) * 10000) / 10000;
           }
         }
-        if (partes.length === 0) throw new CobroError("Sobra una forma de pago: las anteriores ya cubrían las facturas.");
+        const aplicadoAqui = Math.round(partes.reduce((s, x) => s + x.montoUsd, 0) * 10000) / 10000;
+        const anticipoAqui = d.anticipo ? Math.max(0, Math.round((disponible - aplicadoAqui) * 10000) / 10000) : 0;
+        if (partes.length === 0 && anticipoAqui <= 0) throw new CobroError("Sobra una forma de pago: las anteriores ya cubrían las facturas.");
         const c = await cobrarEnTx(
           tx, actor,
           { clienteId: d.clienteId, formaPago: p.formaPago, moneda: p.moneda, cuentaId: p.cuentaId, referencia: p.referencia?.trim().slice(0, 100) || null, observaciones: d.observaciones, aplicaciones: partes, fecha, cobradorId: d.cobradorId, reciboId: recibo.id, bancoChequeId: p.bancoChequeId, numeroCheque: p.numeroCheque, fechaCheque: p.fechaCheque, numeroComprobante: d.numeroComprobante },
-          partes, { montoMoneda: p.monto },
+          partes, { montoMoneda: p.monto, anticipoUsd: anticipoAqui > tolerancia ? anticipoAqui : 0 },
         );
         cobros.push({ id: c.id, numero: c.numero });
       }
@@ -223,5 +241,72 @@ export async function registrarRecibo(db: Db, actor: Actor, d: DatosRecibo): Pro
     });
     await registrarCambio(db, actor, { modulo: "cxc", entidad: "recibo_cobro", entidadId: r.id, descripcion: `RC-${String(r.numero).padStart(6, "0")}`, accion: "crear", despues: { pagos: d.pagos.length, facturas: aplic.length } });
     return { ok: true, id: r.id, numero: r.numero, cobros: r.cobros };
+  });
+}
+
+// ---------- Anticipos de clientes ----------
+
+/**
+ * Aplica el saldo a favor de un cobro (anticipo) a facturas del mismo cliente. No mueve dinero: baja el saldo de la factura y el del anticipo, con un asiento
+ * (anticipos de clientes contra cuentas por cobrar). Cada factura queda en su propia aplicación (AA-…), reversible.
+ */
+export async function aplicarAnticipo(db: Db, actor: Actor, cobroId: string, aplicaciones: { facturaId: string; montoUsd: number }[], fecha?: Date): Promise<ResultadoCobro<{ aplicaciones: { id: string; numero: number }[] }>> {
+  return ejecutar(async () => {
+    const aplic = aplicaciones.filter((a) => a.montoUsd > 0);
+    if (aplic.length === 0) throw new CobroError("Indica cuánto se aplica al menos a una factura.");
+    if (aplic.length > 200) throw new CobroError("Máximo 200 facturas por operación.");
+    if (new Set(aplic.map((a) => a.facturaId)).size !== aplic.length) throw new CobroError("Hay una factura repetida.");
+    for (const a of aplic) if (!Number.isFinite(a.montoUsd) || decimales(a.montoUsd) > 4 || a.montoUsd > 1e12) throw new CobroError("Los montos admiten hasta 4 decimales.");
+    const total = Math.round(aplic.reduce((s, a) => s + a.montoUsd, 0) * 10000) / 10000;
+    const hoy = hoyCaracas();
+    if (fecha && fecha.getTime() > hoy.getTime()) throw new CobroError("La fecha no puede ser futura.");
+    const r = await db.$transaction(async (tx) => {
+      const c = await tx.cobro.findUnique({ where: { id: cobroId }, select: { clienteId: true, numero: true, estado: true } });
+      if (!c) throw new CobroError("El cobro no existe.");
+      if (c.estado !== "REGISTRADO") throw new CobroError("El cobro está anulado.");
+      // Baja el saldo del anticipo solo si alcanza (atómico: dos aplicaciones simultáneas no gastan lo mismo).
+      const u = await tx.cobro.updateMany({ where: { id: cobroId, estado: "REGISTRADO", anticipoSaldoUsd: { gte: total } }, data: { anticipoSaldoUsd: { decrement: total } } });
+      if (u.count === 0) {
+        const x = await tx.cobro.findUniqueOrThrow({ where: { id: cobroId }, select: { anticipoSaldoUsd: true } });
+        throw new CobroError(`El anticipo solo tiene ${Number(x.anticipoSaldoUsd)} USD disponibles.`);
+      }
+      const creadas: { id: string; numero: number }[] = [];
+      for (const a of aplic) {
+        const f = await tx.factura.updateMany({ where: { id: a.facturaId, clienteId: c.clienteId, estado: "EMITIDA", saldo: { gte: a.montoUsd } }, data: { saldo: { decrement: a.montoUsd } } });
+        if (f.count === 0) {
+          const x = await tx.factura.findUnique({ where: { id: a.facturaId }, select: { numero: true, estado: true, saldo: true, clienteId: true } });
+          if (!x || x.clienteId !== c.clienteId) throw new CobroError("Una factura no pertenece al cliente del anticipo.");
+          if (x.estado !== "EMITIDA") throw new CobroError(`${numeroFactura(x.numero)} está anulada.`);
+          throw new CobroError(`${numeroFactura(x.numero)}: solo se debe ${Number(x.saldo)} USD.`);
+        }
+        const ap = await tx.anticipoAplicacion.create({ data: { cobroId, facturaId: a.facturaId, fecha: fecha ?? hoy, montoUsd: a.montoUsd, creadoPorId: actor.id, creadoPorNombre: actor.nombre }, select: { id: true, numero: true } });
+        await contabilizarAplicacionAnticipo(tx, actor, ap.id);
+        creadas.push(ap);
+      }
+      return { numero: c.numero, creadas };
+    });
+    await registrarCambio(db, actor, { modulo: "cxc", entidad: "cobro", entidadId: cobroId, descripcion: numeroCobro(r.numero), accion: "otro", despues: { operacion: "Anticipo aplicado a facturas", totalUsd: total, facturas: aplic.length } });
+    return { ok: true, aplicaciones: r.creadas };
+  });
+}
+
+/** Anula una aplicación de anticipo: la factura recupera su deuda y el anticipo su saldo (asiento inverso). */
+export async function anularAplicacionAnticipo(db: Db, actor: Actor, id: string, motivo: string): Promise<ResultadoCobro> {
+  return ejecutar(async () => {
+    const m = motivo.trim();
+    if (m.length < 3) throw new CobroError("Indica el motivo de la anulación.");
+    const r = await db.$transaction(async (tx) => {
+      const u = await tx.anticipoAplicacion.updateMany({ where: { id, estado: "ACTIVA" }, data: { estado: "ANULADA", anuladoEn: new Date(), anuladoPorNombre: actor.nombre, motivoAnulacion: m.slice(0, 500) } });
+      if (u.count === 0) throw new CobroError("La aplicación ya está anulada o no existe. Recarga la página.");
+      const a = await tx.anticipoAplicacion.findUniqueOrThrow({ where: { id }, include: { cobro: { select: { estado: true } } } });
+      if (a.cobro.estado !== "REGISTRADO") throw new CobroError("El cobro del anticipo está anulado.");
+      const f = await tx.factura.findUniqueOrThrow({ where: { id: a.facturaId }, select: { estado: true } });
+      if (f.estado === "EMITIDA") await tx.factura.update({ where: { id: a.facturaId }, data: { saldo: { increment: a.montoUsd } } });
+      await tx.cobro.update({ where: { id: a.cobroId }, data: { anticipoSaldoUsd: { increment: a.montoUsd } } });
+      await revertirAplicacionAnticipo(tx, actor, a.numero);
+      return a.numero;
+    });
+    await registrarCambio(db, actor, { modulo: "cxc", entidad: "anticipo_aplicacion", entidadId: id, descripcion: numeroAplicacionAnticipo(r), accion: "otro", despues: { estado: "ANULADA", motivo: m } });
+    return { ok: true };
   });
 }

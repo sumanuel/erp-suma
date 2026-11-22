@@ -33,6 +33,8 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa, cuen
   const [cobradorId, setCobradorId] = useState(cobradorInicial);
   const [comprobante, setComprobante] = useState("");
   const [observaciones, setObservaciones] = useState("");
+  // Con anticipo, lo que se paga de más (o todo, si no hay facturas) queda como saldo a favor del cliente.
+  const [anticipo, setAnticipo] = useState(facturas.length === 0);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
 
@@ -52,7 +54,7 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa, cuen
     setError(null);
     iniciar(async () => {
       const r = await registrarReciboCliente({
-        clienteId, fecha, cobradorId, numeroComprobante: comprobante, observaciones,
+        clienteId, fecha, cobradorId, numeroComprobante: comprobante, observaciones, anticipo,
         pagos: pagos.map((p) => ({ ...p, monto: num(p.monto) })),
         aplicaciones: facturas.map((f) => ({ facturaId: f.id, montoUsd: num(montos[f.id] ?? "") })).filter((a) => a.montoUsd > 0),
       });
@@ -154,8 +156,10 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa, cuen
         </div>
         <dl className="ml-auto mt-4 flex w-full max-w-sm flex-col gap-1 text-[13.5px]">
           <div className="flex justify-between"><dt className="text-gris-600">Pagado (equivalente USD)</dt><dd className="tabular-nums">{fmt(pagadoUsd)}</dd></div>
-          {Math.abs(difUsd) > (tasa ? 0.01 / tasa : 0.005) && total > 0 ? <div className="flex justify-between font-semibold text-error"><dt>{difUsd > 0 ? "Sobra" : "Falta"}</dt><dd className="tabular-nums">{fmt(Math.abs(difUsd))} USD</dd></div> : null}
+          {anticipo && difUsd > (tasa ? 0.01 / tasa : 0.005) ? <div className="flex justify-between font-semibold text-marca-texto"><dt>Queda como anticipo</dt><dd className="tabular-nums">{fmt(difUsd)} USD</dd></div> : null}
+          {Math.abs(difUsd) > (tasa ? 0.01 / tasa : 0.005) && (total > 0 || anticipo) && !(anticipo && difUsd > 0) ? <div className="flex justify-between font-semibold text-error"><dt>{difUsd > 0 ? "Sobra" : "Falta"}</dt><dd className="tabular-nums">{fmt(Math.abs(difUsd))} USD</dd></div> : null}
         </dl>
+        <label className="mt-4 flex items-center gap-2 text-sm"><input type="checkbox" checked={anticipo} onChange={(e) => setAnticipo(e.target.checked)} className="size-4 accent-marca-fuerte" /> Lo que sobre del pago queda como anticipo (saldo a favor del cliente)</label>
       </Tarjeta>
 
       <Tarjeta>
@@ -168,6 +172,7 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa, cuen
               </tr>
             </thead>
             <tbody>
+              {facturas.length === 0 ? <tr><td colSpan={4} className="px-4 py-6 text-center text-gris-500">Sin facturas con saldo: el pago se registra completo como anticipo.</td></tr> : null}
               {facturas.map((f) => (
                 <tr key={f.id} className="border-b border-linea last:border-0">
                   <td className="px-4 py-2 font-semibold">{f.numero}</td>
@@ -192,7 +197,7 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa, cuen
       </Tarjeta>
 
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente || total <= 0} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar recibo"}</button>
+        <button type="submit" disabled={pendiente || (total <= 0 && !(anticipo && pagadoUsd > 0))} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar recibo"}</button>
         <Link href={`/cxc/cliente/${clienteId}`} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>

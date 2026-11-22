@@ -63,6 +63,7 @@ model Factura {
   anuladaPorNombre String?        @map("anulada_por_nombre")
   motivoAnulacion  String?        @map("motivo_anulacion")
   lineas           FacturaLinea[]
+  anticiposAplicados AnticipoAplicacion[]
   aplicaciones     CobroAplicacion[]
   notas            NotaVenta[]
   retenciones      Retencion[]

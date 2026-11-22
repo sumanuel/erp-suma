@@ -1,7 +1,7 @@
 import "server-only";
 import type { Actor, Tx } from "@/lib/inventario/movimientos";
 import { numeroFactura } from "@/lib/facturacion/estados";
-import { numeroCobro } from "@/lib/cxc/estados";
+import { numeroAplicacionAnticipo, numeroCobro } from "@/lib/cxc/estados";
 import { numeroFacturaCompra, numeroPago } from "@/lib/cxp/estados";
 import { numeroNotaCompra, numeroNotaVenta } from "@/lib/notas/estados";
 import { numeroEntero, numeroRetencion } from "@/lib/retenciones/estados";
@@ -94,13 +94,30 @@ export async function contabilizarCobro(tx: Tx, actor: Actor, cobroId: string) {
   }
   const recibido = await bolivaresDelPago(tx, c.moneda, Number(c.montoMoneda), c.fecha);
   const cxc = redondear2(c.aplicaciones.reduce((s, a) => s + bs(Number(a.montoUsd), Number(a.factura.tasaUsd)), 0));
-  const dif = redondear2(recibido - cxc);
+  // Lo recibido de más es un anticipo (pasivo con el cliente); el diferencial cambiario solo mide lo aplicado a facturas.
+  const anticipo = Number(c.anticipoBs);
+  const dif = redondear2(recibido - anticipo - cxc);
   const ref = numeroCobro(c.numero);
   await publicar(tx, actor, {
     origen: "COBRO", referencia: ref, fecha: c.fecha, descripcion: `Cobro ${ref} · ${c.cliente.razonSocial}`,
-    lineas: [{ cuentaId: c.cuenta.cuentaContableId, debe: recibido }, { concepto: "CXC", haber: cxc }, { concepto: "DIFERENCIAL_CAMBIARIO", haber: dif > 0 ? dif : 0, debe: dif < 0 ? -dif : 0 }],
+    lineas: [{ cuentaId: c.cuenta.cuentaContableId, debe: recibido }, { concepto: "CXC", haber: cxc }, { concepto: "ANTICIPO_CLIENTES", haber: anticipo }, { concepto: "DIFERENCIAL_CAMBIARIO", haber: dif > 0 ? dif : 0, debe: dif < 0 ? -dif : 0 }],
   });
 }
+
+/** Aplicar un anticipo a una factura: el pasivo con el cliente baja (a lo que valía al recibirlo) y las cuentas por cobrar también (a la tasa de la factura); la diferencia es cambiaria. */
+export async function contabilizarAplicacionAnticipo(tx: Tx, actor: Actor, id: string) {
+  const a = await tx.anticipoAplicacion.findUniqueOrThrow({ where: { id }, include: { cobro: { include: { cliente: { select: { razonSocial: true } } } }, factura: { select: { tasaUsd: true, numero: true } } } });
+  const anticipoUsd = Number(a.cobro.anticipoUsd);
+  const delAnticipo = anticipoUsd > 0 ? redondear2((Number(a.cobro.anticipoBs) * Number(a.montoUsd)) / anticipoUsd) : 0;
+  const cxc = bs(Number(a.montoUsd), Number(a.factura.tasaUsd));
+  const dif = redondear2(delAnticipo - cxc);
+  const ref = numeroAplicacionAnticipo(a.numero);
+  await publicar(tx, actor, {
+    origen: "APLICACION_ANTICIPO", referencia: ref, fecha: a.fecha, descripcion: `Anticipo ${numeroCobro(a.cobro.numero)} aplicado a ${numeroFactura(a.factura.numero)} · ${a.cobro.cliente.razonSocial}`,
+    lineas: [{ concepto: "ANTICIPO_CLIENTES", debe: delAnticipo }, { concepto: "CXC", haber: cxc }, { concepto: "DIFERENCIAL_CAMBIARIO", haber: dif > 0 ? dif : 0, debe: dif < 0 ? -dif : 0 }],
+  });
+}
+export const revertirAplicacionAnticipo = (tx: Tx, actor: Actor, numero: number) => revertir(tx, actor, "APLICACION_ANTICIPO", "ANULACION_APLICACION_ANTICIPO", numeroAplicacionAnticipo(numero), `Anulación de aplicación de anticipo ${numeroAplicacionAnticipo(numero)}`);
 export const revertirCobro = (tx: Tx, actor: Actor, numero: number) => revertir(tx, actor, "COBRO", "ANULACION_COBRO", numeroCobro(numero), `Anulación de cobro ${numeroCobro(numero)}`);
 
 // ---------- Compras ----------

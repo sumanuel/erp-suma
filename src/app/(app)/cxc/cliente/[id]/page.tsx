@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
+import { AplicarAnticipo } from "./aplicar-anticipo";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
-import { ESTADOS_COBRO, FORMAS_PAGO, TRAMOS, diasMora, numeroCobro, tramoDeMora, type EstadoCobro, type TramoId } from "@/lib/cxc/estados";
+import { ESTADOS_COBRO, FORMAS_PAGO, TRAMOS, diasMora, numeroAplicacionAnticipo, numeroCobro, tramoDeMora, type EstadoCobro, type TramoId } from "@/lib/cxc/estados";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { hoyCaracas } from "@/lib/tasas";
 import { formatoFecha, formatoUsd } from "../../formato";
@@ -16,6 +17,11 @@ export default async function EstadoDeCuenta({ params }: { params: Promise<{ id:
   const cliente = await ctx.db.cliente.findUnique({ where: { id } });
   if (!cliente) notFound();
   const hoy = hoyCaracas();
+  const [anticipos, aplicaciones] = await Promise.all([
+    ctx.db.cobro.findMany({ where: { clienteId: id, estado: "REGISTRADO", anticipoSaldoUsd: { gt: 0 } }, orderBy: { numero: "asc" }, select: { id: true, numero: true, anticipoSaldoUsd: true } }),
+    ctx.db.anticipoAplicacion.findMany({ where: { cobro: { clienteId: id }, estado: "ACTIVA" }, orderBy: { numero: "desc" }, take: 20, include: { cobro: { select: { numero: true } }, factura: { select: { numero: true } } } }),
+  ]);
+  const aFavor = anticipos.reduce((s, a) => s + Number(a.anticipoSaldoUsd), 0);
   const [abiertas, cobros] = await Promise.all([
     ctx.db.factura.findMany({ where: { clienteId: id, estado: "EMITIDA", saldo: { gt: 0 } }, orderBy: { fechaVencimiento: "asc" } }),
     ctx.db.cobro.findMany({ where: { clienteId: id }, orderBy: { numero: "desc" }, take: 20 }),
@@ -32,10 +38,14 @@ export default async function EstadoDeCuenta({ params }: { params: Promise<{ id:
             <h2 className="text-xl font-semibold">{cliente.razonSocial}</h2>
             <p className="text-sm text-gris-600">{cliente.documento}{cliente.telefono ? ` · ${cliente.telefono}` : ""}</p>
           </div>
-          {abiertas.length > 0 && tienePermiso(ctx, "cxc", "crear") ? <Link href={`/cxc/cobros/nuevo?cliente=${id}`} className={clasesBoton("primario")}>Registrar cobro</Link> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/cxc/cliente/${id}/estado`} className={clasesBoton("secundario")}>Estado de cuenta</Link>
+            {tienePermiso(ctx, "cxc", "crear") ? <Link href={`/cxc/cobros/nuevo?cliente=${id}`} className={clasesBoton("primario")}>{abiertas.length > 0 ? "Registrar cobro" : "Registrar anticipo"}</Link> : null}
+          </div>
         </div>
         <dl className="mt-4 grid grid-cols-2 gap-3 text-[13.5px] md:grid-cols-3 xl:grid-cols-6">
           <div><dt className="text-gris-500">Saldo total USD</dt><dd className="text-lg font-semibold tabular-nums">{formatoUsd(total)}</dd></div>
+          {aFavor > 0 ? <div><dt className="text-gris-500">Saldo a favor (anticipos)</dt><dd className="text-lg font-semibold tabular-nums text-exito">{formatoUsd(aFavor)}</dd></div> : null}
           {TRAMOS.map((t) => <div key={t.id}><dt className="text-gris-500">{t.etiqueta}</dt><dd className={`text-lg font-semibold tabular-nums ${t.id !== "porVencer" && tramos[t.id] > 0 ? "text-error" : ""}`}>{formatoUsd(tramos[t.id])}</dd></div>)}
         </dl>
       </Tarjeta>
@@ -70,6 +80,19 @@ export default async function EstadoDeCuenta({ params }: { params: Promise<{ id:
           </table>
         </div>
       </Tarjeta>
+
+      {anticipos.length > 0 || aplicaciones.length > 0 ? (
+        <Tarjeta>
+          <h3 className="px-4 pt-4 text-base font-semibold">Anticipos (saldo a favor)</h3>
+          <AplicarAnticipo
+            clienteId={id}
+            anticipos={anticipos.map((a) => ({ id: a.id, numero: numeroCobro(a.numero), saldo: Number(a.anticipoSaldoUsd) }))}
+            facturas={tienePermiso(ctx, "cxc", "crear") ? abiertas.map((f) => ({ id: f.id, numero: numeroFactura(f.numero), saldo: Number(f.saldo) })) : []}
+            aplicaciones={aplicaciones.map((a) => ({ id: a.id, numero: numeroAplicacionAnticipo(a.numero), cobro: numeroCobro(a.cobro.numero), factura: numeroFactura(a.factura.numero), monto: Number(a.montoUsd), fecha: formatoFecha(a.fecha) }))}
+            puedeAnular={tienePermiso(ctx, "cxc", "eliminar")}
+          />
+        </Tarjeta>
+      ) : null}
 
       <Tarjeta>
         <h3 className="px-4 pt-4 text-base font-semibold">Últimos cobros</h3>

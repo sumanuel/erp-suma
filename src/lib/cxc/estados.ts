@@ -1,5 +1,6 @@
 // Constantes de cuentas por cobrar sin acceso a datos: las usan servidor y navegador.
 export const numeroRecibo = (n: number) => `RC-${String(n).padStart(6, "0")}`;
+export const numeroAplicacionAnticipo = (n: number) => `AA-${String(n).padStart(6, "0")}`;
 export const numeroCobro = (n: number) => `COB-${String(n).padStart(6, "0")}`;
 
 export const FORMAS_PAGO = {

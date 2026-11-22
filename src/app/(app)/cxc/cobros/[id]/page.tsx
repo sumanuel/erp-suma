@@ -44,6 +44,7 @@ export default async function DetalleCobro({ params }: { params: Promise<{ id: s
           <div><dt className="text-gris-500">Forma de pago</dt><dd>{FORMAS_PAGO[c.formaPago as keyof typeof FORMAS_PAGO] ?? c.formaPago}</dd></div>
           <div><dt className="text-gris-500">Pagó</dt><dd>{c.moneda === "VES" ? "Bs. " : "$ "}{formatoUsd(Number(c.montoMoneda))}{c.tasaUsd ? ` (tasa ${textoTasa(Number(c.tasaUsd))})` : ""}</dd></div>
           <div><dt className="text-gris-500">Aplicado USD</dt><dd className="font-semibold">{formatoUsd(Number(c.montoUsd))}</dd></div>
+          {Number(c.anticipoUsd) > 0 ? <div><dt className="text-gris-500">Anticipo (saldo a favor)</dt><dd className="font-semibold">{formatoUsd(Number(c.anticipoUsd))} USD · disponible {formatoUsd(Number(c.anticipoSaldoUsd))}</dd></div> : null}
           <div><dt className="text-gris-500">Cuenta</dt><dd>{c.cuenta ? <Link href={`/tesoreria/cuentas/${c.cuenta.id}`} className="text-marca-texto hover:underline">{c.cuenta.codigo}</Link> : "—"}</dd></div>
           <div><dt className="text-gris-500">Referencia</dt><dd>{c.referencia ?? "—"}</dd></div>
           <div><dt className="text-gris-500">Cobrador</dt><dd>{cobrador?.nombre ?? "—"}</dd></div>
