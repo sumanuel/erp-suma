@@ -105,6 +105,7 @@ model Producto {
   precioLista         Decimal  @default(0) @map("precio_lista") @db.Decimal(18, 4)
   /// Precio máximo de venta al público (productos con precio regulado). 0 = sin tope.
   precioMaximoPublico Decimal  @default(0) @map("precio_maximo_publico") @db.Decimal(18, 4)
+  divisionId          String?  @map("division_id") @db.Uuid
   marcaId             String?  @map("marca_id") @db.Uuid
   marca               Marca?   @relation(fields: [marcaId], references: [id])
   /// PROMEDIO (costo promedio ponderado) o ULTIMO (el de la última compra): cuál se usa como costo del producto.

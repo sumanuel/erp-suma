@@ -16,16 +16,34 @@ export const almacenes: Maestro = {
   genero: "el",
   delegado: (db) => db.almacen as unknown as Delegado,
   clave: { campo: "id", autogenerada: true },
-  campos: [
-    { nombre: "codigo", etiqueta: "Código", tipo: "texto", max: 15, requerido: true, soloCrear: true, ayuda: "No se puede cambiar después." },
-    { nombre: "nombre", etiqueta: "Nombre", tipo: "texto", max: 100, requerido: true },
-    { nombre: "direccion", etiqueta: "Dirección (opcional)", tipo: "texto", max: 300, ancho: 2 },
-    { nombre: "activo", etiqueta: "Activo", tipo: "booleano" },
-  ],
+  incluir: { sucursal: { select: { nombre: true } } },
+  campos: async (db) => {
+    const [sucursales, cuentas] = await Promise.all([
+      db.sucursal.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
+      db.cuentaContable.findMany({ where: { posteable: true, activo: true }, orderBy: { codigo: "asc" }, select: { id: true, codigo: true, nombre: true } }),
+    ]);
+    const opcCuentas = cuentas.map((c) => ({ valor: c.id, etiqueta: `${c.codigo} ${c.nombre}` }));
+    const cuenta = (nombre: string, etiqueta: string, extra = {}) => ({ nombre, etiqueta, tipo: "seleccion" as const, opciones: opcCuentas, ...extra });
+    return [
+      { nombre: "codigo", etiqueta: "Código", tipo: "texto", max: 15, requerido: true, soloCrear: true, seccion: "Datos del almacén", ayuda: "No se puede cambiar después." },
+      { nombre: "nombre", etiqueta: "Nombre", tipo: "texto", max: 100, requerido: true },
+      { nombre: "sucursalId", etiqueta: "Sucursal", tipo: "seleccion", opciones: sucursales.map((s) => ({ valor: s.id, etiqueta: s.nombre })) },
+      { nombre: "direccion", etiqueta: "Dirección (opcional)", tipo: "texto", max: 300, ancho: 3 },
+      { nombre: "telefono1", etiqueta: "Teléfono 1 (opcional)", tipo: "texto", max: 20 },
+      { nombre: "telefono2", etiqueta: "Teléfono 2 (opcional)", tipo: "texto", max: 20 },
+      { nombre: "comentario", etiqueta: "Comentario (opcional)", tipo: "textoLargo", max: 500, ancho: 3 },
+      cuenta("cuentaInventarioId", "Cuenta de inventario", { seccion: "Cuentas contables", ayuda: "Las cuentas de entrada y salida se usarán al contabilizar traslados, ajustes y procesos." }),
+      cuenta("cuentaEntradaTrasladoId", "Entrada por traslado"), cuenta("cuentaSalidaTrasladoId", "Salida por traslado"),
+      cuenta("cuentaEntradaAjusteId", "Entrada por ajuste"), cuenta("cuentaSalidaAjusteId", "Salida por ajuste"),
+      cuenta("cuentaEntradaProcesoId", "Entrada por proceso"), cuenta("cuentaSalidaProcesoId", "Salida por proceso"),
+      { nombre: "activo", etiqueta: "Activo", tipo: "booleano" },
+    ];
+  },
   valoresIniciales: { activo: true },
   columnas: [
     { id: "nombre", titulo: "Nombre", campo: "nombre", fija: true },
     { id: "codigo", titulo: "Código", campo: "codigo" },
+    { id: "sucursal", titulo: "Sucursal", valor: (f) => rel(f, "sucursal", "nombre") as string | undefined },
     { id: "direccion", titulo: "Dirección", campo: "direccion" },
     { id: "activo", titulo: "Estado", campo: "activo", etiqueta: etiquetaActivo },
   ],

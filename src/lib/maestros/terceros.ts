@@ -26,8 +26,20 @@ async function catalogo<T extends { id: string }>(consulta: Promise<T[]>, etique
   return (await consulta).map((x) => ({ valor: x.id, etiqueta: etiqueta(x) }));
 }
 
+/** Cuenta contable propia del tercero y su auxiliar (el auxiliar se filtra por la cuenta elegida). */
+async function contabilidadTercero(db: Db, seccion: string): Promise<CampoForm[]> {
+  const [cuentas, auxiliares] = await Promise.all([
+    db.cuentaContable.findMany({ where: { posteable: true, activo: true }, orderBy: { codigo: "asc" }, select: { id: true, codigo: true, nombre: true } }),
+    db.auxiliarContable.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, codigo: true, nombre: true, cuentaId: true } }),
+  ]);
+  return [
+    { nombre: "cuentaContableId", etiqueta: "Cuenta contable propia", tipo: "seleccion", seccion, ayuda: "Opcional. Si la dejas vacía se usa la cuenta general de cuentas por cobrar/pagar.", opciones: cuentas.map((c) => ({ valor: c.id, etiqueta: `${c.codigo} ${c.nombre}` })) },
+    { nombre: "auxiliarContableId", etiqueta: "Auxiliar contable", tipo: "seleccion", dependeDe: "cuentaContableId", opciones: auxiliares.map((a) => ({ valor: a.id, etiqueta: `${a.codigo} · ${a.nombre}`, padre: a.cuentaId })) },
+  ];
+}
+
 /** Catálogos de ubicación: cada nivel lleva el `padre` para que el formulario filtre. */
-async function ubicacion(db: Db, seccion: string): Promise<CampoForm[]> {
+export async function ubicacion(db: Db, seccion: string): Promise<CampoForm[]> {
   const [paises, estados, municipios, parroquias] = await Promise.all([
     db.pais.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
     db.estado.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true, paisId: true } }),
@@ -43,7 +55,7 @@ async function ubicacion(db: Db, seccion: string): Promise<CampoForm[]> {
 }
 
 /** Que estado, municipio y parroquia elegidos pertenezcan a lo de arriba. */
-async function validarUbicacion(db: Db, d: Fila): Promise<Record<string, string>> {
+export async function validarUbicacion(db: Db, d: Fila): Promise<Record<string, string>> {
   const e: Record<string, string> = {};
   if (typeof d.estadoId === "string") {
     const x = await db.estado.findUnique({ where: { id: d.estadoId }, select: { paisId: true } });
@@ -70,6 +82,11 @@ async function validarTercero(db: Db, datos: Fila) {
   Object.assign(errores, rangoPorcentaje(datos, ["descuento1", "descuento2", "descuento3"]));
   if (typeof datos.limiteCredito === "number" && datos.limiteCredito < 0) errores.limiteCredito = "No puede ser negativo.";
   Object.assign(errores, await validarUbicacion(db, datos));
+  if (typeof datos.auxiliarContableId === "string") {
+    const a = await db.auxiliarContable.findUnique({ where: { id: datos.auxiliarContableId }, select: { cuentaId: true } });
+    if (!datos.cuentaContableId) errores.auxiliarContableId = "Elige primero la cuenta contable.";
+    else if (!a || a.cuentaId !== datos.cuentaContableId) errores.auxiliarContableId = "El auxiliar no pertenece a la cuenta elegida.";
+  }
   return errores;
 }
 
@@ -105,6 +122,10 @@ export const clientes: Maestro = {
   clave: { campo: "id", autogenerada: true },
   incluir: { vendedor: { select: { nombre: true } }, condicionPago: { select: { nombre: true } } },
   campos: async (db) => {
+    const [clasificaciones, actividades] = await Promise.all([
+      catalogo(db.clasificacionCliente.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }), (c) => c.nombre),
+      catalogo(db.actividadEconomica.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }), (c) => c.nombre),
+    ]);
     const [vendedores, cobradores, condiciones, tiposNegocio, transportes] = await Promise.all([
       catalogo(db.vendedor.findMany({ where: { activo: true, esVendedor: true }, orderBy: { nombre: "asc" }, select: { id: true, codigo: true, nombre: true } }), (v) => `${v.nombre} (${v.codigo})`),
       catalogo(db.vendedor.findMany({ where: { activo: true, esCobrador: true }, orderBy: { nombre: "asc" }, select: { id: true, codigo: true, nombre: true } }), (v) => `${v.nombre} (${v.codigo})`),
@@ -122,8 +143,8 @@ export const clientes: Maestro = {
       { nombre: "tipo", etiqueta: "Tipo", tipo: "seleccion", requerido: true, opciones: opts(["Privado", "Público"]) },
       { nombre: "categoria", etiqueta: "Categoría", tipo: "seleccion", opciones: opts(["Comercial", "Industrial", "Sanitario", "Municipal", "Residencial"]) },
       { nombre: "tipoNegocioId", etiqueta: "Tipo de negocio", tipo: "seleccion", opciones: tiposNegocio },
-      { nombre: "clasificacion", etiqueta: "Clasificación", tipo: "texto", max: 30 },
-      { nombre: "actividadEconomica", etiqueta: "Actividad económica", tipo: "texto", max: 100 },
+      { nombre: "clasificacionId", etiqueta: "Clasificación", tipo: "seleccion", opciones: clasificaciones },
+      { nombre: "actividadEconomicaId", etiqueta: "Actividad económica", tipo: "seleccion", opciones: actividades },
       { nombre: "representante", etiqueta: "Representante", tipo: "texto", max: 100 },
       { nombre: "situacion", etiqueta: "Situación", tipo: "seleccion", requerido: true, opciones: SITUACIONES },
 
@@ -164,6 +185,8 @@ export const clientes: Maestro = {
       { nombre: "diasMaxVencimiento", etiqueta: "Días máximos de vencimiento", tipo: "entero", requerido: true, ayuda: "Antes de pasarse de estos días con facturas vencidas, se le bloquean ventas a crédito. 0 = sin tope." },
       { nombre: "diaCobro", etiqueta: "Día de cobro", tipo: "texto", max: 30 },
       { nombre: "horaCobro", etiqueta: "Hora de cobro", tipo: "texto", max: 30 },
+
+      ...(await contabilidadTercero(db, "Contabilidad")),
 
       { nombre: "fechaNacimiento", etiqueta: "Fecha de nacimiento / constitución", tipo: "fecha", seccion: "Otros datos" },
       { nombre: "observaciones", etiqueta: "Observaciones", tipo: "textoLargo", max: 2000, ancho: 3 },
@@ -215,6 +238,10 @@ export const proveedores: Maestro = {
   clave: { campo: "id", autogenerada: true },
   incluir: { condicionPago: { select: { nombre: true } } },
   campos: async (db) => {
+    const [clasificaciones, actividades] = await Promise.all([
+      catalogo(db.clasificacionProveedor.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }), (c) => c.nombre),
+      catalogo(db.actividadEconomica.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }), (c) => c.nombre),
+    ]);
     const [condiciones, bancos] = await Promise.all([
       catalogo(db.condicionPago.findMany({ where: { activo: true }, orderBy: { dias: "asc" }, select: { id: true, nombre: true } }), (c) => c.nombre),
       catalogo(db.banco.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }), (b) => b.nombre),
@@ -225,8 +252,8 @@ export const proveedores: Maestro = {
       { nombre: "documento", etiqueta: "RIF / documento", tipo: "texto", max: 25, requerido: true, ayuda: "Los puntos, guiones y espacios se quitan al guardar." },
       { nombre: "nombreComercial", etiqueta: "Nombre comercial", tipo: "texto", max: 200, ancho: 2 },
       { nombre: "tipoPersona", etiqueta: "Tipo de persona", tipo: "seleccion", opciones: PERSONAS },
-      { nombre: "clasificacion", etiqueta: "Clasificación", tipo: "texto", max: 30 },
-      { nombre: "actividadEconomica", etiqueta: "Actividad económica", tipo: "texto", max: 100, ayuda: "Orienta el concepto de retención de ISLR." },
+      { nombre: "clasificacionId", etiqueta: "Clasificación", tipo: "seleccion", opciones: clasificaciones },
+      { nombre: "actividadEconomicaId", etiqueta: "Actividad económica", tipo: "seleccion", opciones: actividades, ayuda: "Orienta el concepto de retención de ISLR." },
       { nombre: "contacto", etiqueta: "Persona de contacto", tipo: "texto", max: 120 },
       { nombre: "situacion", etiqueta: "Situación", tipo: "seleccion", requerido: true, opciones: SITUACIONES },
 
@@ -263,6 +290,8 @@ export const proveedores: Maestro = {
       { nombre: "bancoId", etiqueta: "Banco del proveedor", tipo: "seleccion", opciones: bancos, seccion: "Datos bancarios", ayuda: "Para pagarle por transferencia." },
       { nombre: "tipoCuentaBancaria", etiqueta: "Tipo de cuenta", tipo: "seleccion", opciones: [{ valor: "CORRIENTE", etiqueta: "Corriente" }, { valor: "AHORRO", etiqueta: "Ahorro" }] },
       { nombre: "numeroCuentaBancaria", etiqueta: "Número de cuenta", tipo: "texto", max: 30 },
+
+      ...(await contabilidadTercero(db, "Contabilidad")),
 
       { nombre: "observaciones", etiqueta: "Observaciones", tipo: "textoLargo", max: 2000, ancho: 3, seccion: "Otros datos" },
       { nombre: "activo", etiqueta: "Activo", tipo: "booleano" },

@@ -7,6 +7,18 @@ model Almacen {
   codigo        String                 @unique
   nombre        String
   direccion     String?
+  telefono1     String?
+  telefono2     String?
+  comentario    String?
+  sucursalId    String?                @map("sucursal_id") @db.Uuid
+  /// Cuentas contables del almacén: la de inventario y las de entrada/salida por tipo de movimiento (se usarán al contabilizar ajustes y traslados).
+  cuentaInventarioId       String?     @map("cuenta_inventario_id") @db.Uuid
+  cuentaEntradaTrasladoId  String?     @map("cuenta_entrada_traslado_id") @db.Uuid
+  cuentaSalidaTrasladoId   String?     @map("cuenta_salida_traslado_id") @db.Uuid
+  cuentaEntradaAjusteId    String?     @map("cuenta_entrada_ajuste_id") @db.Uuid
+  cuentaSalidaAjusteId     String?     @map("cuenta_salida_ajuste_id") @db.Uuid
+  cuentaEntradaProcesoId   String?     @map("cuenta_entrada_proceso_id") @db.Uuid
+  cuentaSalidaProcesoId    String?     @map("cuenta_salida_proceso_id") @db.Uuid
   activo        Boolean                @default(true)
   creadoEn      DateTime               @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn DateTime               @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
@@ -15,6 +27,9 @@ model Almacen {
   recepciones   Recepcion[]
   facturas      Factura[]
   notasVenta    NotaVenta[]
+
+  ubicaciones   UbicacionFisica[]
+  sucursal      Sucursal? @relation(fields: [sucursalId], references: [id], onDelete: SetNull)
 
   @@map("almacen")
 }

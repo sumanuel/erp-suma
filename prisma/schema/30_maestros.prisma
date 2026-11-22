@@ -20,8 +20,11 @@ model Cliente {
   /// NORMAL, MOROSO o BLOQUEADO
   situacion       String   @default("NORMAL")
   representante   String?
-  clasificacion   String?
-  actividadEconomica String? @map("actividad_economica")
+  clasificacionId String?  @map("clasificacion_id") @db.Uuid
+  actividadEconomicaId String? @map("actividad_economica_id") @db.Uuid
+  /// Cuenta contable y auxiliar propios del cliente (por omisión se usa la cuenta por cobrar general).
+  cuentaContableId String? @map("cuenta_contable_id") @db.Uuid
+  auxiliarContableId String? @map("auxiliar_contable_id") @db.Uuid
   direccion2      String?
   direccionEnvio  String?  @map("direccion_envio")
   paisId          String?   @map("pais_id") @db.Uuid
@@ -77,6 +80,8 @@ model Cliente {
   cobros        Cobro[]
   notasVenta    NotaVenta[]
   retenciones   Retencion[]
+  contactos     ContactoCliente[]
+  sucursales    SucursalCliente[]
 
   @@index([razonSocial])
   @@map("cliente")
@@ -103,8 +108,11 @@ model Proveedor {
   contribuyente   Boolean  @default(true)
   contribuyenteEspecial Boolean @default(false) @map("contribuyente_especial")
   situacion       String   @default("NORMAL")
-  clasificacion   String?
-  actividadEconomica String? @map("actividad_economica")
+  clasificacionId String?  @map("clasificacion_id") @db.Uuid
+  actividadEconomicaId String? @map("actividad_economica_id") @db.Uuid
+  /// Cuenta contable y auxiliar propios del proveedor (por omisión se usa la cuenta por pagar general).
+  cuentaContableId String? @map("cuenta_contable_id") @db.Uuid
+  auxiliarContableId String? @map("auxiliar_contable_id") @db.Uuid
   /// USD o VES: moneda en que factura.
   divisa          String   @default("USD")
   condicionPagoId String?  @map("condicion_pago_id") @db.Uuid
@@ -149,6 +157,7 @@ model Proveedor {
   notasCompra     NotaCompra[]
   transportes     Transporte[]
   retenciones     Retencion[]
+  contactos       ContactoProveedor[]
 
   @@index([razonSocial])
   @@map("proveedor")

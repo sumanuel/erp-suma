@@ -74,7 +74,8 @@ Nuevo: documento (RIF), razón social, nombre comercial, tipo, categoría, direc
 
 
 > **✅ Avance 2026-11-21 (clientes):** hecho: código automático o manual, NIF, tipo de persona, residente, contribuyente (especial), situación, tres direcciones y país→estado→municipio→parroquia, zona postal y geográfica, teléfonos, celulares, fax, web, vendedor, cobrador, comisiones, condición de pago, lista de precios, tres descuentos, tipo de negocio, transporte, moneda, crédito (límite y días máximos), día y hora de cobro, fecha de nacimiento, clasificación, actividad económica, representante y observaciones. Con reglas en la base y pruebas.
-> **⬜ Sigue pendiente:** contactos (`admpersonalcli`), sucursales del cliente, cuenta contable/auxiliar, clasificación y actividad económica como catálogos (hoy texto libre), y cargar los datos reales con la importación. No se llevaron `FERLE` (confirmado que no se usa), `gacenun`, `nonmbreg` ni las fechas de vacaciones.
+> **✅ Avance 2026-11-22 (clientes, catálogos):** contactos (varias personas), sucursales del cliente, cuenta contable y auxiliar propios, y clasificación y actividad económica como catálogos.
+> **⬜ Sigue pendiente:** usar la cuenta contable del cliente al contabilizar, y cargar los datos reales con la importación. No se llevaron `FERLE` (confirmado que no se usa), `gacenun`, `nonmbreg` ni las fechas de vacaciones.
 
 ### 3.2 Proveedores (`admproveedor`, `frmProveedores`)
 
@@ -102,7 +103,8 @@ Nuevo: documento, razón social, nombre comercial, contacto, teléfono, correo, 
 
 
 > **✅ Avance 2026-11-21 (proveedores):** hecho: código, tipo de persona, residente, contribuyente (especial), zona libre, situación, clasificación, actividad económica, moneda en que factura, condición de pago (si los días están en 0 se toman de ella), límite de crédito, tres descuentos, las banderas de moneda extranjera, banco, tipo y número de cuenta, tres direcciones y ubicación encadenada, tres teléfonos, dos celulares, web y observaciones.
-> **⬜ Sigue pendiente:** varias personas de contacto (`admpersonalprov`), cuentas contables del proveedor, foto, y los catálogos de clasificación y actividad. El enlace de la condición de pago a las órdenes y facturas de compra se hace en el paso 5.
+> **✅ Avance 2026-11-22 (proveedores, catálogos):** varias personas de contacto, cuenta contable y auxiliar propios, y clasificación y actividad económica como catálogos.
+> **⬜ Sigue pendiente:** foto, y usar la cuenta contable del proveedor al contabilizar. El enlace de la condición de pago a las órdenes y facturas de compra se hace en el paso 5.
 
 ### 3.3 Productos (`adminv`, `adminvmed`, `adminvparam`, `admprecios`, `admpromociones`, `frmMantProductos`)
 
@@ -135,7 +137,7 @@ Ya está: código, descripción, categoría/subcategoría, alícuota de IVA, ara
 
 ### 3.4 Almacenes (`admalmacenes`) y catálogos de producto
 
-- **Almacén:** el original guarda código, descripción, **dirección 1 y 2, teléfonos 1 y 2, comentario, transporte, sucursal**, y **cuentas contables de entrada y salida** por tipo de movimiento (transferencia, ajuste, proceso) más una cuenta. El nuevo: código, nombre, dirección, activo. Falta teléfono, comentario, sucursal y las cuentas contables por movimiento (M).
+- **Almacén:** el original guarda código, descripción, **dirección 1 y 2, teléfonos 1 y 2, comentario, transporte, sucursal**, y **cuentas contables de entrada y salida** por tipo de movimiento (transferencia, ajuste, proceso) más una cuenta. El nuevo: código, nombre, dirección, activo. Falta teléfono, comentario, sucursal y las cuentas contables por movimiento (M). **✅ 2026-11-22:** hecho (teléfonos, comentario, sucursal, cuenta de inventario y de entrada/salida por traslado, ajuste y proceso), más **ubicaciones físicas** y **división** del producto; las cuentas se guardan, **aún no se usan al contabilizar**.
 - **Alícuota de IVA:** tiene los tres porcentajes (venta, zona libre, compra). ✔️
 - **Arancel:** código, descripción, porcentaje, impuesto, kilos. ✔️
 - **Categoría y subcategoría:** código, nombre, comisiones. ✔️ Falta la **imagen** y la **descripción larga** que tienen grupo y subgrupo originales (B).

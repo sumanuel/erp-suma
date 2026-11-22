@@ -2,6 +2,7 @@ import type { Maestro, ModuloMaestros } from "./tipos";
 import { alicuotas, aranceles, categorias, marcas, subcategorias, unidades } from "./catalogos";
 import { presentaciones, preciosLista, productos, promociones, proveedoresProducto } from "./productos";
 import { clientes, proveedores } from "./terceros";
+import { actividadesEconomicas, clasificacionesCliente, clasificacionesProveedor, colores, contactosCliente, contactosProveedor, divisiones, seriesFiscales, sucursales, sucursalesCliente, tallas, ubicacionesFisicas } from "./catalogos-extra";
 import { almacenes, existencias, movimientos } from "./existencias";
 import { monedas, tasas } from "./tasas";
 import { auxiliaresContables, bancos, centrosCosto, condicionesPago, estados, municipios, paises, parroquias, tarifasRetencion, tiposNegocio, transportes, vendedores } from "./tablas";
@@ -9,8 +10,21 @@ import { auxiliaresContables, bancos, centrosCosto, condicionesPago, estados, mu
 // Módulos cuyas pantallas las arma el motor de maestros. La primera sección de cada módulo es la que se abre en /<módulo>;
 // las demás van en /<módulo>/<slug>. Un módulo que no esté aquí muestra la pantalla "en construcción".
 export const modulosMaestros: ModuloMaestros[] = [
-  { modulo: "clientes", secciones: [{ slug: "", titulo: "Clientes", maestro: clientes }] },
-  { modulo: "proveedores", secciones: [{ slug: "", titulo: "Proveedores", maestro: proveedores }] },
+  {
+    modulo: "clientes",
+    secciones: [
+      { slug: "", titulo: "Clientes", maestro: clientes },
+      { slug: "contactos", titulo: "Contactos", maestro: contactosCliente },
+      { slug: "sucursales", titulo: "Sucursales", maestro: sucursalesCliente },
+    ],
+  },
+  {
+    modulo: "proveedores",
+    secciones: [
+      { slug: "", titulo: "Proveedores", maestro: proveedores },
+      { slug: "contactos", titulo: "Contactos", maestro: contactosProveedor },
+    ],
+  },
   {
     modulo: "productos",
     secciones: [
@@ -27,6 +41,7 @@ export const modulosMaestros: ModuloMaestros[] = [
       { slug: "", titulo: "Existencias", maestro: existencias },
       { slug: "movimientos", titulo: "Movimientos", maestro: movimientos },
       { slug: "almacenes", titulo: "Almacenes", maestro: almacenes },
+      { slug: "ubicaciones", titulo: "Ubicaciones físicas", maestro: ubicacionesFisicas },
     ],
   },
   {
@@ -62,6 +77,14 @@ export const modulosMaestros: ModuloMaestros[] = [
       { slug: "alicuotas", titulo: "Alícuotas de IVA", maestro: alicuotas },
       { slug: "aranceles", titulo: "Aranceles", maestro: aranceles },
       { slug: "unidades", titulo: "Unidades de medida", maestro: unidades },
+      { slug: "divisiones", titulo: "Divisiones", maestro: divisiones },
+      { slug: "colores", titulo: "Colores", maestro: colores },
+      { slug: "tallas", titulo: "Tallas", maestro: tallas },
+      { slug: "sucursales", titulo: "Sucursales", maestro: sucursales },
+      { slug: "actividades", titulo: "Actividades económicas", maestro: actividadesEconomicas },
+      { slug: "clasificacion-clientes", titulo: "Clasificación de clientes", maestro: clasificacionesCliente },
+      { slug: "clasificacion-proveedores", titulo: "Clasificación de proveedores", maestro: clasificacionesProveedor },
+      { slug: "series-fiscales", titulo: "Series fiscales", maestro: seriesFiscales },
     ],
   },
 ];

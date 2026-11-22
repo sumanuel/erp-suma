@@ -1,0 +1,205 @@
+// Catálogos y registros dependientes que faltaban frente al sistema anterior: sucursales, actividad económica, clasificaciones, divisiones, colores, tallas,
+// series fiscales, ubicaciones físicas, y los contactos y sucursales de clientes y proveedores. Las referencias a otras tablas llevan su clave foránea en la migración.
+
+model Sucursal {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String    @unique
+  nombre        String
+  direccion     String?
+  telefono1     String?
+  telefono2     String?
+  fax           String?
+  rif           String?
+  email         String?
+  fechaInicio   DateTime? @map("fecha_inicio") @db.Date
+  fechaFin      DateTime? @map("fecha_fin") @db.Date
+  paisId        String?   @map("pais_id") @db.Uuid
+  estadoId      String?   @map("estado_id") @db.Uuid
+  municipioId   String?   @map("municipio_id") @db.Uuid
+  parroquiaId   String?   @map("parroquia_id") @db.Uuid
+  activo        Boolean   @default(true)
+  creadoEn      DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime  @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  almacenes     Almacen[]
+
+  @@map("sucursal")
+}
+
+model ActividadEconomica {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  observaciones String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("actividad_economica")
+}
+
+model ClasificacionCliente {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  observaciones String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("clasificacion_cliente")
+}
+
+model ClasificacionProveedor {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  observaciones String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("clasificacion_proveedor")
+}
+
+model Division {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  comentario    String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("division")
+}
+
+model Color {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("color")
+}
+
+model Talla {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  nombre        String
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("talla")
+}
+
+/// Máquina o impresora fiscal de una caja: serie, serial, dirección de red y tipo de documento que imprime. Equivale a admseriefiscal.
+model SerieFiscal {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serie         String   @unique
+  serial        String?
+  impresora     String?
+  ip            String?
+  /// FACTURA, NOTA_CREDITO o NOTA_DEBITO
+  documento     String   @default("FACTURA")
+  caja          String?
+  puntoActivo   Boolean  @default(true) @map("punto_activo")
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("serie_fiscal")
+}
+
+/// Ubicación física dentro de un almacén (pasillo, anaquel, nivel, sector). Equivale a admubicafis.
+model UbicacionFisica {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo        String   @unique
+  almacenId     String   @map("almacen_id") @db.Uuid
+  pasillo       String?
+  anaquel       String?
+  nivel         String?
+  sector        String?
+  comentario    String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  almacen       Almacen  @relation(fields: [almacenId], references: [id], onDelete: Restrict)
+
+  @@index([almacenId])
+  @@map("ubicacion_fisica")
+}
+
+/// Personas de contacto de un cliente (admpersonalcli).
+model ContactoCliente {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId     String   @map("cliente_id") @db.Uuid
+  nombre        String
+  cargo         String?
+  extension     String?
+  telefono      String?
+  celular       String?
+  email         String?
+  observaciones String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  cliente       Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId])
+  @@map("contacto_cliente")
+}
+
+/// Sucursales o puntos de entrega de un cliente (admsucursalcli).
+model SucursalCliente {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId     String   @map("cliente_id") @db.Uuid
+  codigo        String
+  nombre        String
+  direccion     String?
+  telefono      String?
+  fax           String?
+  celular       String?
+  contacto      String?
+  cargo         String?
+  email         String?
+  paisId        String?  @map("pais_id") @db.Uuid
+  estadoId      String?  @map("estado_id") @db.Uuid
+  municipioId   String?  @map("municipio_id") @db.Uuid
+  parroquiaId   String?  @map("parroquia_id") @db.Uuid
+  observaciones String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  cliente       Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@unique([clienteId, codigo])
+  @@map("sucursal_cliente")
+}
+
+/// Personas de contacto de un proveedor (admpersonalprov).
+model ContactoProveedor {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  proveedorId   String   @map("proveedor_id") @db.Uuid
+  nombre        String
+  cargo         String?
+  extension     String?
+  telefono      String?
+  celular       String?
+  email         String?
+  observaciones String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  proveedor     Proveedor @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
+
+  @@index([proveedorId])
+  @@map("contacto_proveedor")
+}
