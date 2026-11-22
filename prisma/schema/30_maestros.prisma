@@ -88,6 +88,7 @@ model Cliente {
 }
 
 model Proveedor {
+  importaciones Importacion[]
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// RIF / documento fiscal, sin puntos ni guiones.
   documento       String   @unique

@@ -3,6 +3,7 @@
 // del sistema anterior, ahora con saldo por almacén.
 
 model Almacen {
+  importaciones Importacion[]
   id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   codigo        String                 @unique
   nombre        String

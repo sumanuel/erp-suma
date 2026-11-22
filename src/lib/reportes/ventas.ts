@@ -39,10 +39,12 @@ export async function reporteVentas(db: Db, v: Record<string, string>): Promise<
     };
   }
 
+  // «Ventas por vendedor» (original: lbxCosultaVentaXVendedor): el vendedor es el del documento.
+  const vendedores = v.agrupar === "vendedor" ? new Map((await db.vendedor.findMany({ select: { id: true, codigo: true, nombre: true } })).map((x) => [x.id, `${x.nombre} (${x.codigo})`])) : new Map<string, string>();
   const grupos = new Map<string, { etiqueta: string; extra: string; fecha?: Date; a: Acum }>();
   for (const f of facturas) {
-    const clave = v.agrupar === "dia" ? f.fecha.toISOString().slice(0, 10) : v.agrupar === "mes" ? f.fecha.toISOString().slice(0, 7) : f.cliente.id;
-    const g = grupos.get(clave) ?? { etiqueta: v.agrupar === "cliente" ? f.cliente.razonSocial : clave, extra: v.agrupar === "cliente" ? f.cliente.documento : "", fecha: v.agrupar === "dia" ? f.fecha : undefined, a: vacio() };
+    const clave = v.agrupar === "dia" ? f.fecha.toISOString().slice(0, 10) : v.agrupar === "mes" ? f.fecha.toISOString().slice(0, 7) : v.agrupar === "vendedor" ? f.vendedorId ?? "SIN" : f.cliente.id;
+    const g = grupos.get(clave) ?? { etiqueta: v.agrupar === "cliente" ? f.cliente.razonSocial : v.agrupar === "vendedor" ? (f.vendedorId ? vendedores.get(f.vendedorId) ?? "Vendedor eliminado" : "Sin vendedor") : clave, extra: v.agrupar === "cliente" ? f.cliente.documento : "", fecha: v.agrupar === "dia" ? f.fecha : undefined, a: vacio() };
     g.a.facturas += 1;
     g.a.ventas += Number(f.subtotal);
     g.a.iva += Number(f.iva);
@@ -52,13 +54,13 @@ export async function reporteVentas(db: Db, v: Record<string, string>): Promise<
     grupos.set(clave, g);
   }
   const lista = [...grupos.values()];
-  if (v.agrupar === "cliente") lista.sort((a, b) => b.a.total - a.a.total);
+  if (v.agrupar === "cliente" || v.agrupar === "vendedor") lista.sort((a, b) => b.a.total - a.a.total);
   const filas: Fila[] = lista.map((g) => ({
     grupo: g.fecha ?? g.etiqueta, documento: g.extra, facturas: g.a.facturas, ventas: redondear2(g.a.ventas), iva: redondear2(g.a.iva), total: redondear2(g.a.total), totalBs: redondear2(g.a.totalBs),
     costo: redondear2(g.a.costo), margen: redondear2(g.a.ventas - g.a.costo),
   }));
   const sum = (k: string) => redondear2(filas.reduce((s, f) => s + (f[k] as number), 0));
-  const titulo = { cliente: "Cliente", dia: "Día", mes: "Mes (AAAA-MM)" }[v.agrupar] ?? "Cliente";
+  const titulo = { cliente: "Cliente", dia: "Día", mes: "Mes (AAAA-MM)", vendedor: "Vendedor" }[v.agrupar] ?? "Cliente";
   return {
     columnas: [
       { clave: "grupo", titulo, tipo: v.agrupar === "dia" ? "fecha" : "texto" },

@@ -19,7 +19,7 @@ const vista = (): Parametro => ({ id: "vista", etiqueta: "Vista", tipo: "opcione
 export const REPORTES: DefReporte[] = [
   {
     id: "ventas", titulo: "Ventas, costo y margen", grupo: "Ventas", descripcion: "Ventas del período por cliente, producto, día o mes, con costo y margen.",
-    parametros: () => [...fechas(), { id: "agrupar", etiqueta: "Agrupar por", tipo: "opciones", defecto: "cliente", opciones: [{ valor: "cliente", etiqueta: "Cliente" }, { valor: "producto", etiqueta: "Producto" }, { valor: "dia", etiqueta: "Día" }, { valor: "mes", etiqueta: "Mes" }] }],
+    parametros: () => [...fechas(), { id: "agrupar", etiqueta: "Agrupar por", tipo: "opciones", defecto: "cliente", opciones: [{ valor: "cliente", etiqueta: "Cliente" }, { valor: "producto", etiqueta: "Producto" }, { valor: "dia", etiqueta: "Día" }, { valor: "mes", etiqueta: "Mes" }, { valor: "vendedor", etiqueta: "Vendedor" }] }],
     consultar: reporteVentas,
   },
   {

@@ -1,0 +1,79 @@
+// Importaciones: expediente de una compra del exterior. Los productos entran al inventario con el costo liquidado (FOB + flete/seguro + gastos prorrateados + arancel).
+// Todo en USD (el FOB puede venir en otra moneda: `cambioUsd` son los USD por 1 unidad de esa moneda).
+
+model Importacion {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Se muestra como IMP-000123.
+  numero          Int       @unique @default(autoincrement())
+  proveedorId     String    @map("proveedor_id") @db.Uuid
+  proveedor       Proveedor @relation(fields: [proveedorId], references: [id])
+  /// Documento (factura) del proveedor del exterior.
+  documento       String
+  fecha           DateTime  @db.Date
+  almacenId       String    @map("almacen_id") @db.Uuid
+  almacen         Almacen   @relation(fields: [almacenId], references: [id])
+  moneda          String    @default("USD")
+  cambioUsd       Decimal   @default(1) @map("cambio_usd") @db.Decimal(18, 8)
+  /// Factor CIF (flete y seguro sobre el FOB, por ejemplo 1,0247) y factor de «otros» (se suma a la base del arancel).
+  factorCif       Decimal   @default(1) @map("factor_cif") @db.Decimal(18, 10)
+  factorOtros     Decimal   @default(0) @map("factor_otros") @db.Decimal(18, 10)
+  /// BORRADOR, PROCESADA, ANULADA
+  estado          String    @default("BORRADOR")
+  observaciones   String?
+  fobUsd          Decimal   @default(0) @map("fob_usd") @db.Decimal(18, 4)
+  cifUsd          Decimal   @default(0) @map("cif_usd") @db.Decimal(18, 4)
+  gastosUsd       Decimal   @default(0) @map("gastos_usd") @db.Decimal(18, 4)
+  arancelesUsd    Decimal   @default(0) @map("aranceles_usd") @db.Decimal(18, 4)
+  totalUsd        Decimal   @default(0) @map("total_usd") @db.Decimal(18, 4)
+  creadoPorId     String?   @map("creado_por_id") @db.Uuid
+  creadoPorNombre String?   @map("creado_por_nombre")
+  creadoEn        DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn   DateTime  @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  procesadaEn     DateTime? @map("procesada_en") @db.Timestamptz(6)
+  procesadaPorNombre String? @map("procesada_por_nombre")
+  anuladaEn       DateTime? @map("anulada_en") @db.Timestamptz(6)
+  anuladaPorNombre String?  @map("anulada_por_nombre")
+  motivoAnulacion String?   @map("motivo_anulacion")
+  lineas          ImportacionLinea[]
+  gastos          ImportacionGasto[]
+
+  @@index([estado, fecha(sort: Desc)])
+  @@index([proveedorId])
+  @@map("importacion")
+}
+
+model ImportacionLinea {
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  importacionId    String      @map("importacion_id") @db.Uuid
+  importacion      Importacion @relation(fields: [importacionId], references: [id], onDelete: Cascade)
+  linea            Int
+  productoCodigo   String      @map("producto_codigo")
+  producto         Producto    @relation(fields: [productoCodigo], references: [codigo])
+  cantidad         Decimal     @db.Decimal(18, 4)
+  /// Precio FOB por unidad en la moneda del documento.
+  fobUnitario      Decimal     @map("fob_unitario") @db.Decimal(18, 8)
+  arancelPct       Decimal     @default(0) @map("arancel_pct") @db.Decimal(7, 4)
+  fobUsd           Decimal     @default(0) @map("fob_usd") @db.Decimal(18, 4)
+  cifUsd           Decimal     @default(0) @map("cif_usd") @db.Decimal(18, 4)
+  gastoUsd         Decimal     @default(0) @map("gasto_usd") @db.Decimal(18, 4)
+  arancelUsd       Decimal     @default(0) @map("arancel_usd") @db.Decimal(18, 4)
+  totalUsd         Decimal     @default(0) @map("total_usd") @db.Decimal(18, 4)
+  costoUnitarioUsd Decimal     @default(0) @map("costo_unitario_usd") @db.Decimal(18, 8)
+
+  @@unique([importacionId, linea])
+  @@unique([importacionId, productoCodigo])
+  @@map("importacion_linea")
+}
+
+model ImportacionGasto {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  importacionId String      @map("importacion_id") @db.Uuid
+  importacion   Importacion @relation(fields: [importacionId], references: [id], onDelete: Cascade)
+  descripcion   String
+  montoUsd      Decimal     @map("monto_usd") @db.Decimal(18, 4)
+  proveedorId   String?     @map("proveedor_id") @db.Uuid
+  fecha         DateTime?   @db.Date
+
+  @@index([importacionId])
+  @@map("importacion_gasto")
+}

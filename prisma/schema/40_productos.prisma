@@ -75,6 +75,7 @@ model UnidadMedida {
 }
 
 model Producto {
+  lineasImportacion ImportacionLinea[]
   id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Código que el negocio usa para el producto. No cambia una vez creado.
   codigo              String   @unique
