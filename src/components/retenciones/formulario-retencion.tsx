@@ -15,8 +15,10 @@ const fmt = (n: number) => n.toLocaleString("es-VE", { minimumFractionDigits: 2,
  * Formulario de retención. `sufrida` pide el comprobante del cliente y su fecha; la practicada usa un comprobante que numera el sistema.
  * El IVA se calcula sobre el IVA de la factura; el ISLR sobre la base imponible (o una menor). El servidor recalcula y valida.
  */
-export function FormularioRetencion({ sufrida, hoy, factura, pctInicialIva, volver, guardar }: {
+export function FormularioRetencion({ sufrida, hoy, factura, pctInicialIva, volver, guardar, tarifas = [] }: {
   sufrida: boolean; hoy: string; pctInicialIva: number; volver: string;
+  /// Conceptos de ISLR del catálogo (tarifas): al elegir uno se propone su porcentaje y su descripción como concepto.
+  tarifas?: { codigo: number; descripcion: string; porcentaje: number }[];
   factura: { id: string; etiqueta: string; tercero: string; iva: number; subtotal: number; saldo: number };
   guardar: (datos: unknown) => Promise<Resultado>;
 }) {
@@ -62,6 +64,15 @@ export function FormularioRetencion({ sufrida, hoy, factura, pctInicialIva, volv
           </div>
           {tipo === "ISLR" ? (
             <>
+              {tarifas.length > 0 ? (
+                <div className="flex flex-col gap-1.5 md:col-span-2">
+                  <label htmlFor="tarifa" className="text-[13px] font-medium">Concepto de ISLR (catálogo)</label>
+                  <select id="tarifa" defaultValue="" onChange={(e) => { const t = tarifas.find((x) => String(x.codigo) === e.target.value); if (t) { setPctIslr(String(t.porcentaje)); setConcepto(`${t.codigo} · ${t.descripcion}`.slice(0, 120)); } }} className={`${claseControl} pr-9`}>
+                    <option value="">Elegir para proponer el porcentaje…</option>
+                    {tarifas.map((t) => <option key={t.codigo} value={t.codigo}>{t.codigo} · {t.descripcion} ({t.porcentaje} %)</option>)}
+                  </select>
+                </div>
+              ) : null}
               <div className="flex flex-col gap-1.5"><label htmlFor="base" className="text-[13px] font-medium">Base (USD)</label><input id="base" inputMode="decimal" value={base} onChange={(e) => setBase(e.target.value)} required className={claseControl} /></div>
               <div className="flex flex-col gap-1.5"><label htmlFor="concepto" className="text-[13px] font-medium">Concepto</label><input id="concepto" value={concepto} onChange={(e) => setConcepto(e.target.value)} maxLength={120} placeholder="Servicios, honorarios…" className={claseControl} /></div>
             </>

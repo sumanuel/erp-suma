@@ -16,8 +16,10 @@ export default async function NuevaRetencionProveedor({ searchParams }: { search
   const f = await db.facturaCompra.findUnique({ where: { id }, include: { proveedor: { select: { razonSocial: true, documento: true, retencionIvaPct: true } } } });
   if (!f) notFound();
   if (f.estado !== "REGISTRADA") redirect(`/cxp/facturas/${id}`);
+  const tarifas = (await db.tarifaRetencion.findMany({ where: { activo: true }, orderBy: { codigo: "asc" }, select: { codigo: true, descripcion: true, porcentaje: true } })).map((t) => ({ ...t, porcentaje: Number(t.porcentaje) }));
   return (
     <FormularioRetencion
+      tarifas={tarifas}
       sufrida={false} hoy={hoyCaracas().toISOString().slice(0, 10)} volver={`/cxp/facturas/${id}`} guardar={aplicarRetencionProveedor}
       pctInicialIva={Number(f.proveedor.retencionIvaPct)}
       factura={{ id, etiqueta: `${numeroFacturaCompra(f.numero)} · ${f.documento}`, tercero: `${f.proveedor.razonSocial} (${f.proveedor.documento})`, iva: Number(f.iva), subtotal: Number(f.subtotal), saldo: Number(f.saldo) }}

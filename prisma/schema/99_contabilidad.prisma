@@ -68,6 +68,7 @@ model Asiento {
   creadoEn         DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
   lineas           AsientoLinea[]
 
+  ejercicioCierre EjercicioContable[]
   @@index([fecha(sort: Desc)])
   @@index([anio, mes])
   @@map("asiento")
@@ -129,4 +130,18 @@ model AuxiliarContable {
 
   @@unique([cuentaId, codigo])
   @@map("auxiliar_contable")
+}
+
+/// Ejercicio (año) contable cerrado: su asiento de cierre llevó los resultados del año a la cuenta de resultados acumulados.
+model EjercicioContable {
+  anio             Int      @id
+  fechaCierre      DateTime @map("fecha_cierre") @db.Date
+  asientoId        String   @map("asiento_id") @db.Uuid
+  asiento          Asiento  @relation(fields: [asientoId], references: [id])
+  resultadoBs      Decimal  @map("resultado_bs") @db.Decimal(18, 2)
+  cerradoPorId     String?  @map("cerrado_por_id") @db.Uuid
+  cerradoPorNombre String?  @map("cerrado_por_nombre")
+  cerradoEn        DateTime @default(now()) @map("cerrado_en") @db.Timestamptz(6)
+
+  @@map("ejercicio_contable")
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requerirPermisoAccion, tienePermiso } from "@/lib/dal";
+import { requerirPermisoAccion, tienePermiso, tienePermisoEspecial } from "@/lib/dal";
 import { abrirTurno, cerrarTurno, registrarVentaPos } from "@/lib/pos/servicio";
 import { buscarProductosVenta, type ProductoVenta } from "@/lib/pedidos/servicio";
 
@@ -42,7 +42,7 @@ export async function cobrarVentaPos(datos: unknown): Promise<RespuestaVenta> {
   const ctx = await requerirPermisoAccion("pos", "crear");
   const r = Venta.safeParse(datos);
   if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
-  const res = await registrarVentaPos(ctx.db, ctx.usuario, r.data);
+  const res = await registrarVentaPos(ctx.db, ctx.usuario, { ...r.data, sinCambiarPrecio: !tienePermisoEspecial(ctx, "ventas.cambiar_precio") });
   if (!res.ok) return { error: res.error };
   revalidatePath("/pos");
   revalidatePath("/existencias");

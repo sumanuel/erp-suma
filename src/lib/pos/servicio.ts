@@ -113,6 +113,8 @@ export type DatosVentaPos = {
   /// Moneda en que se entrega el vuelto (por omisión, la del pago en efectivo que lo generó).
   monedaVuelto?: "USD" | "VES";
   encabezado?: EncabezadoVenta;
+  /// El cajero no tiene el permiso «cambiar precio»: cada línea debe llevar el precio de la lista del cliente.
+  sinCambiarPrecio?: boolean;
 };
 
 /** El cliente genérico del mostrador. */
@@ -137,7 +139,7 @@ export async function registrarVentaPos(db: Db, actor: Actor, d: DatosVentaPos):
       if (turno.usuarioId !== actor.id) throw new PosError("Ese turno es de otro cajero.");
 
       const clienteId = d.clienteId || (await clienteContado(tx));
-      const fac = await emitirFacturaEnTx(tx, actor, { clienteId, almacenId: turno.almacenId, observaciones: "Venta de mostrador (POS)", diasCredito: 0, lineas: d.lineas, encabezado: d.encabezado });
+      const fac = await emitirFacturaEnTx(tx, actor, { clienteId, almacenId: turno.almacenId, observaciones: "Venta de mostrador (POS)", diasCredito: 0, lineas: d.lineas, encabezado: d.encabezado, sinCambiarPrecio: d.sinCambiarPrecio });
       const f = await tx.factura.findUniqueOrThrow({ where: { id: fac.id }, select: { total: true, totalBs: true, tasaUsd: true } });
       const total = Number(f.total), tasa = Number(f.tasaUsd), totalBs = Number(f.totalBs);
 

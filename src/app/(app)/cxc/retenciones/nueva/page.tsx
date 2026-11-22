@@ -16,8 +16,10 @@ export default async function NuevaRetencionCliente({ searchParams }: { searchPa
   const f = await db.factura.findUnique({ where: { id }, include: { cliente: { select: { razonSocial: true, documento: true } } } });
   if (!f) notFound();
   if (f.estado !== "EMITIDA") redirect(`/facturacion/${id}`);
+  const tarifas = (await db.tarifaRetencion.findMany({ where: { activo: true }, orderBy: { codigo: "asc" }, select: { codigo: true, descripcion: true, porcentaje: true } })).map((t) => ({ ...t, porcentaje: Number(t.porcentaje) }));
   return (
     <FormularioRetencion
+      tarifas={tarifas}
       sufrida hoy={hoyCaracas().toISOString().slice(0, 10)} volver={`/facturacion/${id}`} guardar={registrarRetencionCliente} pctInicialIva={75}
       factura={{ id, etiqueta: f.numeroFiscal ?? numeroFactura(f.numero), tercero: `${f.cliente.razonSocial} (${f.cliente.documento})`, iva: Number(f.iva), subtotal: Number(f.subtotal), saldo: Number(f.saldo) }}
     />

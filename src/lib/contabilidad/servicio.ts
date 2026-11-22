@@ -156,6 +156,7 @@ export async function anularAsiento(db: Db, actor: Actor, id: string, motivo: st
 export async function cambiarEstadoPeriodo(db: Db, actor: Actor, anio: number, mes: number, cerrar: boolean): Promise<ResultadoConta> {
   return ejecutar(async () => {
     if (!Number.isInteger(anio) || !Number.isInteger(mes) || mes < 1 || mes > 12 || anio < 2000 || anio > 2100) throw new ContaError("Período inválido.");
+    if (!cerrar && (await db.ejercicioContable.findUnique({ where: { anio } }))) throw new ContaError(`El ejercicio ${anio} está cerrado: reábrelo primero (Contabilidad → Cierre del ejercicio).`);
     const desde = cerrar ? "ABIERTO" : "CERRADO";
     const p = await db.periodoContable.upsert({ where: { anio_mes: { anio, mes } }, create: { anio, mes }, update: {} });
     const u = await db.periodoContable.updateMany({

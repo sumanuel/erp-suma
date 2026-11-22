@@ -199,6 +199,18 @@ describe("Punto de venta", () => {
     assert.equal(Number(t.esperadoVes), 964);
   });
 
+  it("sin el permiso de cambiar precio, el mostrador exige el precio de la lista", async () => {
+    await conTurno(0, 0, async (t) => {
+      const p = await crearProducto(e, { existencia: 5, precio: 10 });
+      const cobrar = (precioUnitario: number, sinCambiarPrecio: boolean) =>
+        registrarVentaPos(e.db, e.actor, { turnoId: t.id, sinCambiarPrecio, lineas: [{ productoCodigo: p.codigo, cantidad: 1, precioUnitario, descuento: 0 }], pagos: [{ formaPago: "EFECTIVO", moneda: "VES", recibido: 464 }] });
+      assert.equal((await cobrar(9, true)).ok, false);
+      assert.equal(await existencia(p.codigo), 5);
+      assert.ok((await cobrar(10, true)).ok);
+      assert.ok((await cobrar(9, false)).ok); // con el permiso sí puede
+    });
+  });
+
   it("otro cajero no vende en tu turno ni lo cierra (salvo supervisor)", async () => {
     await conTurno(0, 0, async (t) => {
       const perfil = await e.db.perfil.findFirstOrThrow();

@@ -17,6 +17,7 @@ export const PLAN_CUENTAS_BASE: [string, string, string, boolean][] = [
   ["2.1.02", "IVA débito fiscal", "PASIVO", true],
   ["2.1.03", "Retenciones de IVA por pagar", "PASIVO", true],
   ["2.1.04", "Retenciones de ISLR por pagar", "PASIVO", true],
+  ["2.1.05", "Anticipos de clientes", "PASIVO", true],
   ["3", "Patrimonio", "PATRIMONIO", false],
   ["3.1", "Capital y resultados", "PATRIMONIO", false],
   ["3.1.01", "Capital social", "PATRIMONIO", true],

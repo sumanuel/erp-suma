@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
 import { guardarConfiguracion } from "@/lib/contabilidad/configuracion";
 import { guardarEmpresa } from "@/lib/contabilidad/empresa";
+import { cerrarEjercicio, reabrirEjercicio } from "@/lib/contabilidad/cierre";
 import { anularAsiento, cambiarEstadoPeriodo, crearCuentaContable, editarCuentaContable, eliminarCuentaContable, registrarAsiento } from "@/lib/contabilidad/servicio";
 
 export type EstadoContaForm = { error?: string };
@@ -111,4 +112,19 @@ export async function guardarDatosEmpresa(datos: unknown): Promise<EstadoContaFo
   if (!res.ok) return { error: res.error };
   revalidatePath("/contabilidad", "layout");
   return {};
+}
+
+// ---------- Cierre del ejercicio ----------
+export async function cerrarEjercicioContable(anio: number): Promise<string | null> {
+  const ctx = await requerirPermisoAccion("contabilidad", "editar");
+  const r = await cerrarEjercicio(ctx.db, ctx.usuario, anio);
+  revalidatePath("/contabilidad", "layout");
+  return r.ok ? null : r.error;
+}
+
+export async function reabrirEjercicioContable(anio: number, motivo: string): Promise<string | null> {
+  const ctx = await requerirPermisoAccion("contabilidad", "eliminar");
+  const r = await reabrirEjercicio(ctx.db, ctx.usuario, anio, motivo);
+  revalidatePath("/contabilidad", "layout");
+  return r.ok ? null : r.error;
 }
