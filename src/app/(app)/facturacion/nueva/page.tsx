@@ -1,5 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { requerirPermiso, tienePermisoEspecial } from "@/lib/dal";
+import { presentacionesVenta } from "@/lib/pedidos/servicio";
+import { enUnidadDeLinea } from "@/lib/ventas/presentaciones";
 import { datosVentaForm } from "@/lib/ventas/formularios";
 import { numeroPedido } from "@/lib/pedidos/calculos";
 import { FormularioFactura, type InicialFactura } from "../formulario-factura";
@@ -29,9 +31,10 @@ export default async function NuevaFactura({ searchParams }: { searchParams: Pro
     if (p.estado !== "CONFIRMADO") redirect(`/pedidos/${p.id}`);
     pedido = { id: p.id, etiqueta: numeroPedido(p.numero) };
     opcionesCliente = [{ valor: p.clienteId, etiqueta: `${p.cliente.razonSocial} (${p.cliente.documento})` }];
+    const unidades = await presentacionesVenta(db, p.lineas.map((l) => l.productoCodigo), p.cliente.listaPrecio);
     inicial = {
       clienteId: p.clienteId, almacenId: almacenInicial, observaciones: p.observaciones ?? "", diasCredito: String(venta.datos.condiciones.find((c) => c.valor === p.condicionPagoId)?.dias ?? 0),
-      lineas: p.lineas.map((l) => ({ productoCodigo: l.productoCodigo, descripcion: l.descripcion, ivaPorcentaje: Number(l.ivaPorcentaje), cantidad: String(Number(l.cantidad)), precioUnitario: String(Number(l.precioUnitario)), descuento: String(Number(l.descuento)), bonificacion: l.bonificacion })),
+      lineas: p.lineas.map((l) => ({ productoCodigo: l.productoCodigo, descripcion: l.descripcion, ivaPorcentaje: Number(l.ivaPorcentaje), ...enUnidadDeLinea(l), presentacionId: l.presentacionId ?? "", presentaciones: unidades.get(l.productoCodigo)?.presentaciones, descuento: String(Number(l.descuento)), bonificacion: l.bonificacion })),
     };
   }
   return <FormularioFactura pedido={pedido} inicial={inicial} clientes={opcionesCliente} almacenes={opcionesAlmacen} ventas={venta.datos} puedeAprobar={tienePermisoEspecial(ctx, "ventas.aprobar")} />;

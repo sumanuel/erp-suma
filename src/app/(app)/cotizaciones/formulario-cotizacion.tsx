@@ -6,12 +6,14 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { CondicionesVenta, useCondiciones, type CondicionesInicial, type DatosVentaForm } from "@/components/ventas/condiciones-venta";
 import { descuentoEfectivo } from "@/lib/pedidos/calculos";
+import { SelectorUnidad } from "@/components/ventas/selector-unidad";
+import { conUnidad, type PresentacionVenta } from "@/lib/ventas/presentaciones";
 import { calcularLinea, calcularTotales } from "@/lib/cotizaciones/estados";
 import { buscarProductosCotizacion, guardarCotizacionVenta } from "./acciones";
 import type { ProductoVenta } from "@/lib/pedidos/servicio";
 import { formatoCantidad, formatoUsd } from "./formato";
 
-export type LineaForm = { productoCodigo: string; descripcion: string; ivaPorcentaje: number; cantidad: string; precioUnitario: string; descuento: string };
+export type LineaForm = { productoCodigo: string; descripcion: string; ivaPorcentaje: number; cantidad: string; precioUnitario: string; descuento: string; presentacionId?: string; presentaciones?: PresentacionVenta[]; precioUnidad?: number };
 export type InicialCotizacion = { clienteId: string; fecha: string; validezDias: string; observaciones: string; lineas: LineaForm[]; condiciones?: CondicionesInicial };
 
 const num = (s: string) => {
@@ -48,10 +50,11 @@ export function FormularioCotizacion({ id, inicial, clientes, ventas }: { id: st
   function agregar(p: ProductoVenta) {
     setTexto("");
     setResultados([]);
-    setLineas((ls) => (ls.some((l) => l.productoCodigo === p.codigo) ? ls : [...ls, { productoCodigo: p.codigo, descripcion: p.descripcion, ivaPorcentaje: p.ivaPorcentaje, cantidad: "1", precioUnitario: String(p.precioLista), descuento: String(p.descuentoSugerido ?? 0) }]));
+    setLineas((ls) => (ls.some((l) => l.productoCodigo === p.codigo) ? ls : [...ls, { productoCodigo: p.codigo, descripcion: p.descripcion, ivaPorcentaje: p.ivaPorcentaje, cantidad: "1", presentaciones: p.presentaciones, precioUnidad: p.precioLista, precioUnitario: String(p.precioLista), descuento: String(p.descuentoSugerido ?? 0) }]));
   }
   const cambiar = (i: number, campo: "cantidad" | "precioUnitario" | "descuento", v: string) => setLineas((ls) => ls.map((l, k) => (k === i ? { ...l, [campo]: v } : l)));
 
+  const cambiarUnidad = (i: number, id: string) => setLineas((ls) => ls.map((l, k) => (k === i ? conUnidad(l, id) : l)));
   const entrada = lineas.map((l) => ({ cantidad: num(l.cantidad), costoUnitario: num(l.precioUnitario), descuento: descuentoEfectivo(num(l.descuento), cond.global), ivaPorcentaje: l.ivaPorcentaje }));
   const calculadas = entrada.map(calcularLinea);
   const totales = calcularTotales(entrada);
@@ -61,7 +64,7 @@ export function FormularioCotizacion({ id, inicial, clientes, ventas }: { id: st
     iniciar(async () => {
       const r = await guardarCotizacionVenta(id, {
         clienteId, fecha, validezDias: Math.trunc(num(validezDias)), observaciones, encabezado: cond.encabezado(),
-        lineas: lineas.map((l) => ({ productoCodigo: l.productoCodigo, cantidad: num(l.cantidad), precioUnitario: num(l.precioUnitario), descuento: num(l.descuento) })),
+        lineas: lineas.map((l) => ({ productoCodigo: l.productoCodigo, presentacionId: l.presentacionId || null, cantidad: num(l.cantidad), precioUnitario: num(l.precioUnitario), descuento: num(l.descuento) })),
       });
       if (r?.error) setError(r.error);
     });
@@ -127,7 +130,7 @@ export function FormularioCotizacion({ id, inicial, clientes, ventas }: { id: st
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-gris-500">Busca y agrega los productos de la cotización.</td></tr>
               ) : lineas.map((l, i) => (
                 <tr key={l.productoCodigo} className="border-b border-linea last:border-0">
-                  <td className="px-4 py-2"><span className="font-semibold">{l.productoCodigo}</span> · {l.descripcion}</td>
+                  <td className="px-4 py-2"><span className="font-semibold">{l.productoCodigo}</span> · {l.descripcion}<SelectorUnidad codigo={l.productoCodigo} presentaciones={l.presentaciones} valor={l.presentacionId} onCambio={(id) => cambiarUnidad(i, id)} /></td>
                   <td className={cel}><input aria-label={`Cantidad de ${l.productoCodigo}`} inputMode="decimal" value={l.cantidad} onChange={(e) => cambiar(i, "cantidad", e.target.value)} className={`${claseControl} w-24 text-right`} /></td>
                   <td className={cel}><input aria-label={`Precio de ${l.productoCodigo}`} inputMode="decimal" value={l.precioUnitario} onChange={(e) => cambiar(i, "precioUnitario", e.target.value)} className={`${claseControl} w-28 text-right`} /></td>
                   <td className={cel}><input aria-label={`Descuento de ${l.productoCodigo}`} inputMode="decimal" value={l.descuento} onChange={(e) => cambiar(i, "descuento", e.target.value)} className={`${claseControl} w-20 text-right`} /></td>

@@ -25,6 +25,7 @@ const Cotizacion = z.object({
     cantidad: z.number().finite(),
     precioUnitario: z.number().finite(),
     descuento: z.number().finite(),
+    presentacionId: z.string().uuid().nullable().optional(),
   })).max(500),
 });
 

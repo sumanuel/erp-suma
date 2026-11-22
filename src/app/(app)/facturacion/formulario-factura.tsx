@@ -5,12 +5,14 @@ import { Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { CondicionesVenta, useCondiciones, type CondicionesInicial, type DatosVentaForm } from "@/components/ventas/condiciones-venta";
+import { SelectorUnidad } from "@/components/ventas/selector-unidad";
+import { conUnidad, type PresentacionVenta } from "@/lib/ventas/presentaciones";
 import { calcularLinea, calcularTotales, descuentoEfectivo } from "@/lib/pedidos/calculos";
 import type { ProductoVenta } from "@/lib/pedidos/servicio";
 import { buscarProductosFactura, emitirFacturaVenta } from "./acciones";
 import { formatoCantidad, formatoUsd } from "./formato";
 
-export type LineaForm = { productoCodigo: string; descripcion: string; ivaPorcentaje: number; cantidad: string; precioUnitario: string; descuento: string; almacenId?: string; bonificacion?: boolean };
+export type LineaForm = { productoCodigo: string; descripcion: string; ivaPorcentaje: number; cantidad: string; precioUnitario: string; descuento: string; presentacionId?: string; presentaciones?: PresentacionVenta[]; precioUnidad?: number; almacenId?: string; bonificacion?: boolean };
 export type InicialFactura = { clienteId: string; almacenId: string; observaciones: string; diasCredito: string; lineas: LineaForm[]; condiciones?: CondicionesInicial };
 
 const num = (s: string) => {
@@ -55,10 +57,11 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes, ventas
   function agregar(p: ProductoVenta) {
     setTexto("");
     setResultados([]);
-    setLineas((ls) => (ls.some((l) => l.productoCodigo === p.codigo) ? ls : [...ls, { productoCodigo: p.codigo, descripcion: p.descripcion, ivaPorcentaje: p.ivaPorcentaje, cantidad: "1", precioUnitario: String(p.precioLista), descuento: String(p.descuentoSugerido ?? 0) }]));
+    setLineas((ls) => (ls.some((l) => l.productoCodigo === p.codigo) ? ls : [...ls, { productoCodigo: p.codigo, descripcion: p.descripcion, ivaPorcentaje: p.ivaPorcentaje, cantidad: "1", presentaciones: p.presentaciones, precioUnidad: p.precioLista, precioUnitario: String(p.precioLista), descuento: String(p.descuentoSugerido ?? 0) }]));
   }
   const cambiar = (i: number, campo: "cantidad" | "precioUnitario" | "descuento" | "almacenId", v: string) => setLineas((ls) => ls.map((l, k) => (k === i ? { ...l, [campo]: v } : l)));
 
+  const cambiarUnidad = (i: number, id: string) => setLineas((ls) => ls.map((l, k) => (k === i ? conUnidad(l, id) : l)));
   const entrada = lineas.map((l) => ({ cantidad: num(l.cantidad), costoUnitario: num(l.precioUnitario), descuento: fijo ? num(l.descuento) : descuentoEfectivo(num(l.descuento), cond.global), ivaPorcentaje: l.ivaPorcentaje }));
   const calculadas = entrada.map(calcularLinea);
   const totales = calcularTotales(entrada);
@@ -72,7 +75,7 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes, ventas
         pedido?.id ?? null,
         fijo
           ? { almacenId, observaciones, diasCredito: Math.trunc(num(diasCredito)), aprobacion }
-          : { clienteId, almacenId, observaciones, diasCredito: Math.trunc(num(diasCredito)), aprobacion, encabezado: cond.encabezado(), lineas: lineas.map((l) => ({ productoCodigo: l.productoCodigo, cantidad: num(l.cantidad), precioUnitario: num(l.precioUnitario), descuento: num(l.descuento), almacenId: l.almacenId || null })) },
+          : { clienteId, almacenId, observaciones, diasCredito: Math.trunc(num(diasCredito)), aprobacion, encabezado: cond.encabezado(), lineas: lineas.map((l) => ({ productoCodigo: l.productoCodigo, presentacionId: l.presentacionId || null, cantidad: num(l.cantidad), precioUnitario: num(l.precioUnitario), descuento: num(l.descuento), almacenId: l.almacenId || null })) },
       );
       if (r?.error) setError(r.error);
     });
@@ -161,7 +164,7 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes, ventas
                 <tr><td colSpan={8} className="px-4 py-8 text-center text-gris-500">Busca y agrega los productos de la factura.</td></tr>
               ) : lineas.map((l, i) => (
                 <tr key={`${l.productoCodigo}-${i}`} className="border-b border-linea last:border-0">
-                  <td className="px-4 py-2"><span className="font-semibold">{l.productoCodigo}</span> · {l.descripcion}{l.bonificacion ? <span className="ml-2 rounded-full bg-exito-suave px-2 py-0.5 text-[11.5px] text-exito">Bonificación</span> : null}</td>
+                  <td className="px-4 py-2"><span className="font-semibold">{l.productoCodigo}</span> · {l.descripcion}{fijo && l.presentacionId ? <span className="ml-2 text-[12.5px] text-gris-500">{l.presentaciones?.find((x) => x.id === l.presentacionId)?.nombre}</span> : null}{l.bonificacion ? <span className="ml-2 rounded-full bg-exito-suave px-2 py-0.5 text-[11.5px] text-exito">Bonificación</span> : null}<SelectorUnidad codigo={l.productoCodigo} presentaciones={fijo ? undefined : l.presentaciones} valor={l.presentacionId} onCambio={(id) => cambiarUnidad(i, id)} /></td>
                   {fijo ? (
                     <>
                       <td className={`${cel} text-right tabular-nums`}>{formatoCantidad(num(l.cantidad))}</td>

@@ -60,7 +60,7 @@ model PedidoVentaLinea {
   descripcion    String
   cantidad       Decimal     @db.Decimal(18, 4)
   /// Precio unitario en USD, antes de descuento.
-  precioUnitario Decimal     @map("precio_unitario") @db.Decimal(18, 4)
+  precioUnitario Decimal     @map("precio_unitario") @db.Decimal(18, 8)
   descuento      Decimal     @default(0) @db.Decimal(7, 4)
   /// Descuento que se escribió en la línea (%), sin los globales; `descuento` es el efectivo (línea + globales) con el que se calcula el total.
   descuentoLinea Decimal? @map("descuento_linea") @db.Decimal(7, 4)
@@ -70,6 +70,8 @@ model PedidoVentaLinea {
 
   /// Línea regalada por una promoción «compra N, llévate M» (precio 0); la genera el sistema y se recalcula al editar el documento.
   bonificacion   Boolean  @default(false)
+  presentacionId String?  @map("presentacion_id") @db.Uuid
+  factor         Decimal  @default(1) @db.Decimal(18, 4)
   /// Almacén del que sale esta línea al facturar (vacío = el del documento).
   almacenId      String?  @map("almacen_id") @db.Uuid
 

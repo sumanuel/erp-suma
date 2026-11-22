@@ -151,7 +151,7 @@ Ya está: código, descripción, categoría/subcategoría, alícuota de IVA, ara
 Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédito; por línea: producto, cantidad, precio, descuento %. En el pedido: cliente, fecha, observaciones, líneas.
 
 > **✅ Avance 2026-11-21 (cotización, pedido y factura):** hecho: **vendedor**, **condición de pago** (propone los días de crédito de la factura), **transporte**, **dirección de entrega** y **tres descuentos globales** en cadena; todo se propone desde la ficha del cliente y se puede cambiar. El precio sale de la **lista de precios del cliente** (con **promociones** de precio o descuento vigentes) y se respeta el **descuento máximo** de la lista. **Control de crédito** al facturar: bloqueado no compra; a crédito solo con crédito habilitado, sin mora, dentro del **límite** y sin facturas vencidas más allá de los **días máximos**. Los documentos copian sus condiciones al convertirse (cotización → pedido → factura) y el detalle las muestra.
-> **⬜ Sigue pendiente:** aplicar el **pronto pago** al cobrar, la **unidad de venta por línea** (ventas por presentación), el permiso «cambiar precio» en el POS, y **candado por cliente** en el crédito (dos ventas a crédito simultáneas pueden pasar el límite juntas).
+> **⬜ Sigue pendiente:** aplicar el **pronto pago** al cobrar, el permiso «cambiar precio» en el POS, y **candado por cliente** en el crédito (dos ventas a crédito simultáneas pueden pasar el límite juntas).
 
 > **✅ Avance 2026-11-22 (punto de venta):** hecho: **turnos de caja** (apertura con fondo en Bs. y USD, un turno abierto por cajero), **venta de mostrador** (factura de contado + cobros en una sola transacción), **pago mixto** (efectivo en Bs. o USD, punto de venta, pago móvil, transferencia, Zelle, con cuenta y referencia), **vuelto** en la moneda del pago o en la otra, **cierre de caja** con conteo, diferencia y observaciones, y **recibo no fiscal**.
 > **⬜ Sigue pendiente:** impresora fiscal y **serie fiscal** (caja, serial, IP; número fiscal y de control al facturar), reportes **Z y X**, devoluciones y anulación de una venta desde el POS, cheques y tarjeta de crédito/débito diferenciadas en el cierre, venta a crédito y vendedor en el mostrador, y control del permiso «cambiar precio».
@@ -165,7 +165,7 @@ Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédi
 | **Pronto pago:** días 1 y 2 y porcentajes 1 y 2 (`pDiasPP1/2`, `pFechaPP1/2`) | ✅ 2026-11-22: en la condición de pago y copiado al documento (falta aplicarlo al cobrar) | M |
 | **Dirección de entrega** y dirección fiscal impresas | Falta (se toma del cliente, que solo tiene una) | A |
 | **Transporte**, cantidad de bultos, kilos | ✅ 2026-11-22 | M |
-| **Almacén por línea** y **unidad de venta** por línea | ✅ Almacén por línea (2026-11-22). ⬜ Unidad de venta por línea: requiere vender por presentación con conversión de unidades | A |
+| **Almacén por línea** y **unidad de venta** por línea | ✅ Almacén por línea (2026-11-22). ✅ Unidad de venta por línea (2026-11-22): selector de presentación en cotización, pedido y factura; la línea se guarda en unidades base con su factor | A |
 | **Divisa de visualización** y valor de cambio | Todo en USD con tasa congelada ✔️ (la divisa elegida en pantalla no) | M |
 | **Origen de venta** (`cboOrigenVenta`) | ✅ 2026-11-22 (catálogo + campo del documento) | M |
 | **Caja, número de punto de venta, relación de caja** | Falta (llega con el POS) | A |

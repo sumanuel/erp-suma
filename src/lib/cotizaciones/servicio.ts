@@ -34,7 +34,7 @@ export async function guardarCotizacion(db: Db, actor: Actor, id: string | null,
       const enc = await validarEncabezado(tx, d.encabezado);
       const lineas = await prepararLineasVenta(tx, { ...d, descuentos: enc.descuentos });
       const t = calcularTotales(lineas.map((l) => l._e));
-      const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total, bonificacion: l.bonificacion }));
+      const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total, bonificacion: l.bonificacion, presentacionId: l.presentacionId, factor: l.factor }));
       const base = { clienteId: d.clienteId, fecha: d.fecha, validezDias: d.validezDias, fechaVencimiento: vence(d.fecha, d.validezDias), observaciones: d.observaciones, ...enc.columnas, ...t };
       if (id) {
         const u = await tx.cotizacion.updateMany({ where: { id, estado: "BORRADOR" }, data: base });
@@ -94,13 +94,13 @@ export async function convertirEnPedido(db: Db, actor: Actor, id: string): Promi
         clienteId: c.clienteId,
         descuentos: enc.descuentos,
         // Se parte del descuento que escribió quien cotizó (sin los globales), que se vuelven a combinar.
-        lineas: c.lineas.filter((l) => !l.bonificacion).map((l) => ({ productoCodigo: l.productoCodigo, cantidad: Number(l.cantidad), precioUnitario: Number(l.precioUnitario), descuento: Number(l.descuentoLinea ?? l.descuento) })),
+        lineas: c.lineas.filter((l) => !l.bonificacion).map((l) => ({ productoCodigo: l.productoCodigo, presentacionId: l.presentacionId, cantidad: Number(l.cantidad) / Number(l.factor), precioUnitario: Number(l.precioUnitario) * Number(l.factor), descuento: Number(l.descuentoLinea ?? l.descuento) })),
       });
       const t = calcularTotales(lineas.map((l) => l._e));
       const p = await tx.pedidoVenta.create({
         data: {
           clienteId: c.clienteId, cotizacionId: id, fecha: hoyCaracas(), observaciones: c.observaciones, ...enc.columnas, ...t, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
-          lineas: { create: lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total, bonificacion: l.bonificacion })) },
+          lineas: { create: lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total, bonificacion: l.bonificacion, presentacionId: l.presentacionId, factor: l.factor })) },
         },
         select: { id: true, numero: true },
       });

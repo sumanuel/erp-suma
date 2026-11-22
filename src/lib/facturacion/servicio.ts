@@ -26,7 +26,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoFactura<T>>): Promise
   }
 }
 
-type LineaLista = { productoCodigo: string; descripcion: string; cantidad: number; precioUnitario: number; descuento: number; descuentoLinea?: number | null; ivaPorcentaje: number; total: number; bonificacion?: boolean; almacenId?: string | null };
+type LineaLista = { productoCodigo: string; descripcion: string; cantidad: number; precioUnitario: number; descuento: number; descuentoLinea?: number | null; ivaPorcentaje: number; total: number; bonificacion?: boolean; almacenId?: string | null; presentacionId?: string | null; factor?: number };
 
 /** Crea la factura y descuenta el inventario, todo dentro de la transacción recibida. */
 async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedidoId: string | null; almacenId: string; observaciones: string | null; diasCredito: number; lineas: LineaLista[]; encabezado: Awaited<ReturnType<typeof validarEncabezado>>["columnas"]; aprobacion?: { motivo: string } }) {
@@ -50,7 +50,7 @@ async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedido
       clienteId: d.clienteId, pedidoId: d.pedidoId, almacenId: d.almacenId, fecha, observaciones: d.observaciones, ...d.encabezado, ...t,
       diasCredito: d.diasCredito, fechaVencimiento: vence, saldo: t.total, ...aprobacion,
       tasaUsd: tasa.valor, totalBs: aBolivares(t.total, tasa.valor), creadoPorId: actor.id, creadoPorNombre: actor.nombre,
-      lineas: { create: d.lineas.map((l, i) => ({ linea: i + 1, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea ?? null, ivaPorcentaje: l.ivaPorcentaje, total: l.total, costoUnitario: costos.get(l.productoCodigo) ?? 0, bonificacion: l.bonificacion ?? false, almacenId: l.almacenId && l.almacenId !== d.almacenId ? l.almacenId : null })) },
+      lineas: { create: d.lineas.map((l, i) => ({ linea: i + 1, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea ?? null, ivaPorcentaje: l.ivaPorcentaje, total: l.total, costoUnitario: costos.get(l.productoCodigo) ?? 0, bonificacion: l.bonificacion ?? false, almacenId: l.almacenId && l.almacenId !== d.almacenId ? l.almacenId : null, presentacionId: l.presentacionId ?? null, factor: l.factor ?? 1 })) },
     },
     select: { id: true, numero: true },
   });
@@ -109,7 +109,7 @@ export async function emitirFacturaDePedido(db: Db, actor: Actor, pedidoId: stri
       const p = await tx.pedidoVenta.findUniqueOrThrow({ where: { id: pedidoId }, include: { lineas: { orderBy: { linea: "asc" } } } });
       const lineas: LineaLista[] = p.lineas.map((l) => ({
         productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: Number(l.cantidad), precioUnitario: Number(l.precioUnitario),
-        descuento: Number(l.descuento), descuentoLinea: l.descuentoLinea === null ? null : Number(l.descuentoLinea), ivaPorcentaje: Number(l.ivaPorcentaje), total: Number(l.total), bonificacion: l.bonificacion, almacenId: l.almacenId,
+        descuento: Number(l.descuento), descuentoLinea: l.descuentoLinea === null ? null : Number(l.descuentoLinea), ivaPorcentaje: Number(l.ivaPorcentaje), total: Number(l.total), bonificacion: l.bonificacion, almacenId: l.almacenId, presentacionId: l.presentacionId, factor: Number(l.factor),
       }));
       const enc = await validarEncabezado(tx, encabezadoDe(p));
       return crearFactura(tx, actor, { clienteId: p.clienteId, pedidoId, almacenId, observaciones, diasCredito, lineas, encabezado: enc.columnas, aprobacion });

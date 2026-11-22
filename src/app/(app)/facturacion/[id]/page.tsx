@@ -80,7 +80,7 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
             <tbody>
               {f.lineas.map((l) => (
                 <tr key={l.id} className="border-b border-linea last:border-0">
-                  <td className="px-4 py-3"><span className="font-semibold">{l.productoCodigo}</span> · {l.descripcion}</td>
+                  <td className="px-4 py-3"><span className="font-semibold">{l.productoCodigo}</span> · {l.descripcion}{l.presentacionId ? <span className="ml-2 text-[12.5px] text-gris-500">{Number(l.cantidad) / Number(l.factor)} × presentación de {Number(l.factor)} = {Number(l.cantidad)} u.</span> : null}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatoCantidad(Number(l.cantidad))}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatoUsd(Number(l.precioUnitario))}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatoCantidad(Number(l.descuento))}</td>
