@@ -45,7 +45,7 @@ export async function reporteBalanceGeneral(db: Db, v: Record<string, string>): 
 
 /** Estado de resultados del rango [desde, hasta]: ingresos, costos y gastos de ese período. */
 export async function reporteEstadoResultados(db: Db, v: Record<string, string>): Promise<Resultado> {
-  const { filas } = await balanceComprobacion(db, aFecha(v.desde), aFecha(v.hasta));
+  const { filas } = await balanceComprobacion(db, aFecha(v.desde), aFecha(v.hasta), { sinCierre: true });
   const neto = (f: FilaBalance) => f.debe - f.haber; // movimiento del período, no el saldo acumulado
   const ingresos = seccion(filas, ["INGRESO"], neto, -1);
   const costos = seccion(filas, ["COSTO"], neto, 1);
@@ -62,6 +62,37 @@ export async function reporteEstadoResultados(db: Db, v: Record<string, string>)
       { cuenta: utilidad >= 0 ? "Utilidad neta del período" : "Pérdida neta del período", saldo: bs(utilidad), _negrita: true },
     ],
     notas: ["Movimientos del período en bolívares según los asientos registrados."],
+  };
+}
+
+/**
+ * Estructura de costos (original: frmEstructuraCostos): costos y gastos del rango con su peso sobre los ingresos y sobre el total de costos y gastos.
+ */
+export async function reporteEstructuraCostos(db: Db, v: Record<string, string>): Promise<Resultado> {
+  const { filas } = await balanceComprobacion(db, aFecha(v.desde), aFecha(v.hasta), { sinCierre: true });
+  const neto = (f: FilaBalance) => f.debe - f.haber;
+  const ingresos = seccion(filas, ["INGRESO"], neto, -1).total;
+  const costos = seccion(filas, ["COSTO"], neto, 1);
+  const gastos = seccion(filas, ["GASTO"], neto, 1);
+  const totalCG = costos.total + gastos.total;
+  const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 10000) / 100 : 0);
+  const detalle = (tipos: string[], titulo: string, total: number): Fila[] => {
+    const hojas = filas.filter((f) => tipos.includes(f.tipo) && neto(f) !== 0).sort(orden);
+    return [
+      { cuenta: titulo, saldo: null, sobreIngresos: null, sobreCostos: null, _negrita: true },
+      ...hojas.filter((f) => f.imprimeBalance || !f.posteable).map((f) => ({ cuenta: `${f.codigo} ${f.nombre}`, saldo: bs(neto(f)), sobreIngresos: pct(neto(f), ingresos), sobreCostos: pct(neto(f), totalCG), _nivel: f.nivel - 1, _negrita: !f.posteable })),
+      { cuenta: `Total ${titulo.toLowerCase()}`, saldo: bs(total), sobreIngresos: pct(total, ingresos), sobreCostos: pct(total, totalCG), _negrita: true },
+    ];
+  };
+  return {
+    columnas: [{ clave: "cuenta", titulo: "Cuenta", tipo: "texto" }, { clave: "saldo", titulo: "Monto Bs.", tipo: "moneda" }, { clave: "sobreIngresos", titulo: "% de los ingresos", tipo: "numero" }, { clave: "sobreCostos", titulo: "% de costos y gastos", tipo: "numero" }],
+    filas: [
+      { cuenta: "Ingresos del período", saldo: bs(ingresos), sobreIngresos: 100, sobreCostos: null, _negrita: true },
+      ...detalle(["COSTO"], "COSTOS", costos.total), ...detalle(["GASTO"], "GASTOS", gastos.total),
+      { cuenta: "Total costos y gastos", saldo: bs(totalCG), sobreIngresos: pct(totalCG, ingresos), sobreCostos: 100, _negrita: true },
+      { cuenta: ingresos - totalCG >= 0 ? "Utilidad del período" : "Pérdida del período", saldo: bs(ingresos - totalCG), sobreIngresos: pct(Math.abs(ingresos - totalCG), ingresos), sobreCostos: null, _negrita: true },
+    ],
+    notas: ["Movimientos del período en bolívares según los asientos registrados; no incluye el asiento de cierre del ejercicio."],
   };
 }
 

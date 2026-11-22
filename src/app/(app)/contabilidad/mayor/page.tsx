@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { Tarjeta, claseControl, clasesBoton } from "@/components/ui";
 import { requerirSesion } from "@/lib/dal";
-import { libroMayor } from "@/lib/contabilidad/reportes";
+import { balancePorAuxiliar, libroMayor } from "@/lib/contabilidad/reportes";
 import { numeroAsiento } from "@/lib/contabilidad/tipos";
 import { hoyCaracas } from "@/lib/tasas";
 import { formatoCentavos, formatoFecha, rangoDeReporte } from "../formato";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default async function Mayor({ searchParams }: { searchParams: Promise<{ cuenta?: string; desde?: string; hasta?: string }> }) {
+export default async function Mayor({ searchParams }: { searchParams: Promise<{ cuenta?: string; desde?: string; hasta?: string; auxiliar?: string }> }) {
   const ctx = await requerirSesion();
   const sp = await searchParams;
   const { desde, hasta } = rangoDeReporte(hoyCaracas(), sp.desde, sp.hasta);
@@ -16,7 +16,10 @@ export default async function Mayor({ searchParams }: { searchParams: Promise<{ 
   const clave = (c: string) => c.split(".").map((n) => n.padStart(6, "0")).join(".");
   cuentas.sort((a, b) => clave(a.codigo).localeCompare(clave(b.codigo)));
   const elegida = sp.cuenta && UUID.test(sp.cuenta) ? cuentas.find((c) => c.id === sp.cuenta) : undefined;
-  const mayor = elegida ? await libroMayor(ctx.db, elegida.id, desde, hasta) : null;
+  const auxiliares = elegida ? await ctx.db.auxiliarContable.findMany({ where: { cuentaId: elegida.id }, orderBy: { codigo: "asc" }, select: { id: true, codigo: true, nombre: true } }) : [];
+  const aux = sp.auxiliar && UUID.test(sp.auxiliar) ? auxiliares.find((a) => a.id === sp.auxiliar) : undefined;
+  const mayor = elegida ? await libroMayor(ctx.db, elegida.id, desde, hasta, aux?.id) : null;
+  const porAuxiliar = elegida && auxiliares.length > 0 && !aux ? await balancePorAuxiliar(ctx.db, elegida.id, desde, hasta) : [];
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   return (
     <Tarjeta>
@@ -28,10 +31,35 @@ export default async function Mayor({ searchParams }: { searchParams: Promise<{ 
             {cuentas.map((c) => <option key={c.id} value={c.id}>{c.codigo} {c.nombre}{c.posteable ? "" : " (agrupa)"}</option>)}
           </select>
         </div>
+        {auxiliares.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="auxiliar" className="text-[13px] font-medium">Auxiliar</label>
+            <select id="auxiliar" name="auxiliar" defaultValue={aux?.id ?? ""} className={`${claseControl} w-64 pr-9`}>
+              <option value="">Todos</option>
+              {auxiliares.map((a) => <option key={a.id} value={a.id}>{a.codigo} {a.nombre}</option>)}
+            </select>
+          </div>
+        ) : null}
         <div className="flex flex-col gap-1.5"><label htmlFor="desde" className="text-[13px] font-medium">Desde</label><input id="desde" name="desde" type="date" defaultValue={iso(desde)} className={`${claseControl} w-44`} /></div>
         <div className="flex flex-col gap-1.5"><label htmlFor="hasta" className="text-[13px] font-medium">Hasta</label><input id="hasta" name="hasta" type="date" defaultValue={iso(hasta)} className={`${claseControl} w-44`} /></div>
         <button type="submit" className={clasesBoton("secundario")}>Ver mayor</button>
       </form>
+      {porAuxiliar.length > 0 ? (
+        <div className="overflow-x-auto border-t border-linea">
+          <h3 className="px-4 pt-4 text-base font-semibold">Balance por auxiliar</h3>
+          <table className="mt-2 w-full text-left text-[13.5px]">
+            <thead><tr className="border-y border-linea text-[12.5px] text-gris-600"><th className="px-4 py-3 font-medium">Auxiliar</th><th className="px-3 py-3 text-right font-medium">Saldo inicial</th><th className="px-3 py-3 text-right font-medium">Debe</th><th className="px-3 py-3 text-right font-medium">Haber</th><th className="px-4 py-3 text-right font-medium">Saldo final</th></tr></thead>
+            <tbody>
+              {porAuxiliar.map((f) => (
+                <tr key={f.auxiliarId ?? "sin"} className="border-b border-linea last:border-0">
+                  <td className="px-4 py-3">{f.auxiliarId ? <Link href={`/contabilidad/mayor?cuenta=${elegida!.id}&auxiliar=${f.auxiliarId}&desde=${iso(desde)}&hasta=${iso(hasta)}`} className="hover:underline"><span className="font-semibold">{f.codigo}</span> {f.nombre}</Link> : f.nombre}</td>
+                  <td className="px-3 py-3 text-right tabular-nums">{formatoCentavos(f.saldoInicial)}</td><td className="px-3 py-3 text-right tabular-nums">{formatoCentavos(f.debe, true)}</td><td className="px-3 py-3 text-right tabular-nums">{formatoCentavos(f.haber, true)}</td><td className="px-4 py-3 text-right font-semibold tabular-nums">{formatoCentavos(f.saldoFinal)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
       {mayor && elegida ? (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[13.5px]">

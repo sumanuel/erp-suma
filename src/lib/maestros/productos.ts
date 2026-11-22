@@ -11,7 +11,7 @@ const rel = (f: Fila, r: string, campo: string) => (f[r] as Record<string, unkno
 
 async function opciones(db: Db) {
   const divisiones = await db.division.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } });
-  const [cats, subs, ivas, aranceles, unidades, provs, marcas] = await Promise.all([
+  const [cats, subs, ivas, aranceles, unidades, provs, marcas, ubicaciones] = await Promise.all([
     db.categoria.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
     db.subcategoria.findMany({ where: { activo: true }, orderBy: [{ categoria: { nombre: "asc" } }, { nombre: "asc" }], select: { id: true, nombre: true, categoria: { select: { nombre: true } } } }),
     db.alicuotaIva.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true, porcentajeVenta: true } }),
@@ -19,6 +19,7 @@ async function opciones(db: Db) {
     db.unidadMedida.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true, codigo: true } }),
     db.proveedor.findMany({ where: { activo: true }, orderBy: { razonSocial: "asc" }, take: 1000, select: { id: true, razonSocial: true } }),
     db.marca.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
+    db.ubicacionFisica.findMany({ where: { activo: true }, orderBy: { codigo: "asc" }, select: { id: true, codigo: true, almacen: { select: { codigo: true } } } }),
   ]);
   return {
     categorias: cats.map((c) => ({ valor: c.id, etiqueta: c.nombre })),
@@ -29,6 +30,7 @@ async function opciones(db: Db) {
     proveedores: provs.map((p) => ({ valor: p.id, etiqueta: p.razonSocial })),
     marcas: marcas.map((m) => ({ valor: m.id, etiqueta: m.nombre })),
     divisiones: divisiones.map((d) => ({ valor: d.id, etiqueta: d.nombre })),
+    ubicaciones: ubicaciones.map((u) => ({ valor: u.id, etiqueta: `${u.codigo} (${u.almacen.codigo})` })),
   };
 }
 
@@ -58,6 +60,7 @@ export const productos: Maestro = {
       { nombre: "categoriaId", etiqueta: "Categoría", tipo: "seleccion", requerido: true, opciones: o.categorias, seccion: "Clasificación" },
       { nombre: "subcategoriaId", etiqueta: "Subcategoría", tipo: "seleccion", opciones: o.subcategorias, ayuda: "Debe pertenecer a la categoría elegida." },
       { nombre: "divisionId", etiqueta: "División", tipo: "seleccion", opciones: o.divisiones },
+      { nombre: "ubicacionId", etiqueta: "Ubicación física", tipo: "seleccion", opciones: o.ubicaciones },
       { nombre: "alicuotaIvaId", etiqueta: "Alícuota de IVA", tipo: "seleccion", requerido: true, opciones: o.alicuotas },
       { nombre: "arancelId", etiqueta: "Arancel", tipo: "seleccion", opciones: o.aranceles },
       { nombre: "procedencia", etiqueta: "Procedencia", tipo: "seleccion", opciones: ["Nacional", "Importado"].map((v) => ({ valor: v, etiqueta: v })) },

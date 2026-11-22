@@ -107,6 +107,8 @@ model Producto {
   /// Precio máximo de venta al público (productos con precio regulado). 0 = sin tope.
   precioMaximoPublico Decimal  @default(0) @map("precio_maximo_publico") @db.Decimal(18, 4)
   divisionId          String?  @map("division_id") @db.Uuid
+  /// Ubicación física en el almacén (pasillo, anaquel, nivel).
+  ubicacionId         String?  @map("ubicacion_id") @db.Uuid
   /// Dirección de la foto del producto (por ahora un enlace; la carga de archivos queda para después).
   imagenUrl           String?  @map("imagen_url")
   marcaId             String?  @map("marca_id") @db.Uuid

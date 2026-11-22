@@ -23,6 +23,9 @@ const bs = (usd: number, tasa: number) => redondear2(usd * tasa);
 type Linea = { concepto?: Concepto; cuentaId?: string; debe?: number; haber?: number; detalle?: string };
 type Documento = { origen: string; referencia: string; fecha: Date; descripcion: string; lineas: Linea[] };
 
+/** Línea con la cuenta propia del tercero o del almacén si la tiene; si no, la del concepto general. */
+const cuentaOConcepto = (cuentaId: string | null | undefined, concepto: Concepto): { cuentaId?: string; concepto?: Concepto } => (cuentaId ? { cuentaId } : { concepto });
+
 async function configuracion(tx: Tx) {
   const [cfg, conceptos] = await Promise.all([tx.configContable.findUnique({ where: { id: 1 } }), tx.cuentaConcepto.findMany()]);
   return { automatica: cfg?.automatica ?? false, mapa: new Map(conceptos.map((c) => [c.concepto, c.cuentaId])) };
@@ -66,7 +69,7 @@ async function revertir(tx: Tx, actor: Actor, original: string, reversa: string,
 
 // ---------- Ventas ----------
 export async function contabilizarFactura(tx: Tx, actor: Actor, facturaId: string) {
-  const f = await tx.factura.findUniqueOrThrow({ where: { id: facturaId }, include: { lineas: true, cliente: { select: { razonSocial: true } } } });
+  const f = await tx.factura.findUniqueOrThrow({ where: { id: facturaId }, include: { lineas: true, cliente: { select: { razonSocial: true, cuentaContableId: true } }, almacen: { select: { cuentaInventarioId: true } } } });
   const tasa = Number(f.tasaUsd);
   const totalBs = Number(f.totalBs);
   const ventasBs = bs(Number(f.subtotal), tasa);
@@ -77,8 +80,9 @@ export async function contabilizarFactura(tx: Tx, actor: Actor, facturaId: strin
   await publicar(tx, actor, {
     origen: "FACTURA", referencia: ref, fecha: f.fecha, descripcion: `Factura ${ref} · ${f.cliente.razonSocial}`,
     lineas: [
-      { concepto: "CXC", debe: totalBs }, { concepto: "VENTAS", haber: ventasBs }, { concepto: "IVA_DEBITO", haber: ivaBs },
-      { concepto: "COSTO_VENTAS", debe: costoBs }, { concepto: "INVENTARIO", haber: costoBs },
+      // La cuenta propia del cliente (si la tiene) y la de inventario del almacén (si la tiene) mandan sobre las generales.
+      { ...cuentaOConcepto(f.cliente.cuentaContableId, "CXC"), debe: totalBs }, { concepto: "VENTAS", haber: ventasBs }, { concepto: "IVA_DEBITO", haber: ivaBs },
+      { concepto: "COSTO_VENTAS", debe: costoBs }, { ...cuentaOConcepto(f.almacen.cuentaInventarioId, "INVENTARIO"), haber: costoBs },
     ],
   });
 }
@@ -86,7 +90,7 @@ export const revertirFactura = (tx: Tx, actor: Actor, numero: number) => reverti
 
 // ---------- Cobros ----------
 export async function contabilizarCobro(tx: Tx, actor: Actor, cobroId: string) {
-  const c = await tx.cobro.findUniqueOrThrow({ where: { id: cobroId }, include: { aplicaciones: { include: { factura: { select: { tasaUsd: true } } } }, cuenta: true, cliente: { select: { razonSocial: true } } } });
+  const c = await tx.cobro.findUniqueOrThrow({ where: { id: cobroId }, include: { aplicaciones: { include: { factura: { select: { tasaUsd: true } } } }, cuenta: true, cliente: { select: { razonSocial: true, cuentaContableId: true } } } });
   if (!c.cuenta) return; // cobros anteriores a Tesorería: sin cuenta, no hay dónde contabilizarlos
   if (!c.cuenta.cuentaContableId) {
     if (!(await configuracion(tx)).automatica) return;
@@ -100,7 +104,7 @@ export async function contabilizarCobro(tx: Tx, actor: Actor, cobroId: string) {
   const ref = numeroCobro(c.numero);
   await publicar(tx, actor, {
     origen: "COBRO", referencia: ref, fecha: c.fecha, descripcion: `Cobro ${ref} · ${c.cliente.razonSocial}`,
-    lineas: [{ cuentaId: c.cuenta.cuentaContableId, debe: recibido }, { concepto: "CXC", haber: cxc }, { concepto: "ANTICIPO_CLIENTES", haber: anticipo }, { concepto: "DIFERENCIAL_CAMBIARIO", haber: dif > 0 ? dif : 0, debe: dif < 0 ? -dif : 0 }],
+    lineas: [{ cuentaId: c.cuenta.cuentaContableId, debe: recibido }, { ...cuentaOConcepto(c.cliente.cuentaContableId, "CXC"), haber: cxc }, { concepto: "ANTICIPO_CLIENTES", haber: anticipo }, { concepto: "DIFERENCIAL_CAMBIARIO", haber: dif > 0 ? dif : 0, debe: dif < 0 ? -dif : 0 }],
   });
 }
 
@@ -122,7 +126,7 @@ export const revertirCobro = (tx: Tx, actor: Actor, numero: number) => revertir(
 
 // ---------- Compras ----------
 export async function contabilizarFacturaCompra(tx: Tx, actor: Actor, id: string) {
-  const f = await tx.facturaCompra.findUniqueOrThrow({ where: { id }, include: { proveedor: { select: { razonSocial: true } }, lineas: true } });
+  const f = await tx.facturaCompra.findUniqueOrThrow({ where: { id }, include: { proveedor: { select: { razonSocial: true, cuentaContableId: true } }, lineas: true } });
   const tasa = Number(f.tasaUsd);
   // Con desglose por alícuota, cada base y cada IVA se pasa a bolívares por separado (así el asiento y el libro de compras coinciden al centavo).
   const baseBs = f.lineas.length ? redondear2(f.lineas.reduce((s, l) => s + bs(Number(l.base), tasa), 0)) : bs(Number(f.subtotal), tasa);
@@ -131,14 +135,14 @@ export async function contabilizarFacturaCompra(tx: Tx, actor: Actor, id: string
   const ref = numeroFacturaCompra(f.numero);
   await publicar(tx, actor, {
     origen: "FACTURA_COMPRA", referencia: ref, fecha: f.fechaLibro ?? f.fecha, descripcion: `Factura de proveedor ${ref} (${f.documento}) · ${f.proveedor.razonSocial}`,
-    lineas: [f.cuentaGastoId ? { cuentaId: f.cuentaGastoId, debe: baseBs } : { concepto: "COMPRAS", debe: baseBs }, { concepto: "IVA_CREDITO", debe: ivaBs }, { concepto: "CXP", haber: totalBs }],
+    lineas: [f.cuentaGastoId ? { cuentaId: f.cuentaGastoId, debe: baseBs } : { concepto: "COMPRAS", debe: baseBs }, { concepto: "IVA_CREDITO", debe: ivaBs }, { ...cuentaOConcepto(f.proveedor.cuentaContableId, "CXP"), haber: totalBs }],
   });
 }
 export const revertirFacturaCompra = (tx: Tx, actor: Actor, numero: number) => revertir(tx, actor, "FACTURA_COMPRA", "ANULACION_FACTURA_COMPRA", numeroFacturaCompra(numero), `Anulación de factura de proveedor ${numeroFacturaCompra(numero)}`);
 
 // ---------- Pagos ----------
 export async function contabilizarPago(tx: Tx, actor: Actor, pagoId: string) {
-  const p = await tx.pagoProveedor.findUniqueOrThrow({ where: { id: pagoId }, include: { aplicaciones: { include: { factura: { select: { tasaUsd: true } } } }, cuenta: true, proveedor: { select: { razonSocial: true } } } });
+  const p = await tx.pagoProveedor.findUniqueOrThrow({ where: { id: pagoId }, include: { aplicaciones: { include: { factura: { select: { tasaUsd: true } } } }, cuenta: true, proveedor: { select: { razonSocial: true, cuentaContableId: true } } } });
   if (!p.cuenta) return;
   if (!p.cuenta.cuentaContableId) {
     if (!(await configuracion(tx)).automatica) return;
@@ -150,7 +154,7 @@ export async function contabilizarPago(tx: Tx, actor: Actor, pagoId: string) {
   const ref = numeroPago(p.numero);
   await publicar(tx, actor, {
     origen: "PAGO", referencia: ref, fecha: p.fecha, descripcion: `Pago ${ref} · ${p.proveedor.razonSocial}`,
-    lineas: [{ concepto: "CXP", debe: cxp }, { cuentaId: p.cuenta.cuentaContableId, haber: pagado }, { concepto: "DIFERENCIAL_CAMBIARIO", haber: dif > 0 ? dif : 0, debe: dif < 0 ? -dif : 0 }],
+    lineas: [{ ...cuentaOConcepto(p.proveedor.cuentaContableId, "CXP"), debe: cxp }, { cuentaId: p.cuenta.cuentaContableId, haber: pagado }, { concepto: "DIFERENCIAL_CAMBIARIO", haber: dif > 0 ? dif : 0, debe: dif < 0 ? -dif : 0 }],
   });
 }
 export const revertirPago = (tx: Tx, actor: Actor, numero: number) => revertir(tx, actor, "PAGO", "ANULACION_PAGO", numeroPago(numero), `Anulación de pago ${numeroPago(numero)}`);
