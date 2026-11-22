@@ -346,6 +346,32 @@ Lo que no cabe en el motor (documentos con líneas, flujos) se escribe como pant
 >
 > Prioridad: **A** = bloquea operar con clientes reales o declarar impuestos, **M** = importante pero hay alternativa, **B** = mejora u ocasional.
 
+### 12.00 Alcance: solo lo que existe en el Lebrun original (decisión del 2026-11-22)
+
+**Regla:** para que el proyecto sea **finito**, no se agrega nada que el sistema original no tenga. Un pendiente solo se hace si hay una pantalla, clase o columna equivalente en el original (`D:\lebrun_20220627\...\lebrun`, 461 archivos .cs; revisado con búsqueda en el código, en `formularios/`, `clases/` y `analisis/inventario.json`). Lo que el original no tiene se anota aquí como **fuera de alcance** y no se hace salvo que el usuario lo pida expresamente (las mejoras propias de ser un servicio en la nube —respaldos, planes, panel del proveedor— se evalúan aparte, en 12.8).
+
+**Revisión de los pendientes frente al original:**
+
+| Pendiente | ¿Existe en el original? | Decisión |
+|---|---|---|
+| Aplicar el **pronto pago al cobrar** | No: el original solo lo **guarda y lo imprime** en la prefactura (`guardarProntoPagos`, días y % 1 y 2); el recibo de ingreso no lo usa | ⛔ Fuera. Ya está hecho lo que el original tiene (guardarlo y mostrarlo). Queda la función `prontoPagoAplicable` sin uso |
+| **Comisiones** (cálculo y reporte) | Parcial: solo guarda el **porcentaje** (cliente, producto, categoría, vendedor); no hay cálculo de comisiones. Sí hay «ventas por vendedor» (`lbxCosultaVentaXVendedor`) | ⛔ El cálculo, fuera. ✅ «Ventas por vendedor» sí es del original |
+| **Colores, tallas, seriales, variantes** del producto | No hay en el producto ni en las clases (los `serial` son del equipo fiscal) | ⛔ Fuera. Los catálogos de colores y tallas ya creados no se usarán: **no seguir** con variantes |
+| «**Impuesto patente**» del producto | Sin ninguna aparición en el código | ⛔ Fuera (era un «¿?») |
+| **Sustitutos, asociados y componentes** de producto | No hay (ni «sustituto» ni «kit» ni «componente») | ⛔ Ya está hecha la pantalla (2026-11-22); **no** usarla al vender ni ampliarla |
+| Conteo físico, **compras sugeridas**, revaluación de saldos en divisas, **conciliación bancaria** (importar el estado del banco), **intereses de mora**, envío por **correo**, **IGTF**, lotes con vencimiento, importación masiva desde Excel | No hay (0 apariciones; Excel solo en 2 pantallas puntuales) | ⛔ Fuera |
+| **Unidad de venta por línea** | **Sí**: la factura tiene `cboUnidad` con las unidades del producto (`frmUnidaXProducto`, presentaciones) | ✅ En alcance (es el siguiente en ventas); requiere ventas por presentación |
+| **Aprobación gerencial** | **Sí, pero distinta a lo hecho**: en el original es una **tabla de reglas** (`admaprobgerent`: descripción, monto, activa; p. ej. «Máximo Dtco. a otorgar en Precio») y al **cerrar un pedido** que las incumple pasa a una **lista de aprobación** (`lbxAprobacionGerencial`) donde el gerente **aprueba o rechaza** (`frmPedido`: `pedidoAprobado`, `aprobacionPedido`) | ⚠ Lo hecho (aprobar excepciones de **crédito** en la factura con un permiso) **no es lo del original**. Rehacerlo: reglas configurables (descuento máximo y las que existan), pedido «por aprobar», cola del gerente con aprobar/rechazar |
+| «**Cambiar precio**» | **Sí**, pero con **clave de supervisor** (`frmClaveConfirmacion2`), no con un permiso por perfil | ⚠ Lo hecho (permiso especial) cubre el objetivo; evaluar si se cambia a clave de supervisor |
+| **Etiquetas** de góndola y códigos de barras | **Sí** (`frmEtiqGran`, `frmEtiqMed`, `frmEtiqPeqCodg`, `frmEtiqPeqDesg`) | ✅ En alcance |
+| **Importaciones** (liquidación, gastos, factura nacional) | **Sí** (11 formularios) | ✅ En alcance (módulo sin empezar) |
+| **Pagaré, cruce de saldos, pago manual**, **anticipos** de clientes | **Sí** (`frmPagare`, `frmCruceDeSaldo`, `frmProcesoPagoManual`, anticipo en el recibo) | ✅ En alcance |
+| **Estado de cuenta** de clientes | **Sí** (`lbxEstadoCuentas`) | ✅ En alcance (el de «recordatorios de mora» no) |
+| **Cierre de caja, reportes Z/X, serie fiscal, documentos no impresos, devolución importada** | **Sí** (carpeta `facturacion`) | ✅ En alcance |
+| **Trabajadores** (`lbxTrabjadores`), **clasificación económica**, **tipo de documento de proveedor** (`lbxtipoDocPro`), **factura Misión Vivienda**, **consultas gerenciales**, **bultos**, **estructura de costos**, **comprobante de cierre** | **Sí** | ✅ En alcance; revisar uno por uno si ya están cubiertos (sección 12.1 «Sin comparar todavía») |
+
+**Siguiente paso de campos:** terminar lo que está marcado ✅ y revisar lo marcado ⚠; no empezar nada marcado ⛔.
+
 ### 12.0 Ruta sugerida hacia el corte
 
 1. **Campos de los formularios (12.1):** lo que falta en tesorería y bancos, compras y proveedores, contabilidad y almacenes. Es el criterio «vital» del proyecto: sin estos campos no se puede dejar el escritorio.
@@ -361,9 +387,9 @@ Estado por módulo en `ANALISIS-CAMPOS.md`. **Hecho:** tablas base (condición d
 - **A · Cobros:** **anticipos** y saldos a favor de clientes (el cobro exige factura). El resto (cobrador, varias formas de pago, cheque, fecha) está hecho.
 - **A · Contabilidad:** **cierre definitivo del comprobante** (borrador/definitivo) y mayor y balance **por auxiliar**; ambos pendientes (el primero va con el cierre del ejercicio). El resto (auxiliares, saldo inicial por asiento de apertura, referencia y documento por línea, siglas y banderas) está hecho.
 - ~~M · Almacén, catálogos sin hacer, cliente y proveedor (contactos, sucursales, cuenta contable)~~ **Hecho 2026-11-22** (ver sección 11). Queda: **usar** colores/tallas (variantes del producto), la serie fiscal en la impresora, la cuenta contable del almacén y del tercero al contabilizar.
-- **M · Productos:** enlazar la ubicación física al producto, seriales/tallas/colores, etiquetas. (Hechos 2026-11-22: cambio masivo de precios, imagen por enlace, sustitutos/asociados/componentes, división.)
-- **M · Documentos de venta:** **unidad de venta por línea** (requiere ventas por presentación con conversión de unidades). (Hechos 2026-11-22: origen de venta, bultos y kilos, pronto pago guardado, permiso de «cambiar precio», almacén por línea, bonificaciones «compra N, llévate M», aprobación gerencial de excepciones de crédito.) Queda: aplicar el pronto pago al cobrar, exigir el permiso de precio en el POS, flujo de solicitud de aprobación a otro gerente.
-- **B · Productos:** seriales, tallas y colores, etiquetas de góndola, «impuesto patente» (¿?).
+- **M · Productos:** enlazar la ubicación física al producto, etiquetas (✅ del original). ~~Seriales/tallas/colores~~ ⛔ fuera de alcance (12.00). (Hechos 2026-11-22: cambio masivo de precios, imagen por enlace, sustitutos/asociados/componentes, división.)
+- **M · Documentos de venta:** **unidad de venta por línea** (requiere ventas por presentación con conversión de unidades). (Hechos 2026-11-22: origen de venta, bultos y kilos, pronto pago guardado, permiso de «cambiar precio», almacén por línea, bonificaciones «compra N, llévate M», aprobación gerencial de excepciones de crédito.) Queda: la **aprobación gerencial como en el original** (reglas y cola de pedidos por aprobar, ver 12.00); exigir el permiso de precio en el POS. ~~Aplicar el pronto pago al cobrar~~ ⛔ fuera de alcance (el original solo lo guarda).
+- **B · Productos:** etiquetas de góndola (✅ del original). ~~Seriales, tallas y colores, «impuesto patente»~~ ⛔ fuera de alcance.
 - **B · Sin comparar todavía:** importaciones (`frmOtrosDatos`, `frmFacturaImportacion`…), consultas gerenciales, bultos, seguimientos y solicitudes del original.
 - **M · Usar lo cargado:** las **tarifas de ISLR** aún no se aplican en las retenciones; la **geografía**, los **bancos** y las tarifas están vacíos hasta la importación.
 
@@ -386,7 +412,7 @@ Estado por módulo en `ANALISIS-CAMPOS.md`. **Hecho:** tablas base (condición d
 - **M · Retenciones:** aplicar las tarifas de ISLR (catálogo) al calcular, concepto por proveedor, saldo con diferencia de 0,01 Bs. aceptada entre el pasivo contable y el saldo × tasa.
 - **M · Notas de crédito/débito:** número fiscal y de control de la nota de venta, saldo a favor cuando la nota excede el saldo, devolución a proveedor con salida de inventario, PDF.
 - **M · Facturas y órdenes de compra en bolívares** (hoy todo es USD con la tasa del día).
-- **M · Revisar con el contador** si aplican IGTF u otras cargas a pagos en divisas, y otras normas vigentes antes del primer cliente: no están modeladas.
+- **M · Revisar con el contador** otras normas vigentes antes del primer cliente (no están modeladas). El IGTF no está en el original: solo si el contador lo exige.
 
 ### 12.4 Ventas, POS y cobranza
 
@@ -394,34 +420,33 @@ Estado por módulo en `ANALISIS-CAMPOS.md`. **Hecho:** tablas base (condición d
 - **A · POS — anular y devolver** una venta desde el mostrador (hoy: anular el cobro en Cuentas por cobrar y luego la factura, o una nota de crédito).
 - **M · POS:** cheques y tarjetas de crédito/débito separados en el cierre, venta a crédito y vendedor en el mostrador, descuento sin permiso, dos cajeros en la misma caja (el esperado de cada uno cuenta solo sus movimientos).
 - ~~M · Promociones «compra N y llévate M»~~ **Hecho 2026-11-22** (ver sección 11).
-- **M · Comisiones:** cálculo y reporte por vendedor y cobrador (los porcentajes ya están en cliente, producto y categoría).
-- **M · PDF y envío por correo** de cotización, pedido, factura y recibo de cobro.
-- **M · Cobranza:** recordatorios de mora, intereses de mora, estado de cuenta imprimible.
+- ~~M · Comisiones: cálculo y reporte~~ ⛔ fuera de alcance (el original solo guarda los porcentajes). «Ventas por vendedor» sí.
+- **M · PDF** de cotización, pedido, factura y recibo (el original imprime con Crystal Reports ✅). ~~Envío por correo~~ ⛔ fuera de alcance.
+- **M · Cobranza:** estado de cuenta imprimible (✅ del original). ~~Recordatorios e intereses de mora~~ ⛔ fuera de alcance.
 - **B · Convertir una cotización directo en factura**, versiones de cotización, seguimiento comercial.
 - **B · Reserva por almacén** (hoy es global por producto).
 
 ### 12.5 Compras, importaciones y pagos
 
 - **A · Importaciones:** liquidación con gastos de importación y su efecto en el costo del producto (módulo sin empezar).
-- **M · Compras sugeridas** (por mínimos, ventas y proveedor).
+- ~~M · Compras sugeridas~~ ⛔ fuera de alcance (el original no las tiene).
 - **M · Programación de pagos por vencimiento.**
 - **M · Aplicar** la condición de pago, los descuentos y el límite de crédito del proveedor en órdenes y facturas de compra.
 - **M · Número de recepción:** puede saltar cuando una recepción falla.
 
 ### 12.6 Inventario y productos
 
-- **M · Conteo físico con conciliación**, kardex por producto y fecha, exportar a Excel.
-- **M · Importación masiva desde Excel**, etiquetas y códigos de barras.
+- **M · Kardex por producto y fecha**, etiquetas y códigos de barras (✅ del original). ~~Conteo físico, exportar/importar Excel~~ ⛔ fuera de alcance.
 - **M · Precio en bolívares** en la ficha del producto (con la tasa del día).
-- **B · Lotes y vencimientos** y costo por lote, solo si el cliente los usa.
+- ~~B · Lotes y vencimientos~~ ⛔ fuera de alcance.
 - **B · Regla de presentación principal única por producto** (sin validar todavía).
 
 ### 12.7 Tesorería y bancos
 
 - **M · Cambio de divisas** entre cuentas de distinta moneda como operación propia (el vuelto del POS ya usa un intercambio entre cajas).
-- **M · Revaluación de saldos en divisas:** las cuentas en USD no se revalúan; no se registra la diferencia cambiaria al cierre del mes.
+- ~~M · Revaluación de saldos en divisas~~ ⛔ fuera de alcance (el original no la tiene).
 - **M · Corregir movimientos manuales** (hoy con un contramovimiento) y anularlos con su asiento.
-- **M · Importar el estado de cuenta del banco** y conciliar automáticamente; cheques emitidos y en tránsito; comisiones bancarias automáticas.
+- ~~M · Importar el estado de cuenta del banco y conciliar automáticamente~~ ⛔ fuera de alcance (el original no concilia).
 - **B · Reportes de tesorería** (flujo de caja, saldos por fecha).
 
 ### 12.8 Plataforma como servicio (alquiler)

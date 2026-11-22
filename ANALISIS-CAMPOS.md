@@ -1,5 +1,7 @@
 # Análisis de campos: Lebrun (origen) contra `erp-suma` (nuevo)
 
+> **Alcance (2026-11-22):** solo se hace lo que existe en el original; lo que no, queda anotado como fuera de alcance en `PLAN-WEB.md` sección 12.00 (con la revisión contra el código del original).
+
 **Fecha:** 2026-11-21 · **Objetivo:** comprobar que los formularios nuevos tienen **todos los campos que el Lebrun original usa**. Es condición del proyecto: si falta un campo, el cliente no puede dejar de usar el escritorio.
 
 ## 1. Cómo se hizo y qué tan firme es
