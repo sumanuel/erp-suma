@@ -22,7 +22,7 @@
 | **Clientes** | 49 columnas · 36 etiquetas en pantalla | ~55 | **✅ Completado el 2026-11-21** (faltan contactos, sucursales y cuenta contable) |
 | **Proveedores** | 42 columnas · 50 etiquetas | ~45 | **✅ Completado el 2026-11-21** (falta varios contactos y cuentas contables) |
 | **Productos** | 31 columnas + presentaciones, precios por lista, promociones | ~40 + precios y promociones | **✅ Campos completados el 2026-11-21** (falta usarlos en ventas, cambio masivo e imagen) |
-| **Pedido / Prefactura / Factura** | 46–47 columnas · ~40 etiquetas | cliente, almacén, observaciones, días de crédito y líneas | **Incompleto** (vendedor, condiciones, descuentos, entrega, pago mixto…) |
+| **Pedido / Prefactura / Factura** | 46–47 columnas · ~40 etiquetas | + vendedor, condición de pago, transporte, entrega, 3 descuentos globales, lista de precios y control de crédito | **✅ Condiciones completadas el 2026-11-21** (faltan pronto pago, almacén/unidad por línea y pago mixto con el POS) |
 | **Orden de compra** | 29 columnas | proveedor, fechas, observaciones, líneas | **Incompleto** (moneda/cambio, condición, 3 descuentos, arancel) |
 | **Documento del proveedor** | 45 columnas | 8 | **Incompleto** (fechas, desglose por alícuota, tipo de documento) |
 | **Cobros (recibo de ingreso)** | 16 + 20 columnas | 7 | **Incompleto** (cobrador, pago mixto, anticipos, cheques) |
@@ -145,6 +145,9 @@ Ya está: código, descripción, categoría/subcategoría, alícuota de IVA, ara
 ### 4.1 Pedido, prefactura y factura (`admpedido`, `admdocclipre`, `admdoccli`, `frmPedido`, `frmPrefactura`, `frmFactura`)
 
 Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédito; por línea: producto, cantidad, precio, descuento %. En el pedido: cliente, fecha, observaciones, líneas.
+
+> **✅ Avance 2026-11-21 (cotización, pedido y factura):** hecho: **vendedor**, **condición de pago** (propone los días de crédito de la factura), **transporte**, **dirección de entrega** y **tres descuentos globales** en cadena; todo se propone desde la ficha del cliente y se puede cambiar. El precio sale de la **lista de precios del cliente** (con **promociones** de precio o descuento vigentes) y se respeta el **descuento máximo** de la lista. **Control de crédito** al facturar: bloqueado no compra; a crédito solo con crédito habilitado, sin mora, dentro del **límite** y sin facturas vencidas más allá de los **días máximos**. Los documentos copian sus condiciones al convertirse (cotización → pedido → factura) y el detalle las muestra.
+> **⬜ Sigue pendiente:** **pronto pago** (días y % 1 y 2), almacén y unidad **por línea**, bultos y kilos, origen de venta, aprobación gerencial, control del permiso «cambiar precio», promociones de «compra N y llévate M» (cantidad otorgada), y **candado por cliente** en el crédito (dos ventas a crédito simultáneas pueden pasar el límite juntas).
 
 | Campo original | En el nuevo | Prio |
 |---|---|---|

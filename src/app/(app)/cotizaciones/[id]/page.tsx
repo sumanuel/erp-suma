@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
+import { FilasCondiciones } from "@/components/ventas/filas-condiciones";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { ESTADOS_COTIZACION, estaVigente, numeroCotizacion, type EstadoCotizacion } from "@/lib/cotizaciones/estados";
 import { numeroPedido } from "@/lib/pedidos/calculos";
@@ -57,6 +58,7 @@ export default async function DetalleCotizacion({ params }: { params: Promise<{ 
           <div><dt className="text-gris-500">Válida hasta</dt><dd className={vencida ? "text-error" : ""}>{formatoFecha(c.fechaVencimiento)} ({c.validezDias} días)</dd></div>
           <div><dt className="text-gris-500">Tasa USD (al emitir)</dt><dd>{tasa ? textoTasa(tasa) : "—"}</dd></div>
           <div><dt className="text-gris-500">Creada por</dt><dd>{c.creadoPorNombre ?? "—"} · {formatoFechaHora(c.creadoEn)}</dd></div>
+          <FilasCondiciones db={ctx.db} doc={c} />
           <div className="sm:col-span-2"><dt className="text-gris-500">Observaciones</dt><dd>{c.observaciones ?? "—"}</dd></div>
           {c.pedidos.length > 0 ? <div><dt className="text-gris-500">Pedido</dt><dd>{c.pedidos.map((p) => <Link key={p.id} href={`/pedidos/${p.id}`} className="text-marca-texto hover:underline">{numeroPedido(p.numero)}</Link>)}</dd></div> : null}
           {c.estado === "RECHAZADA" ? <div className="sm:col-span-2"><dt className="text-gris-500">Motivo del rechazo</dt><dd>{c.motivoCierre ?? "—"}</dd></div> : null}

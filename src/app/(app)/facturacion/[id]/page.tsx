@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
+import { FilasCondiciones } from "@/components/ventas/filas-condiciones";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { ESTADOS_FACTURA, numeroFactura, type EstadoFactura } from "@/lib/facturacion/estados";
 import { numeroPedido } from "@/lib/pedidos/calculos";
@@ -59,6 +60,7 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
           <div><dt className="text-gris-500">Nº de control</dt><dd>{f.numeroControl ?? "—"}</dd></div>
           <div><dt className="text-gris-500">Pedido</dt><dd>{f.pedido ? <Link href={`/pedidos/${f.pedido.id}`} className="text-marca-texto hover:underline">{numeroPedido(f.pedido.numero)}</Link> : "—"}</dd></div>
           <div><dt className="text-gris-500">Emitida por</dt><dd>{f.creadoPorNombre ?? "—"} · {formatoFechaHora(f.creadoEn)}</dd></div>
+          <FilasCondiciones db={ctx.db} doc={f} />
           <div className="sm:col-span-2"><dt className="text-gris-500">Observaciones</dt><dd>{f.observaciones ?? "—"}</dd></div>
           {f.estado === "ANULADA" ? <div className="sm:col-span-2 xl:col-span-4"><dt className="text-gris-500">Anulada</dt><dd>{f.anuladaPorNombre ?? "—"} · {formatoFechaHora(f.anuladaEn)} · {f.motivoAnulacion}</dd></div> : null}
         </dl>

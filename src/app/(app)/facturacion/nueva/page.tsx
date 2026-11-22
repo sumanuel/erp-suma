@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requerirPermiso } from "@/lib/dal";
+import { datosVentaForm } from "@/lib/ventas/formularios";
 import { numeroPedido } from "@/lib/pedidos/calculos";
 import { FormularioFactura, type InicialFactura } from "../formulario-factura";
 
@@ -10,8 +11,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export default async function NuevaFactura({ searchParams }: { searchParams: Promise<{ pedido?: string }> }) {
   const { db } = await requerirPermiso("facturacion", "crear");
   const { pedido: pedidoId } = await searchParams;
-  const [clientes, almacenes] = await Promise.all([
-    db.cliente.findMany({ where: { activo: true }, orderBy: { razonSocial: "asc" }, select: { id: true, razonSocial: true, documento: true } }),
+  const [venta, almacenes] = await Promise.all([
+    datosVentaForm(db),
     db.almacen.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
   ]);
   const opcionesAlmacen = almacenes.map((a) => ({ valor: a.id, etiqueta: `${a.codigo} · ${a.nombre}` }));
@@ -19,7 +20,7 @@ export default async function NuevaFactura({ searchParams }: { searchParams: Pro
 
   let pedido: { id: string; etiqueta: string } | null = null;
   let inicial: InicialFactura = { clienteId: "", almacenId: almacenInicial, observaciones: "", diasCredito: "0", lineas: [] };
-  let opcionesCliente = clientes.map((c) => ({ valor: c.id, etiqueta: `${c.razonSocial} (${c.documento})` }));
+  let opcionesCliente = venta.clientes;
   if (pedidoId) {
     if (!UUID.test(pedidoId)) notFound();
     const p = await db.pedidoVenta.findUnique({ where: { id: pedidoId }, include: { cliente: true, lineas: { orderBy: { linea: "asc" } } } });
@@ -28,9 +29,9 @@ export default async function NuevaFactura({ searchParams }: { searchParams: Pro
     pedido = { id: p.id, etiqueta: numeroPedido(p.numero) };
     opcionesCliente = [{ valor: p.clienteId, etiqueta: `${p.cliente.razonSocial} (${p.cliente.documento})` }];
     inicial = {
-      clienteId: p.clienteId, almacenId: almacenInicial, observaciones: p.observaciones ?? "", diasCredito: "0",
+      clienteId: p.clienteId, almacenId: almacenInicial, observaciones: p.observaciones ?? "", diasCredito: String(venta.datos.condiciones.find((c) => c.valor === p.condicionPagoId)?.dias ?? 0),
       lineas: p.lineas.map((l) => ({ productoCodigo: l.productoCodigo, descripcion: l.descripcion, ivaPorcentaje: Number(l.ivaPorcentaje), cantidad: String(Number(l.cantidad)), precioUnitario: String(Number(l.precioUnitario)), descuento: String(Number(l.descuento)) })),
     };
   }
-  return <FormularioFactura pedido={pedido} inicial={inicial} clientes={opcionesCliente} almacenes={opcionesAlmacen} />;
+  return <FormularioFactura pedido={pedido} inicial={inicial} clientes={opcionesCliente} almacenes={opcionesAlmacen} ventas={venta.datos} />;
 }

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
+import { EncabezadoVentaZ } from "@/lib/ventas/esquemas";
 import { anularPedido, buscarProductosVenta, confirmarPedido, guardarPedido, type ProductoVenta } from "@/lib/pedidos/servicio";
 
 export type EstadoPedidoForm = { error?: string };
@@ -11,6 +12,7 @@ export type EstadoPedidoForm = { error?: string };
 const Fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida").transform((s) => new Date(`${s}T00:00:00.000Z`)).refine((d) => !Number.isNaN(d.getTime()), "Fecha inválida");
 
 const Pedido = z.object({
+  encabezado: EncabezadoVentaZ.optional(),
   clienteId: z.string().uuid("Elige un cliente"),
   fecha: Fecha,
   observaciones: z.string().trim().max(1000).transform((v) => v || null),
@@ -23,9 +25,9 @@ const Pedido = z.object({
 });
 
 /** Busca productos activos para armar el pedido, con su precio de lista y lo disponible (existencia menos reservas). */
-export async function buscarProductosPedido(texto: string): Promise<ProductoVenta[]> {
+export async function buscarProductosPedido(texto: string, lista = "A"): Promise<ProductoVenta[]> {
   const { db } = await requerirPermisoAccion("pedidos", "ver");
-  return buscarProductosVenta(db, texto);
+  return buscarProductosVenta(db, texto, lista);
 }
 
 export async function guardarPedidoVenta(id: string | null, datos: unknown): Promise<EstadoPedidoForm> {

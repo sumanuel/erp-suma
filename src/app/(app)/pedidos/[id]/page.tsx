@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
+import { FilasCondiciones } from "@/components/ventas/filas-condiciones";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { ESTADOS_PEDIDO, numeroPedido, type EstadoPedido } from "@/lib/pedidos/calculos";
 import { numeroFactura } from "@/lib/facturacion/estados";
@@ -48,6 +49,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           <div><dt className="text-gris-500">Fecha</dt><dd>{formatoFecha(p.fecha)}</dd></div>
           <div><dt className="text-gris-500">Creado por</dt><dd>{p.creadoPorNombre ?? "—"} · {formatoFechaHora(p.creadoEn)}</dd></div>
           <div><dt className="text-gris-500">Tasa USD (al confirmar)</dt><dd>{tasa ? textoTasa(tasa) : "—"}</dd></div>
+          <FilasCondiciones db={ctx.db} doc={p} />
           <div><dt className="text-gris-500">Observaciones</dt><dd>{p.observaciones ?? "—"}</dd></div>
           {p.facturas.length > 0 ? <div><dt className="text-gris-500">Factura</dt><dd>{p.facturas.map((f) => <Link key={f.id} href={`/facturacion/${f.id}`} className="text-marca-texto hover:underline">{numeroFactura(f.numero)}</Link>)}</dd></div> : null}
         </dl>

@@ -4,13 +4,14 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
-import { calcularLinea, calcularTotales } from "@/lib/pedidos/calculos";
+import { CondicionesVenta, useCondiciones, type CondicionesInicial, type DatosVentaForm } from "@/components/ventas/condiciones-venta";
+import { calcularLinea, calcularTotales, descuentoEfectivo } from "@/lib/pedidos/calculos";
 import type { ProductoVenta } from "@/lib/pedidos/servicio";
 import { buscarProductosFactura, emitirFacturaVenta } from "./acciones";
 import { formatoCantidad, formatoUsd } from "./formato";
 
 export type LineaForm = { productoCodigo: string; descripcion: string; ivaPorcentaje: number; cantidad: string; precioUnitario: string; descuento: string };
-export type InicialFactura = { clienteId: string; almacenId: string; observaciones: string; diasCredito: string; lineas: LineaForm[] };
+export type InicialFactura = { clienteId: string; almacenId: string; observaciones: string; diasCredito: string; lineas: LineaForm[]; condiciones?: CondicionesInicial };
 
 const num = (s: string) => {
   const n = Number(s.replace(",", "."));
@@ -21,10 +22,11 @@ const num = (s: string) => {
  * Formulario de factura. Con `pedido` las líneas y el cliente vienen del pedido confirmado y no se editan (solo se elige el almacén);
  * sin él, es una factura directa con buscador de productos. El servidor recalcula todo.
  */
-export function FormularioFactura({ pedido, inicial, clientes, almacenes }: {
-  pedido: { id: string; etiqueta: string } | null; inicial: InicialFactura; clientes: { valor: string; etiqueta: string }[]; almacenes: { valor: string; etiqueta: string }[];
+export function FormularioFactura({ pedido, inicial, clientes, almacenes, ventas }: {
+  pedido: { id: string; etiqueta: string } | null; inicial: InicialFactura; clientes: { valor: string; etiqueta: string }[]; almacenes: { valor: string; etiqueta: string }[]; ventas: DatosVentaForm;
 }) {
   const [clienteId, setClienteId] = useState(inicial.clienteId);
+  const cond = useCondiciones(inicial.condiciones, ventas, inicial.clienteId);
   const [almacenId, setAlmacenId] = useState(inicial.almacenId);
   const [observaciones, setObservaciones] = useState(inicial.observaciones);
   const [diasCredito, setDiasCredito] = useState(inicial.diasCredito);
@@ -41,21 +43,21 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes }: {
     if (fijo || q.length < 2) return;
     const turno = ++ultima.current;
     const t = setTimeout(async () => {
-      const r = await buscarProductosFactura(q).catch(() => []);
+      const r = await buscarProductosFactura(q, cond.lista).catch(() => []);
       if (turno === ultima.current) setResultados(r);
     }, 250);
     return () => clearTimeout(t);
-  }, [texto, fijo]);
+  }, [texto, fijo, cond.lista]);
   const visibles = texto.trim().length < 2 ? [] : resultados;
 
   function agregar(p: ProductoVenta) {
     setTexto("");
     setResultados([]);
-    setLineas((ls) => (ls.some((l) => l.productoCodigo === p.codigo) ? ls : [...ls, { productoCodigo: p.codigo, descripcion: p.descripcion, ivaPorcentaje: p.ivaPorcentaje, cantidad: "1", precioUnitario: String(p.precioLista), descuento: "0" }]));
+    setLineas((ls) => (ls.some((l) => l.productoCodigo === p.codigo) ? ls : [...ls, { productoCodigo: p.codigo, descripcion: p.descripcion, ivaPorcentaje: p.ivaPorcentaje, cantidad: "1", precioUnitario: String(p.precioLista), descuento: String(p.descuentoSugerido ?? 0) }]));
   }
   const cambiar = (i: number, campo: "cantidad" | "precioUnitario" | "descuento", v: string) => setLineas((ls) => ls.map((l, k) => (k === i ? { ...l, [campo]: v } : l)));
 
-  const entrada = lineas.map((l) => ({ cantidad: num(l.cantidad), costoUnitario: num(l.precioUnitario), descuento: num(l.descuento), ivaPorcentaje: l.ivaPorcentaje }));
+  const entrada = lineas.map((l) => ({ cantidad: num(l.cantidad), costoUnitario: num(l.precioUnitario), descuento: fijo ? num(l.descuento) : descuentoEfectivo(num(l.descuento), cond.global), ivaPorcentaje: l.ivaPorcentaje }));
   const calculadas = entrada.map(calcularLinea);
   const totales = calcularTotales(entrada);
 
@@ -67,7 +69,7 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes }: {
         pedido?.id ?? null,
         fijo
           ? { almacenId, observaciones, diasCredito: Math.trunc(num(diasCredito)) }
-          : { clienteId, almacenId, observaciones, diasCredito: Math.trunc(num(diasCredito)), lineas: lineas.map((l) => ({ productoCodigo: l.productoCodigo, cantidad: num(l.cantidad), precioUnitario: num(l.precioUnitario), descuento: num(l.descuento) })) },
+          : { clienteId, almacenId, observaciones, diasCredito: Math.trunc(num(diasCredito)), encabezado: cond.encabezado(), lineas: lineas.map((l) => ({ productoCodigo: l.productoCodigo, cantidad: num(l.cantidad), precioUnitario: num(l.precioUnitario), descuento: num(l.descuento) })) },
       );
       if (r?.error) setError(r.error);
     });
@@ -82,7 +84,7 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes }: {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="clienteId" className="text-[13px] font-medium">Cliente</label>
-            <select id="clienteId" value={clienteId} onChange={(e) => setClienteId(e.target.value)} required disabled={fijo} className={`${claseControl} pr-9`}>
+            <select id="clienteId" value={clienteId} onChange={(e) => { setClienteId(e.target.value); setDiasCredito(String(cond.elegirCliente(e.target.value))); }} required disabled={fijo} className={`${claseControl} pr-9`}>
               <option value="">Elegir…</option>
               {clientes.map((c) => <option key={c.valor} value={c.valor}>{c.etiqueta}</option>)}
             </select>
@@ -105,6 +107,8 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes }: {
           </div>
         </div>
       </Tarjeta>
+
+      {fijo ? null : <CondicionesVenta cond={cond} datos={ventas} onCondicion={(dias) => setDiasCredito(String(dias))} />}
 
       <Tarjeta recortar={false}>
         {fijo ? null : (

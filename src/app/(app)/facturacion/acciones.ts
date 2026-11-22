@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
+import { EncabezadoVentaZ } from "@/lib/ventas/esquemas";
 import { anularFactura, emitirFactura, emitirFacturaDePedido, registrarNumerosFiscales } from "@/lib/facturacion/servicio";
 import { anularNotaVenta, crearNotaVenta } from "@/lib/notas/servicio";
 import { buscarProductosVenta, type ProductoVenta } from "@/lib/pedidos/servicio";
@@ -11,6 +12,7 @@ import { buscarProductosVenta, type ProductoVenta } from "@/lib/pedidos/servicio
 export type EstadoFacturaForm = { error?: string };
 
 const Factura = z.object({
+  encabezado: EncabezadoVentaZ.optional(),
   clienteId: z.string().uuid("Elige un cliente"),
   almacenId: z.string().uuid("Elige un almacén"),
   observaciones: z.string().trim().max(1000).transform((v) => v || null),
@@ -23,9 +25,9 @@ const Factura = z.object({
   })).max(500),
 });
 
-export async function buscarProductosFactura(texto: string): Promise<ProductoVenta[]> {
+export async function buscarProductosFactura(texto: string, lista = "A"): Promise<ProductoVenta[]> {
   const { db } = await requerirPermisoAccion("facturacion", "crear");
-  return buscarProductosVenta(db, texto);
+  return buscarProductosVenta(db, texto, lista);
 }
 
 /** Emite una factura directa o, si trae `pedidoId`, la del pedido confirmado (con sus líneas y precios). */

@@ -14,6 +14,15 @@ model PedidoVenta {
   fecha           DateTime          @db.Date
   /// BORRADOR, CONFIRMADO, FACTURADO, ANULADO
   estado          String            @default("BORRADOR")
+  /// Condiciones comerciales (vienen del cliente y se pueden cambiar en el documento).
+  vendedorId      String?  @map("vendedor_id") @db.Uuid
+  condicionPagoId String?  @map("condicion_pago_id") @db.Uuid
+  transporteId    String?  @map("transporte_id") @db.Uuid
+  direccionEntrega String? @map("direccion_entrega")
+  /// Descuentos globales 1, 2 y 3 (%): se aplican en cadena a todas las líneas (quedan dentro del descuento de cada línea).
+  descuentoGlobal1 Decimal @default(0) @map("descuento_global_1") @db.Decimal(7, 4)
+  descuentoGlobal2 Decimal @default(0) @map("descuento_global_2") @db.Decimal(7, 4)
+  descuentoGlobal3 Decimal @default(0) @map("descuento_global_3") @db.Decimal(7, 4)
   observaciones   String?
   subtotal        Decimal           @default(0) @db.Decimal(18, 4)
   descuento       Decimal           @default(0) @db.Decimal(18, 4)
@@ -45,6 +54,8 @@ model PedidoVentaLinea {
   /// Precio unitario en USD, antes de descuento.
   precioUnitario Decimal     @map("precio_unitario") @db.Decimal(18, 4)
   descuento      Decimal     @default(0) @db.Decimal(7, 4)
+  /// Descuento que se escribió en la línea (%), sin los globales; `descuento` es el efectivo (línea + globales) con el que se calcula el total.
+  descuentoLinea Decimal? @map("descuento_linea") @db.Decimal(7, 4)
   /// Alícuota de IVA de venta del producto al momento del pedido.
   ivaPorcentaje  Decimal     @default(0) @map("iva_porcentaje") @db.Decimal(7, 4)
   total          Decimal     @default(0) @db.Decimal(18, 4)

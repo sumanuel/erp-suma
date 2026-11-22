@@ -6,11 +6,12 @@ import { numeroPedido } from "@/lib/pedidos/calculos";
 import { PedidoError, prepararLineasVenta, type LineaPedido } from "@/lib/pedidos/servicio";
 import { hoyCaracas, tasaVigente } from "@/lib/tasas";
 import { calcularTotales, estaVigente, numeroCotizacion } from "./estados";
+import { VentaError, encabezadoDe, validarEncabezado, type EncabezadoVenta } from "@/lib/ventas/condiciones";
 
 // Servicio de cotizaciones. Una cotización no reserva ni mueve inventario. Convertir una cotización emitida y vigente crea un pedido en borrador
 // con los mismos precios, y la cotización pasa a ACEPTADA en la misma transacción (el cambio de estado condicionado impide convertirla dos veces).
 
-export type DatosCotizacion = { clienteId: string; fecha: Date; validezDias: number; observaciones: string | null; lineas: LineaPedido[] };
+export type DatosCotizacion = { clienteId: string; fecha: Date; validezDias: number; observaciones: string | null; lineas: LineaPedido[]; encabezado?: EncabezadoVenta };
 export type ResultadoCotizacion<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
 class CotizacionError extends Error {}
@@ -19,7 +20,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoCotizacion<T>>): Prom
   try {
     return await trabajo();
   } catch (e) {
-    if (e instanceof CotizacionError || e instanceof PedidoError) return { ok: false, error: e.message };
+    if (e instanceof CotizacionError || e instanceof PedidoError || e instanceof VentaError) return { ok: false, error: e.message };
     throw e;
   }
 }
@@ -30,10 +31,11 @@ export async function guardarCotizacion(db: Db, actor: Actor, id: string | null,
   return ejecutar(async () => {
     if (!Number.isInteger(d.validezDias) || d.validezDias < 1 || d.validezDias > 365) throw new CotizacionError("La vigencia debe ser un entero entre 1 y 365 días.");
     const r = await db.$transaction(async (tx) => {
-      const lineas = await prepararLineasVenta(tx, d);
+      const enc = await validarEncabezado(tx, d.encabezado);
+      const lineas = await prepararLineasVenta(tx, { ...d, descuentos: enc.descuentos });
       const t = calcularTotales(lineas.map((l) => l._e));
-      const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, ivaPorcentaje: l.ivaPorcentaje, total: l.total }));
-      const base = { clienteId: d.clienteId, fecha: d.fecha, validezDias: d.validezDias, fechaVencimiento: vence(d.fecha, d.validezDias), observaciones: d.observaciones, ...t };
+      const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total }));
+      const base = { clienteId: d.clienteId, fecha: d.fecha, validezDias: d.validezDias, fechaVencimiento: vence(d.fecha, d.validezDias), observaciones: d.observaciones, ...enc.columnas, ...t };
       if (id) {
         const u = await tx.cotizacion.updateMany({ where: { id, estado: "BORRADOR" }, data: base });
         if (u.count === 0) throw new CotizacionError("Solo se puede editar una cotización en borrador (o ya no existe).");
@@ -87,15 +89,18 @@ export async function convertirEnPedido(db: Db, actor: Actor, id: string): Promi
       const c = await tx.cotizacion.findUniqueOrThrow({ where: { id }, include: { lineas: { orderBy: { linea: "asc" } } } });
       if (!estaVigente(hoyCaracas(), c.fechaVencimiento)) throw new CotizacionError("La cotización está vencida: haz una nueva con los precios de hoy.");
       // Revalida producto activo, precio máximo y datos del cliente con las reglas de un pedido, pero conservando los precios cotizados.
+      const enc = await validarEncabezado(tx, encabezadoDe(c));
       const lineas = await prepararLineasVenta(tx, {
         clienteId: c.clienteId,
-        lineas: c.lineas.map((l) => ({ productoCodigo: l.productoCodigo, cantidad: Number(l.cantidad), precioUnitario: Number(l.precioUnitario), descuento: Number(l.descuento) })),
+        descuentos: enc.descuentos,
+        // Se parte del descuento que escribió quien cotizó (sin los globales), que se vuelven a combinar.
+        lineas: c.lineas.map((l) => ({ productoCodigo: l.productoCodigo, cantidad: Number(l.cantidad), precioUnitario: Number(l.precioUnitario), descuento: Number(l.descuentoLinea ?? l.descuento) })),
       });
       const t = calcularTotales(lineas.map((l) => l._e));
       const p = await tx.pedidoVenta.create({
         data: {
-          clienteId: c.clienteId, cotizacionId: id, fecha: hoyCaracas(), observaciones: c.observaciones, ...t, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
-          lineas: { create: lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, ivaPorcentaje: l.ivaPorcentaje, total: l.total })) },
+          clienteId: c.clienteId, cotizacionId: id, fecha: hoyCaracas(), observaciones: c.observaciones, ...enc.columnas, ...t, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
+          lineas: { create: lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total })) },
         },
         select: { id: true, numero: true },
       });

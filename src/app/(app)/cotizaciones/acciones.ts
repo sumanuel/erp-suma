@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requerirPermisoAccion } from "@/lib/dal";
+import { EncabezadoVentaZ } from "@/lib/ventas/esquemas";
 import { anularCotizacion, convertirEnPedido, emitirCotizacion, guardarCotizacion, rechazarCotizacion, type ResultadoCotizacion } from "@/lib/cotizaciones/servicio";
 import type { Actor } from "@/lib/inventario/movimientos";
 import type { Db } from "@/lib/tenant";
@@ -14,6 +15,7 @@ export type EstadoCotizacionForm = { error?: string };
 const Fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida").transform((s) => new Date(`${s}T00:00:00.000Z`)).refine((d) => !Number.isNaN(d.getTime()), "Fecha inválida");
 
 const Cotizacion = z.object({
+  encabezado: EncabezadoVentaZ.optional(),
   clienteId: z.string().uuid("Elige un cliente"),
   fecha: Fecha,
   validezDias: z.number().int("La vigencia debe ser un número entero de días").min(1, "La vigencia mínima es 1 día").max(365, "La vigencia máxima es 365 días"),
@@ -27,9 +29,9 @@ const Cotizacion = z.object({
 });
 
 /** Busca productos activos para armar la cotización, con su precio de lista y lo disponible (informativo: no reserva). */
-export async function buscarProductosCotizacion(texto: string): Promise<ProductoVenta[]> {
+export async function buscarProductosCotizacion(texto: string, lista = "A"): Promise<ProductoVenta[]> {
   const { db } = await requerirPermisoAccion("cotizaciones", "ver");
-  return buscarProductosVenta(db, texto);
+  return buscarProductosVenta(db, texto, lista);
 }
 
 export async function guardarCotizacionVenta(id: string | null, datos: unknown): Promise<EstadoCotizacionForm> {

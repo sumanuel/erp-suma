@@ -4,21 +4,24 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
+import { CondicionesVenta, useCondiciones, type CondicionesInicial, type DatosVentaForm } from "@/components/ventas/condiciones-venta";
+import { descuentoEfectivo } from "@/lib/pedidos/calculos";
 import { calcularLinea, calcularTotales } from "@/lib/cotizaciones/estados";
 import { buscarProductosCotizacion, guardarCotizacionVenta } from "./acciones";
 import type { ProductoVenta } from "@/lib/pedidos/servicio";
 import { formatoCantidad, formatoUsd } from "./formato";
 
 export type LineaForm = { productoCodigo: string; descripcion: string; ivaPorcentaje: number; cantidad: string; precioUnitario: string; descuento: string };
-export type InicialCotizacion = { clienteId: string; fecha: string; validezDias: string; observaciones: string; lineas: LineaForm[] };
+export type InicialCotizacion = { clienteId: string; fecha: string; validezDias: string; observaciones: string; lineas: LineaForm[]; condiciones?: CondicionesInicial };
 
 const num = (s: string) => {
   const n = Number(s.replace(",", "."));
   return Number.isFinite(n) ? n : 0;
 };
 
-export function FormularioCotizacion({ id, inicial, clientes }: { id: string | null; inicial: InicialCotizacion; clientes: { valor: string; etiqueta: string }[] }) {
+export function FormularioCotizacion({ id, inicial, clientes, ventas }: { id: string | null; inicial: InicialCotizacion; clientes: { valor: string; etiqueta: string }[]; ventas: DatosVentaForm }) {
   const [clienteId, setClienteId] = useState(inicial.clienteId);
+  const cond = useCondiciones(inicial.condiciones, ventas, inicial.clienteId);
   const [fecha, setFecha] = useState(inicial.fecha);
   const [validezDias, setValidezDias] = useState(inicial.validezDias);
   const [observaciones, setObservaciones] = useState(inicial.observaciones);
@@ -35,21 +38,21 @@ export function FormularioCotizacion({ id, inicial, clientes }: { id: string | n
     if (q.length < 2) return;
     const turno = ++ultima.current;
     const t = setTimeout(async () => {
-      const r = await buscarProductosCotizacion(q).catch(() => []);
+      const r = await buscarProductosCotizacion(q, cond.lista).catch(() => []);
       if (turno === ultima.current) setResultados(r);
     }, 250);
     return () => clearTimeout(t);
-  }, [texto]);
+  }, [texto, cond.lista]);
   const visibles = texto.trim().length < 2 ? [] : resultados;
 
   function agregar(p: ProductoVenta) {
     setTexto("");
     setResultados([]);
-    setLineas((ls) => (ls.some((l) => l.productoCodigo === p.codigo) ? ls : [...ls, { productoCodigo: p.codigo, descripcion: p.descripcion, ivaPorcentaje: p.ivaPorcentaje, cantidad: "1", precioUnitario: String(p.precioLista), descuento: "0" }]));
+    setLineas((ls) => (ls.some((l) => l.productoCodigo === p.codigo) ? ls : [...ls, { productoCodigo: p.codigo, descripcion: p.descripcion, ivaPorcentaje: p.ivaPorcentaje, cantidad: "1", precioUnitario: String(p.precioLista), descuento: String(p.descuentoSugerido ?? 0) }]));
   }
   const cambiar = (i: number, campo: "cantidad" | "precioUnitario" | "descuento", v: string) => setLineas((ls) => ls.map((l, k) => (k === i ? { ...l, [campo]: v } : l)));
 
-  const entrada = lineas.map((l) => ({ cantidad: num(l.cantidad), costoUnitario: num(l.precioUnitario), descuento: num(l.descuento), ivaPorcentaje: l.ivaPorcentaje }));
+  const entrada = lineas.map((l) => ({ cantidad: num(l.cantidad), costoUnitario: num(l.precioUnitario), descuento: descuentoEfectivo(num(l.descuento), cond.global), ivaPorcentaje: l.ivaPorcentaje }));
   const calculadas = entrada.map(calcularLinea);
   const totales = calcularTotales(entrada);
 
@@ -57,7 +60,7 @@ export function FormularioCotizacion({ id, inicial, clientes }: { id: string | n
     setError(null);
     iniciar(async () => {
       const r = await guardarCotizacionVenta(id, {
-        clienteId, fecha, validezDias: Math.trunc(num(validezDias)), observaciones,
+        clienteId, fecha, validezDias: Math.trunc(num(validezDias)), observaciones, encabezado: cond.encabezado(),
         lineas: lineas.map((l) => ({ productoCodigo: l.productoCodigo, cantidad: num(l.cantidad), precioUnitario: num(l.precioUnitario), descuento: num(l.descuento) })),
       });
       if (r?.error) setError(r.error);
@@ -72,7 +75,7 @@ export function FormularioCotizacion({ id, inicial, clientes }: { id: string | n
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="flex flex-col gap-1.5 xl:col-span-2">
             <label htmlFor="clienteId" className="text-[13px] font-medium">Cliente</label>
-            <select id="clienteId" value={clienteId} onChange={(e) => setClienteId(e.target.value)} required className={`${claseControl} pr-9`}>
+            <select id="clienteId" value={clienteId} onChange={(e) => { setClienteId(e.target.value); cond.elegirCliente(e.target.value); }} required className={`${claseControl} pr-9`}>
               <option value="">Elegir…</option>
               {clientes.map((c) => <option key={c.valor} value={c.valor}>{c.etiqueta}</option>)}
             </select>
@@ -91,6 +94,8 @@ export function FormularioCotizacion({ id, inicial, clientes }: { id: string | n
           </div>
         </div>
       </Tarjeta>
+
+      <CondicionesVenta cond={cond} datos={ventas} />
 
       <Tarjeta recortar={false}>
         <div className="relative p-4">

@@ -3,14 +3,16 @@ import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import type { Actor } from "@/lib/inventario/movimientos";
 import { tasaVigente } from "@/lib/tasas";
-import { calcularLinea, calcularTotales, numeroPedido } from "./calculos";
+import { calcularLinea, calcularTotales, descuentoEfectivo, descuentoGlobal, numeroPedido } from "./calculos";
+import { VentaError, validarEncabezado, type EncabezadoVenta } from "@/lib/ventas/condiciones";
+import { resolverPrecios } from "@/lib/ventas/precios";
 
 // Servicio de pedidos de venta. Cada operación es una transacción. Confirmar reserva mercancía: la reserva no es una columna sino la suma
 // de las líneas de pedidos CONFIRMADOS, así que no hay un saldo que se pueda desajustar; el candado por producto evita que dos
 // confirmaciones simultáneas reserven lo mismo.
 
 export type LineaPedido = { productoCodigo: string; cantidad: number; precioUnitario: number; descuento: number };
-export type DatosPedido = { clienteId: string; fecha: Date; observaciones: string | null; lineas: LineaPedido[] };
+export type DatosPedido = { clienteId: string; fecha: Date; observaciones: string | null; lineas: LineaPedido[]; encabezado?: EncabezadoVenta };
 export type ResultadoPedido<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
 export class PedidoError extends Error {}
@@ -20,7 +22,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoPedido<T>>): Promise<
   try {
     return await trabajo();
   } catch (e) {
-    if (e instanceof PedidoError) return { ok: false, error: e.message };
+    if (e instanceof PedidoError || e instanceof VentaError) return { ok: false, error: e.message };
     throw e;
   }
 }
@@ -41,9 +43,12 @@ export async function disponibles(db: Db | Tx, codigos: string[], excluirPedidoI
   return r;
 }
 
-export async function prepararLineasVenta(tx: Tx, d: Pick<DatosPedido, "clienteId" | "lineas">) {
-  const cliente = await tx.cliente.findUnique({ where: { id: d.clienteId }, select: { activo: true } });
+export async function prepararLineasVenta(tx: Tx, d: Pick<DatosPedido, "clienteId" | "lineas"> & { descuentos?: number[] }) {
+  const cliente = await tx.cliente.findUnique({ where: { id: d.clienteId }, select: { activo: true, situacion: true, listaPrecio: true } });
   if (!cliente || !cliente.activo) throw new PedidoError("El cliente no existe o está inactivo.");
+  if (cliente.situacion === "BLOQUEADO") throw new PedidoError("El cliente está bloqueado: no se le puede vender.");
+  const global = descuentoGlobal(d.descuentos ?? []);
+  const precios = await resolverPrecios(tx, d.lineas.map((l) => l.productoCodigo), cliente.listaPrecio);
   if (d.lineas.length === 0) throw new PedidoError("Agrega al menos un producto.");
   if (d.lineas.length > 500) throw new PedidoError("Máximo 500 líneas por pedido.");
   const codigos = d.lineas.map((l) => l.productoCodigo);
@@ -58,21 +63,26 @@ export async function prepararLineasVenta(tx: Tx, d: Pick<DatosPedido, "clienteI
     if (l.precioUnitario < 0 || l.precioUnitario > 1e9) throw new PedidoError(`Línea ${i + 1}: precio inválido.`);
     if (l.descuento < 0 || l.descuento > 100) throw new PedidoError(`Línea ${i + 1}: el descuento debe estar entre 0 y 100.`);
     const maximo = Number(p.precioMaximoPublico);
-    const neto = l.precioUnitario * (1 - l.descuento / 100);
+    const efectivo = descuentoEfectivo(l.descuento, global);
+    const neto = l.precioUnitario * (1 - efectivo / 100);
     if (maximo > 0 && neto > maximo + 1e-9) throw new PedidoError(`${l.productoCodigo}: el precio supera el máximo al público (${maximo}).`);
     const ivaPorcentaje = Number(p.alicuotaIva.porcentajeVenta);
-    const calc = calcularLinea({ cantidad: l.cantidad, costoUnitario: l.precioUnitario, descuento: l.descuento, ivaPorcentaje });
-    return { linea: i + 1, productoCodigo: l.productoCodigo, descripcion: p.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, ivaPorcentaje, total: calc.total, _e: { cantidad: l.cantidad, costoUnitario: l.precioUnitario, descuento: l.descuento, ivaPorcentaje } };
+    // El descuento máximo de la lista limita lo que escribió quien vende (el global del cliente no cuenta contra ese tope).
+    const tope = precios.get(l.productoCodigo);
+    if (tope && tope.origen === "LISTA" && tope.descuentoMaxPct > 0 && l.descuento > tope.descuentoMaxPct + 1e-9) throw new PedidoError(`${l.productoCodigo}: el descuento máximo de la lista ${cliente.listaPrecio} es ${tope.descuentoMaxPct} %.`);
+    const calc = calcularLinea({ cantidad: l.cantidad, costoUnitario: l.precioUnitario, descuento: efectivo, ivaPorcentaje });
+    return { linea: i + 1, productoCodigo: l.productoCodigo, descripcion: p.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: efectivo, descuentoLinea: l.descuento, ivaPorcentaje, total: calc.total, _e: { cantidad: l.cantidad, costoUnitario: l.precioUnitario, descuento: efectivo, ivaPorcentaje } };
   });
 }
 
 export async function guardarPedido(db: Db, actor: Actor, id: string | null, d: DatosPedido): Promise<ResultadoPedido<{ id: string; numero: number }>> {
   return ejecutar(async () => {
     const r = await db.$transaction(async (tx) => {
-      const lineas = await prepararLineasVenta(tx, d);
+      const enc = await validarEncabezado(tx, d.encabezado);
+      const lineas = await prepararLineasVenta(tx, { ...d, descuentos: enc.descuentos });
       const t = calcularTotales(lineas.map((l) => l._e));
-      const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, ivaPorcentaje: l.ivaPorcentaje, total: l.total }));
-      const base = { clienteId: d.clienteId, fecha: d.fecha, observaciones: d.observaciones, ...t };
+      const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total }));
+      const base = { clienteId: d.clienteId, fecha: d.fecha, observaciones: d.observaciones, ...enc.columnas, ...t };
       if (id) {
         // Se edita solo si sigue en borrador: la condición va en el mismo UPDATE para que no se pisen dos personas.
         const u = await tx.pedidoVenta.updateMany({ where: { id, estado: "BORRADOR" }, data: base });
@@ -134,10 +144,10 @@ export async function anularPedido(db: Db, actor: Actor, id: string): Promise<Re
   });
 }
 
-export type ProductoVenta = { codigo: string; descripcion: string; precioLista: number; ivaPorcentaje: number; disponible: number };
+export type ProductoVenta = { codigo: string; descripcion: string; precioLista: number; ivaPorcentaje: number; disponible: number; descuentoSugerido?: number; descuentoMax?: number; origenPrecio?: "BASE" | "LISTA" | "PROMOCION" };
 
 /** Busca productos activos para armar un documento de venta, con su precio de lista y lo disponible (existencia menos reservas). */
-export async function buscarProductosVenta(db: Db, texto: string): Promise<ProductoVenta[]> {
+export async function buscarProductosVenta(db: Db, texto: string, lista = "A"): Promise<ProductoVenta[]> {
   const q = texto.trim().slice(0, 60);
   if (q.length < 2) return [];
   const r = await db.producto.findMany({
@@ -146,6 +156,13 @@ export async function buscarProductosVenta(db: Db, texto: string): Promise<Produ
     orderBy: { descripcion: "asc" },
     take: 12,
   });
-  const libre = await disponibles(db, r.map((p) => p.codigo));
-  return r.map((p) => ({ codigo: p.codigo, descripcion: p.descripcion, precioLista: Number(p.precioLista), ivaPorcentaje: Number(p.alicuotaIva.porcentajeVenta), disponible: libre.get(p.codigo) ?? 0 }));
+  const codigos = r.map((p) => p.codigo);
+  const [libre, precios] = await Promise.all([disponibles(db, codigos), resolverPrecios(db, codigos, /^[A-Z]$/.test(lista) ? lista : "A")]);
+  return r.map((p) => {
+    const x = precios.get(p.codigo);
+    return {
+      codigo: p.codigo, descripcion: p.descripcion, precioLista: x?.precioUsd ?? Number(p.precioLista), ivaPorcentaje: Number(p.alicuotaIva.porcentajeVenta), disponible: libre.get(p.codigo) ?? 0,
+      descuentoSugerido: x?.descuentoSugeridoPct ?? 0, descuentoMax: x?.descuentoMaxPct ?? 0, origenPrecio: x?.origen ?? "BASE",
+    };
+  });
 }
