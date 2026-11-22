@@ -20,6 +20,7 @@ export const LISTA_CONCEPTOS = Object.keys(CONCEPTOS) as Concepto[];
 
 export const ORIGENES_ASIENTO: Record<string, string> = {
   MANUAL: "Manual",
+  APERTURA: "Apertura del ejercicio",
   FACTURA: "Factura de venta",
   ANULACION_FACTURA: "Anulación de factura",
   COBRO: "Cobro",

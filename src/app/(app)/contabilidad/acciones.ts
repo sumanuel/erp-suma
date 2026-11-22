@@ -17,6 +17,9 @@ const Cuenta = z.object({
   padreId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null),
   posteable: z.boolean(),
   activo: z.boolean(),
+  siglas: z.string().trim().max(12).transform((v) => v || null).optional(),
+  imprimeBalance: z.boolean().optional(),
+  imprimeDiario: z.boolean().optional(),
 });
 
 export async function crearCuenta(datos: unknown): Promise<EstadoContaForm> {
@@ -31,7 +34,7 @@ export async function crearCuenta(datos: unknown): Promise<EstadoContaForm> {
 
 export async function editarCuenta(id: string, datos: unknown): Promise<EstadoContaForm> {
   const ctx = await requerirPermisoAccion("contabilidad", "editar");
-  const r = Cuenta.pick({ nombre: true, posteable: true, activo: true }).safeParse(datos);
+  const r = Cuenta.pick({ nombre: true, posteable: true, activo: true, siglas: true, imprimeBalance: true, imprimeDiario: true }).safeParse(datos);
   if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
   const res = await editarCuentaContable(ctx.db, ctx.usuario, id, r.data);
   if (!res.ok) return { error: res.error };
@@ -51,14 +54,21 @@ const Asiento = z.object({
   fecha: Fecha,
   descripcion: z.string().trim().min(3, "Escribe la descripción del asiento").max(300),
   referencia: z.string().trim().max(60).transform((v) => v || null),
-  lineas: z.array(z.object({ cuentaId: z.string().uuid("Elige la cuenta de cada línea"), descripcion: z.string().trim().max(200).transform((v) => v || null), debe: z.number().finite(), haber: z.number().finite() })).max(300),
+  apertura: z.boolean().optional(),
+  lineas: z.array(z.object({
+    cuentaId: z.string().uuid("Elige la cuenta de cada línea"), descripcion: z.string().trim().max(200).transform((v) => v || null), debe: z.number().finite(), haber: z.number().finite(),
+    auxiliarId: z.union([z.string().uuid(), z.literal("")]).transform((v) => v || null).optional(),
+    referencia: z.string().trim().max(60).transform((v) => v || null).optional(),
+    documento: z.string().trim().max(40).transform((v) => v || null).optional(),
+  })).max(300),
 });
 
 export async function registrarAsientoManual(datos: unknown): Promise<EstadoContaForm> {
   const ctx = await requerirPermisoAccion("contabilidad", "crear");
   const r = Asiento.safeParse(datos);
   if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
-  const res = await registrarAsiento(ctx.db, ctx.usuario, r.data);
+  const { apertura, ...asiento } = r.data;
+  const res = await registrarAsiento(ctx.db, ctx.usuario, asiento, apertura ? "APERTURA" : "MANUAL");
   if (!res.ok) return { error: res.error };
   revalidatePath("/contabilidad/asientos");
   redirect(`/contabilidad/asientos/${res.id}`);

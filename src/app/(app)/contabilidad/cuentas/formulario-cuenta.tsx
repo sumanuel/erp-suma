@@ -8,7 +8,7 @@ import { crearCuenta, editarCuenta } from "../acciones";
 
 /** Alta (código, padre, tipo) o edición (solo nombre, clase y estado: el código y el padre no cambian). */
 export function FormularioCuenta({ id, inicial, padres }: {
-  id: string | null; inicial: { codigo: string; nombre: string; padreId: string; tipo: string; posteable: boolean; activo: boolean }; padres: { valor: string; etiqueta: string }[];
+  id: string | null; inicial: { codigo: string; nombre: string; padreId: string; tipo: string; posteable: boolean; activo: boolean; siglas: string; imprimeBalance: boolean; imprimeDiario: boolean }; padres: { valor: string; etiqueta: string }[];
 }) {
   const [v, setV] = useState(inicial);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +42,10 @@ export function FormularioCuenta({ id, inicial, padres }: {
             <label htmlFor="nombre" className="text-[13px] font-medium">Nombre</label>
             <input id="nombre" value={v.nombre} onChange={(e) => setV({ ...v, nombre: e.target.value })} required maxLength={120} className={claseControl} />
           </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="siglas" className="text-[13px] font-medium">Siglas <span className="font-normal text-gris-500">(opcional)</span></label>
+            <input id="siglas" value={v.siglas} onChange={(e) => setV({ ...v, siglas: e.target.value.toUpperCase() })} maxLength={12} className={claseControl} />
+          </div>
           {v.padreId === "" && !edicion ? (
             <div className="flex flex-col gap-1.5">
               <label htmlFor="tipo" className="text-[13px] font-medium">Tipo</label>
@@ -53,6 +57,8 @@ export function FormularioCuenta({ id, inicial, padres }: {
           ) : null}
         </div>
         <div className="mt-4 flex flex-wrap gap-6">
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.imprimeBalance} onChange={(e) => setV({ ...v, imprimeBalance: e.target.checked })} className="size-4 accent-marca-fuerte" /> Se detalla en el balance general</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.imprimeDiario} onChange={(e) => setV({ ...v, imprimeDiario: e.target.checked })} className="size-4 accent-marca-fuerte" /> Se detalla en el libro diario</label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.posteable} onChange={(e) => setV({ ...v, posteable: e.target.checked })} className="size-4 accent-marca-fuerte" /> Recibe asientos (cuenta de movimiento)</label>
           {edicion ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.activo} onChange={(e) => setV({ ...v, activo: e.target.checked })} className="size-4 accent-marca-fuerte" /> Cuenta activa</label> : null}
         </div>

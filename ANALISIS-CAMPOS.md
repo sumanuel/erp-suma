@@ -278,6 +278,8 @@ Nuevo (formulario de factura): cliente, almacén, observaciones, días de crédi
 | Parámetros contables (`parametrosContables`, 25 etiquetas) | Configuración por concepto ✔️ (revisar paridad en 6) | M |
 | Centro de costos (`admcentrocostos`) y estructura de costos | Falta | M |
 
+> **✅ Avance 2026-11-22 (contabilidad):** siglas, «imprime balance» e «imprime diarios» por cuenta, **auxiliares contables**, referencia y documento por línea del asiento, asiento de **apertura** (saldos iniciales) y **libro diario**. **⬜ Pendiente:** cierre definitivo del comprobante, mayor y balance por auxiliar.
+
 ### 5.5 Reportes y fiscal
 
 Ya cubiertos: libros de ventas y compras, resumen de IVA, retenciones, balance, resultados, antigüedad de saldos, ventas, inventario. Faltan los de la sección 12.8 de `PLAN-WEB.md` (ARC, comprobantes de retención en PDF, planillas, kardex, flujo de caja, comisiones) y los 20 Crystal Reports.

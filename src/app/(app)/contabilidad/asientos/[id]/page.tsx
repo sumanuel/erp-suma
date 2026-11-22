@@ -12,7 +12,7 @@ export default async function DetalleAsiento({ params }: { params: Promise<{ id:
   const { id } = await params;
   if (!UUID.test(id)) notFound();
   const ctx = await requerirSesion();
-  const a = await ctx.db.asiento.findUnique({ where: { id }, include: { lineas: { orderBy: { linea: "asc" }, include: { cuenta: { select: { codigo: true, nombre: true } } } } } });
+  const a = await ctx.db.asiento.findUnique({ where: { id }, include: { lineas: { orderBy: { linea: "asc" }, include: { cuenta: { select: { codigo: true, nombre: true } }, auxiliar: { select: { codigo: true, nombre: true } } } } } });
   if (!a) notFound();
   const periodo = await ctx.db.periodoContable.findUnique({ where: { anio_mes: { anio: a.anio, mes: a.mes } } });
   const e = ESTADOS_ASIENTO[a.estado as EstadoAsiento];
@@ -46,20 +46,23 @@ export default async function DetalleAsiento({ params }: { params: Promise<{ id:
           <table className="w-full text-left text-[13.5px]">
             <thead>
               <tr className="border-b border-linea text-[12.5px] text-gris-600">
-                <th className="px-4 py-3 font-medium">Cuenta</th><th className="px-3 py-3 font-medium">Detalle</th><th className="px-3 py-3 text-right font-medium">Debe Bs.</th><th className="px-4 py-3 text-right font-medium">Haber Bs.</th>
+                <th className="px-4 py-3 font-medium">Cuenta</th><th className="px-3 py-3 font-medium">Auxiliar</th><th className="px-3 py-3 font-medium">Detalle</th><th className="px-3 py-3 font-medium">Referencia</th><th className="px-3 py-3 font-medium">Documento</th><th className="px-3 py-3 text-right font-medium">Debe Bs.</th><th className="px-4 py-3 text-right font-medium">Haber Bs.</th>
               </tr>
             </thead>
             <tbody>
               {a.lineas.map((l) => (
                 <tr key={l.id} className="border-b border-linea last:border-0">
                   <td className="px-4 py-3"><span className="font-semibold tabular-nums">{l.cuenta.codigo}</span> · {l.cuenta.nombre}</td>
+                  <td className="px-3 py-3">{l.auxiliar ? `${l.auxiliar.codigo} · ${l.auxiliar.nombre}` : "—"}</td>
                   <td className="px-3 py-3">{l.descripcion ?? "—"}</td>
+                  <td className="px-3 py-3">{l.referencia ?? "—"}</td>
+                  <td className="px-3 py-3">{l.documento ?? "—"}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{Number(l.debe) > 0 ? formatoUsd(Number(l.debe)) : ""}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{Number(l.haber) > 0 ? formatoUsd(Number(l.haber)) : ""}</td>
                 </tr>
               ))}
             </tbody>
-            <tfoot><tr className="border-t border-linea font-semibold"><td className="px-4 py-3" colSpan={2}>Totales</td><td className="px-3 py-3 text-right tabular-nums">{formatoUsd(debe)}</td><td className="px-4 py-3 text-right tabular-nums">{formatoUsd(haber)}</td></tr></tfoot>
+            <tfoot><tr className="border-t border-linea font-semibold"><td className="px-4 py-3" colSpan={5}>Totales</td><td className="px-3 py-3 text-right tabular-nums">{formatoUsd(debe)}</td><td className="px-4 py-3 text-right tabular-nums">{formatoUsd(haber)}</td></tr></tfoot>
           </table>
         </div>
       </Tarjeta>

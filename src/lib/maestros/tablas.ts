@@ -197,6 +197,39 @@ export const centrosCosto: Maestro = {
   preparar: mayusculas, mensajeDuplicado: "Ya existe un centro de costo con este código.", mensajeDependientes: "No se puede eliminar: hay órdenes o documentos en este centro de costo. Márcalo como inactivo en su lugar.",
 };
 
+export const auxiliaresContables: Maestro = {
+  id: "auxiliares-contables", modulo: "tablas", ruta: "/tablas/auxiliares", entidad: "auxiliar_contable", singular: "auxiliar contable", plural: "auxiliares contables", genero: "el",
+  delegado: (db) => db.auxiliarContable as unknown as Delegado, clave,
+  incluir: { cuenta: { select: { codigo: true, nombre: true } } },
+  campos: async (db) => [
+    {
+      nombre: "cuentaId", etiqueta: "Cuenta contable", tipo: "seleccion", requerido: true, soloCrear: true, ayuda: "Una cuenta de movimiento. No se puede cambiar después.",
+      opciones: (await db.cuentaContable.findMany({ where: { posteable: true, activo: true }, orderBy: { codigo: "asc" }, select: { id: true, codigo: true, nombre: true } })).map((c) => ({ valor: c.id, etiqueta: `${c.codigo} ${c.nombre}` })),
+    },
+    { nombre: "codigo", etiqueta: "Código del auxiliar", tipo: "texto", max: 20, requerido: true, soloCrear: true, ayuda: "No se puede cambiar después." },
+    { nombre: "nombre", etiqueta: "Nombre", tipo: "texto", max: 120, requerido: true, ancho: 2 },
+    { nombre: "manejaDocumentos", etiqueta: "Maneja documentos (facturas, cheques)", tipo: "booleano" },
+    { nombre: "activo", etiqueta: "Activo", tipo: "booleano" },
+  ],
+  valoresIniciales: { activo: true, manejaDocumentos: false },
+  columnas: [
+    { id: "nombre", titulo: "Nombre", campo: "nombre", fija: true },
+    { id: "codigo", titulo: "Código", campo: "codigo" },
+    { id: "cuenta", titulo: "Cuenta", valor: (f) => { const c = f.cuenta as { codigo?: string; nombre?: string } | undefined; return c ? `${c.codigo} ${c.nombre}` : ""; } },
+    { id: "manejaDocumentos", titulo: "Documentos", campo: "manejaDocumentos", etiqueta: (v) => (v === true ? { texto: "Sí", tono: "marca" } : { texto: "—", tono: "neutro" }), oculta: true },
+    { id: "activo", titulo: "Estado", campo: "activo", etiqueta: etiquetaActivo },
+  ],
+  busqueda: { texto: "Buscar por código o nombre", campos: ["codigo", "nombre"] }, filtros: [filtroActivo],
+  orden: { columna: "nombre", dir: "asc" }, titulo: (f) => String(f.nombre ?? ""), descripcion: (f) => `Código ${f.codigo}`,
+  preparar: mayusculas,
+  validar: async (db, d, editando) => {
+    if (editando || typeof d.cuentaId !== "string") return null;
+    const c = await db.cuentaContable.findUnique({ where: { id: d.cuentaId }, select: { posteable: true, activo: true } });
+    return !c?.activo || !c.posteable ? { cuentaId: "Solo las cuentas de movimiento activas llevan auxiliares." } : null;
+  },
+  mensajeDuplicado: "Esa cuenta ya tiene un auxiliar con este código.", mensajeDependientes: "No se puede eliminar: tiene movimientos en asientos. Márcalo como inactivo en su lugar.",
+};
+
 // ---------- Geografía ----------
 
 const geo = (id: string, modulo: string, ruta: string, entidad: string, singular: string, plural: string, genero: "el" | "la", delegado: Maestro["delegado"]) => ({ id, modulo, ruta, entidad, singular, plural, genero, delegado, clave });

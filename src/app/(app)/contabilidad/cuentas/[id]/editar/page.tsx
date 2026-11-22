@@ -10,5 +10,5 @@ export default async function EditarCuenta({ params }: { params: Promise<{ id: s
   const { db } = await requerirPermiso("contabilidad", "editar");
   const c = await db.cuentaContable.findUnique({ where: { id } });
   if (!c) notFound();
-  return <FormularioCuenta id={id} padres={[]} inicial={{ codigo: c.codigo, nombre: c.nombre, padreId: c.padreId ?? "", tipo: c.tipo, posteable: c.posteable, activo: c.activo }} />;
+  return <FormularioCuenta id={id} padres={[]} inicial={{ codigo: c.codigo, nombre: c.nombre, padreId: c.padreId ?? "", tipo: c.tipo, posteable: c.posteable, activo: c.activo, siglas: c.siglas ?? "", imprimeBalance: c.imprimeBalance, imprimeDiario: c.imprimeDiario }} />;
 }

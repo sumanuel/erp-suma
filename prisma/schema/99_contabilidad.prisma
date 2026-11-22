@@ -16,6 +16,12 @@ model CuentaContable {
   nivel         Int              @default(1)
   /// Solo las cuentas «de movimiento» reciben asientos; las demás agrupan.
   posteable     Boolean          @default(false)
+  /// Abreviatura de la cuenta para listados.
+  siglas        String?
+  /// Si la cuenta se detalla en el balance general y en el libro diario (sus montos suman igual a los totales).
+  imprimeBalance Boolean         @default(true) @map("imprime_balance")
+  imprimeDiario Boolean          @default(true) @map("imprime_diario")
+  auxiliares    AuxiliarContable[]
   activo        Boolean          @default(true)
   creadoEn      DateTime         @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn DateTime         @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
@@ -74,7 +80,13 @@ model AsientoLinea {
   linea       Int
   cuentaId    String         @map("cuenta_id") @db.Uuid
   cuenta      CuentaContable @relation(fields: [cuentaId], references: [id])
+  /// Concepto de la línea.
   descripcion String?
+  /// Auxiliar de la cuenta (cliente, proveedor, banco…) y referencia y documento de origen de la línea.
+  auxiliarId  String?        @map("auxiliar_id") @db.Uuid
+  auxiliar    AuxiliarContable? @relation(fields: [auxiliarId], references: [id])
+  referencia  String?
+  documento   String?
   debe        Decimal        @default(0) @db.Decimal(18, 2)
   haber       Decimal        @default(0) @db.Decimal(18, 2)
 
@@ -99,4 +111,22 @@ model CuentaConcepto {
   cuenta   CuentaContable @relation(fields: [cuentaId], references: [id])
 
   @@map("cuenta_concepto")
+}
+
+/// Auxiliares de una cuenta: el detalle por tercero o concepto (cada cliente en cuentas por cobrar, cada banco en caja y bancos…). Equivale a admauxiliarcontable.
+model AuxiliarContable {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId         String         @map("cuenta_id") @db.Uuid
+  cuenta           CuentaContable @relation(fields: [cuentaId], references: [id])
+  codigo           String
+  nombre           String
+  /// Si el auxiliar lleva documentos (facturas, cheques) para su conciliación.
+  manejaDocumentos Boolean        @default(false) @map("maneja_documentos")
+  activo           Boolean        @default(true)
+  creadoEn         DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime       @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  lineas           AsientoLinea[]
+
+  @@unique([cuentaId, codigo])
+  @@map("auxiliar_contable")
 }

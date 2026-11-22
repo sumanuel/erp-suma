@@ -22,7 +22,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoConta<T>>): Promise<R
 }
 
 // ---------- Plan de cuentas ----------
-export type DatosCuentaContable = { codigo: string; nombre: string; tipo: string | null; padreId: string | null; posteable: boolean };
+export type DatosCuentaContable = { codigo: string; nombre: string; tipo: string | null; padreId: string | null; posteable: boolean; siglas?: string | null; imprimeBalance?: boolean; imprimeDiario?: boolean };
 
 export async function crearCuentaContable(db: Db, actor: Actor, d: DatosCuentaContable): Promise<ResultadoConta<{ id: string }>> {
   return ejecutar(async () => {
@@ -43,20 +43,20 @@ export async function crearCuentaContable(db: Db, actor: Actor, d: DatosCuentaCo
         if (d.codigo.includes(".")) throw new ContaError("Una cuenta sin padre es de primer nivel: su código no lleva puntos.");
         if (!tipo || !(tipo in TIPOS_CUENTA_CONTABLE)) throw new ContaError("Elige el tipo de la cuenta.");
       }
-      return (await tx.cuentaContable.create({ data: { codigo: d.codigo, nombre: d.nombre, tipo: tipo as string, padreId: d.padreId, nivel, posteable: d.posteable }, select: { id: true } })).id;
+      return (await tx.cuentaContable.create({ data: { codigo: d.codigo, nombre: d.nombre, tipo: tipo as string, padreId: d.padreId, nivel, posteable: d.posteable, siglas: d.siglas?.trim().toUpperCase().slice(0, 12) || null, imprimeBalance: d.imprimeBalance ?? true, imprimeDiario: d.imprimeDiario ?? true }, select: { id: true } })).id;
     });
     await registrarCambio(db, actor, { modulo: "contabilidad", entidad: "cuenta_contable", entidadId: id, descripcion: `${d.codigo} ${d.nombre}`, accion: "crear", despues: { codigo: d.codigo, nombre: d.nombre, posteable: d.posteable } });
     return { ok: true, id };
   });
 }
 
-export async function editarCuentaContable(db: Db, actor: Actor, id: string, d: { nombre: string; posteable: boolean; activo: boolean }): Promise<ResultadoConta> {
+export async function editarCuentaContable(db: Db, actor: Actor, id: string, d: { nombre: string; posteable: boolean; activo: boolean; siglas?: string | null; imprimeBalance?: boolean; imprimeDiario?: boolean }): Promise<ResultadoConta> {
   return ejecutar(async () => {
     const antes = await db.cuentaContable.findUnique({ where: { id }, include: { _count: { select: { hijas: true, lineas: true } } } });
     if (!antes) throw new ContaError("La cuenta ya no existe.");
     if (d.posteable && antes._count.hijas > 0) throw new ContaError("Tiene cuentas hijas: no puede recibir asientos.");
     if (!d.posteable && antes._count.lineas > 0) throw new ContaError("Ya tiene movimientos: no se puede convertir en cuenta de agrupación.");
-    await db.cuentaContable.update({ where: { id }, data: d });
+    await db.cuentaContable.update({ where: { id }, data: { nombre: d.nombre, posteable: d.posteable, activo: d.activo, siglas: d.siglas?.trim().toUpperCase().slice(0, 12) || null, ...(d.imprimeBalance === undefined ? {} : { imprimeBalance: d.imprimeBalance }), ...(d.imprimeDiario === undefined ? {} : { imprimeDiario: d.imprimeDiario }) } });
     await registrarCambio(db, actor, { modulo: "contabilidad", entidad: "cuenta_contable", entidadId: id, descripcion: `${antes.codigo} ${antes.nombre}`, accion: "editar", antes: { nombre: antes.nombre, posteable: antes.posteable, activo: antes.activo }, despues: d });
     return { ok: true };
   });
@@ -75,7 +75,7 @@ export async function eliminarCuentaContable(db: Db, actor: Actor, id: string): 
 }
 
 // ---------- Asientos ----------
-export type DatosAsiento = { fecha: Date; descripcion: string; referencia: string | null; lineas: { cuentaId: string; descripcion: string | null; debe: number; haber: number }[] };
+export type DatosAsiento = { fecha: Date; descripcion: string; referencia: string | null; lineas: { cuentaId: string; descripcion: string | null; debe: number; haber: number; auxiliarId?: string | null; referencia?: string | null; documento?: string | null }[] };
 
 /** Crea un asiento completo dentro de la transacción recibida (manual o automático). Valida todo; si algo falla lanza `ContaError` y no deja nada. */
 export async function crearAsientoEnTx(tx: Tx, actor: Actor, d: DatosAsiento, origen = "MANUAL"): Promise<{ id: string; numero: number; total: number }> {
@@ -91,7 +91,7 @@ export async function crearAsientoEnTx(tx: Tx, actor: Actor, d: DatosAsiento, or
     if ((cd > 0) === (ch > 0)) throw new ContaError(`Línea ${i + 1}: indica el monto en el debe o en el haber (uno solo).`);
     debe += cd;
     haber += ch;
-    return { linea: i + 1, cuentaId: l.cuentaId, descripcion: l.descripcion?.trim() || null, debe: cd / 100, haber: ch / 100 };
+    return { linea: i + 1, cuentaId: l.cuentaId, descripcion: l.descripcion?.trim() || null, auxiliarId: l.auxiliarId || null, referencia: l.referencia?.trim().slice(0, 60) || null, documento: l.documento?.trim().slice(0, 40) || null, debe: cd / 100, haber: ch / 100 };
   });
   if (debe !== haber) throw new ContaError(`El asiento no cuadra: debe ${(debe / 100).toFixed(2)} y haber ${(haber / 100).toFixed(2)}.`);
   const anio = d.fecha.getUTCFullYear(), mes = d.fecha.getUTCMonth() + 1;
@@ -106,6 +106,18 @@ export async function crearAsientoEnTx(tx: Tx, actor: Actor, d: DatosAsiento, or
     if (!c.activo) throw new ContaError(`Línea ${f.linea}: la cuenta ${c.codigo} está inactiva.`);
     if (!c.posteable) throw new ContaError(`Línea ${f.linea}: la cuenta ${c.codigo} es de agrupación y no recibe asientos.`);
   }
+  // Un auxiliar solo se usa con su propia cuenta y si está activo.
+  const auxIds = [...new Set(filas.map((f) => f.auxiliarId).filter((x): x is string => !!x))];
+  if (auxIds.length) {
+    const auxiliares = new Map((await tx.auxiliarContable.findMany({ where: { id: { in: auxIds } }, select: { id: true, cuentaId: true, activo: true, codigo: true } })).map((x) => [x.id, x]));
+    for (const f of filas) {
+      if (!f.auxiliarId) continue;
+      const x = auxiliares.get(f.auxiliarId);
+      if (!x) throw new ContaError(`Línea ${f.linea}: el auxiliar no existe.`);
+      if (x.cuentaId !== f.cuentaId) throw new ContaError(`Línea ${f.linea}: el auxiliar ${x.codigo} no pertenece a la cuenta elegida.`);
+      if (!x.activo) throw new ContaError(`Línea ${f.linea}: el auxiliar ${x.codigo} está inactivo.`);
+    }
+  }
   const a = await tx.asiento.create({
     data: { fecha: d.fecha, anio, mes, descripcion: d.descripcion.trim(), origen, referencia: d.referencia, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: filas } },
     select: { id: true, numero: true },
@@ -113,9 +125,10 @@ export async function crearAsientoEnTx(tx: Tx, actor: Actor, d: DatosAsiento, or
   return { ...a, total: debe / 100 };
 }
 
-export async function registrarAsiento(db: Db, actor: Actor, d: DatosAsiento): Promise<ResultadoConta<{ id: string; numero: number }>> {
+/** `origen` APERTURA marca el asiento de saldos iniciales del ejercicio (se distingue en el libro; se carga como cualquier asiento manual). */
+export async function registrarAsiento(db: Db, actor: Actor, d: DatosAsiento, origen: "MANUAL" | "APERTURA" = "MANUAL"): Promise<ResultadoConta<{ id: string; numero: number }>> {
   return ejecutar(async () => {
-    const r = await db.$transaction((tx) => crearAsientoEnTx(tx, actor, d));
+    const r = await db.$transaction((tx) => crearAsientoEnTx(tx, actor, d, origen));
     await registrarCambio(db, actor, { modulo: "contabilidad", entidad: "asiento", entidadId: r.id, descripcion: numeroAsiento(r.numero), accion: "crear", despues: { descripcion: d.descripcion.trim(), lineas: d.lineas.length, total: r.total } });
     return { ok: true, id: r.id, numero: r.numero };
   });

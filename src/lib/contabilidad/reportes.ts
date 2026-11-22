@@ -7,7 +7,7 @@ import { TIPOS_CUENTA_CONTABLE, type TipoCuentaContable } from "./tipos";
 const cent = (n: unknown) => Math.round(Number(n ?? 0) * 100);
 
 export type FilaBalance = {
-  id: string; codigo: string; nombre: string; tipo: TipoCuentaContable; nivel: number; posteable: boolean;
+  id: string; codigo: string; nombre: string; tipo: TipoCuentaContable; nivel: number; posteable: boolean; imprimeBalance: boolean; imprimeDiario: boolean;
   /** Todo en centavos. saldoInicial/saldoFinal = debe − haber (positivo = deudor). */
   saldoInicial: number; debe: number; haber: number; saldoFinal: number;
 };
@@ -21,7 +21,7 @@ export async function balanceComprobacion(db: Db, desde: Date, hasta: Date) {
   ]);
   const ini = new Map(previos.map((p) => [p.cuentaId, cent(p._sum.debe) - cent(p._sum.haber)]));
   const mov = new Map(periodo.map((p) => [p.cuentaId, { debe: cent(p._sum.debe), haber: cent(p._sum.haber) }]));
-  const filas = new Map<string, FilaBalance>(cuentas.map((c) => [c.id, { id: c.id, codigo: c.codigo, nombre: c.nombre, tipo: c.tipo as TipoCuentaContable, nivel: c.nivel, posteable: c.posteable, saldoInicial: 0, debe: 0, haber: 0, saldoFinal: 0 }]));
+  const filas = new Map<string, FilaBalance>(cuentas.map((c) => [c.id, { id: c.id, codigo: c.codigo, nombre: c.nombre, tipo: c.tipo as TipoCuentaContable, nivel: c.nivel, posteable: c.posteable, imprimeBalance: c.imprimeBalance, imprimeDiario: c.imprimeDiario, saldoInicial: 0, debe: 0, haber: 0, saldoFinal: 0 }]));
   const padre = new Map(cuentas.map((c) => [c.id, c.padreId]));
   for (const c of cuentas) {
     const m = mov.get(c.id) ?? { debe: 0, haber: 0 };
