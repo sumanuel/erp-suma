@@ -82,6 +82,8 @@ export type Maestro = {
   completar?: (db: Db, datos: Fila) => Promise<Fila>;
   mensajeDependientes?: string;
   mensajeDuplicado?: string;
+  // Se puede cargar desde un archivo de Excel (botón «Importar Excel» en el listado).
+  importable?: boolean;
 };
 
 export type Seccion = { slug: string; titulo: string; maestro: Maestro };

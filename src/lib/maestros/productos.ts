@@ -123,6 +123,7 @@ export const productos: Maestro = {
     return conErrores(errores);
   },
   mensajeDuplicado: "Ya existe un producto con este código.",
+  importable: true,
   mensajeDependientes: "No se puede eliminar: tiene presentaciones, proveedores o movimientos. Márcalo como inactivo en su lugar.",
 };
 

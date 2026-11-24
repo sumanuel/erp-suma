@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { FichaMaestro } from "@/components/maestro/ficha-maestro";
+import { ImportarMaestro } from "@/components/maestro/importar-maestro";
 import { ListadoMaestro } from "@/components/maestro/listado-maestro";
 import { EncabezadoPagina, Tarjeta } from "@/components/ui";
 import { requerirPermiso } from "@/lib/dal";
@@ -16,6 +17,7 @@ const paginasPropias: Record<string, () => Promise<React.JSX.Element>> = { "prod
 //   /<módulo>                      listado de la primera sección
 //   /<módulo>/<sección>            listado de otra sección
 //   /<módulo>[/<sección>]/nuevo    alta
+//   /<módulo>[/<sección>]/importar carga masiva desde Excel (maestros con `importable`)
 //   /<módulo>[/<sección>]/<clave>  ficha
 // Los módulos que aún no tienen sus pantallas muestran un marcador.
 export default async function PaginaModulo({
@@ -55,6 +57,7 @@ export default async function PaginaModulo({
 
   if (resto.length === 0) return <ListadoMaestro maestro={seccion.maestro} busqueda={await searchParams} />;
   if (seccion.maestro.soloConsulta) notFound();
+  if (resto[0] === "importar" && seccion.maestro.importable) return <ImportarMaestro maestro={seccion.maestro} titulo={seccion.titulo} />;
   if (seccion.maestro.sinEdicion && resto[0] !== "nuevo") notFound();
   if (resto[0] === "nuevo") return <FichaMaestro maestro={seccion.maestro} clave={null} titulo={seccion.titulo} />;
   return <FichaMaestro maestro={seccion.maestro} clave={decodeURIComponent(resto[0])} titulo={seccion.titulo} />;

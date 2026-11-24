@@ -194,7 +194,7 @@ export const clientes: Maestro = {
     ];
   },
   valoresIniciales: {
-    activo: true, residente: true, contribuyente: true, situacion: "NORMAL", listaPrecio: "A", divisa: "USD", comisionVentaPct: "0", comisionCobroPct: "0",
+    activo: true, residente: true, contribuyente: true, situacion: "NORMAL", tipo: "Privado", listaPrecio: "A", divisa: "USD", comisionVentaPct: "0", comisionCobroPct: "0",
     descuento1: "0", descuento2: "0", descuento3: "0", limiteCredito: "0", diasMaxVencimiento: "0",
   },
   columnas: [
@@ -223,6 +223,7 @@ export const clientes: Maestro = {
     return Object.keys(e).length ? e : null;
   },
   mensajeDuplicado: "Ya existe un cliente con este documento o código.",
+  importable: true,
   mensajeDependientes: "No se puede eliminar: tiene documentos asociados. Márcalo como inactivo en su lugar.",
 };
 
@@ -339,5 +340,6 @@ export const proveedores: Maestro = {
     return datos;
   },
   mensajeDuplicado: "Ya existe un proveedor con este documento o código.",
+  importable: true,
   mensajeDependientes: "No se puede eliminar: tiene compras asociadas. Márcalo como inactivo en su lugar.",
 };

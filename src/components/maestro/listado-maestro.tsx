@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { FileSpreadsheet, Plus } from "lucide-react";
 import { Listado } from "@/components/listado/listado";
 import { textoAviso } from "@/components/ficha";
 import { Aviso, Etiqueta, clasesBoton } from "@/components/ui";
@@ -73,6 +73,12 @@ export async function ListadoMaestro({ maestro: m, busqueda }: { maestro: Maestr
         acciones={
           puedeCrear ? (
             <>
+              {m.importable ? (
+                <Link href={`${m.ruta}/importar`} className={clasesBoton("secundario")}>
+                  <FileSpreadsheet className="size-4" aria-hidden />
+                  Importar Excel
+                </Link>
+              ) : null}
               <Link href={`${m.ruta}/nuevo`} className={clasesBoton("primario")}>
                 <Plus className="size-4" aria-hidden />
                 {m.genero === "el" ? "Nuevo" : "Nueva"} {m.singular}

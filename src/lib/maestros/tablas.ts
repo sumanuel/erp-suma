@@ -160,7 +160,7 @@ export const bancos: Maestro = {
   ],
   busqueda: { texto: "Buscar por código o nombre", campos: ["codigo", "nombre"] }, filtros: [filtroActivo],
   orden: { columna: "nombre", dir: "asc" }, titulo: (f) => String(f.nombre ?? ""), descripcion: (f) => `Código ${f.codigo}`,
-  preparar: mayusculas, mensajeDuplicado: "Ya existe un banco con este código.",
+  preparar: mayusculas, mensajeDuplicado: "Ya existe un banco con este código.", importable: true,
 };
 
 export const tarifasRetencion: Maestro = {
