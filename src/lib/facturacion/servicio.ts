@@ -1,4 +1,5 @@
 import "server-only";
+import { siguienteFiscalFactura, siguienteNumero } from "@/lib/numeracion";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import { aplicarMovimiento, MovimientoRechazado, type Actor } from "@/lib/inventario/movimientos";
@@ -47,9 +48,10 @@ async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedido
   if (almacenesLinea.length && (await tx.almacen.count({ where: { id: { in: almacenesLinea }, activo: true } })) !== almacenesLinea.length) throw new FacturaError("Hay un almacén de línea que no existe o está inactivo.");
   const fecha = hoyCaracas();
   const vence = new Date(fecha.getTime() + d.diasCredito * 86_400_000);
+  const fis = await siguienteFiscalFactura(tx);
   const f = await tx.factura.create({
     data: {
-      clienteId: d.clienteId, pedidoId: d.pedidoId, almacenId: d.almacenId, fecha, observaciones: d.observaciones, ...d.encabezado, ...t,
+      numero: await siguienteNumero(tx, "FACTURA"), ...(fis ?? {}), clienteId: d.clienteId, pedidoId: d.pedidoId, almacenId: d.almacenId, fecha, observaciones: d.observaciones, ...d.encabezado, ...t,
       diasCredito: d.diasCredito, fechaVencimiento: vence, saldo: t.total, ...aprobacion,
       tasaUsd: tasa.valor, totalBs: aBolivares(t.total, tasa.valor), creadoPorId: actor.id, creadoPorNombre: actor.nombre,
       lineas: { create: d.lineas.map((l, i) => ({ linea: i + 1, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea ?? null, ivaPorcentaje: l.ivaPorcentaje, total: l.total, costoUnitario: costos.get(l.productoCodigo) ?? 0, bonificacion: l.bonificacion ?? false, almacenId: l.almacenId && l.almacenId !== d.almacenId ? l.almacenId : null, presentacionId: l.presentacionId ?? null, factor: l.factor ?? 1 })) },

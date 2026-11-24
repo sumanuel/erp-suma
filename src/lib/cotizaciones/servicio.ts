@@ -1,4 +1,5 @@
 import "server-only";
+import { siguienteNumero } from "@/lib/numeracion";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import type { Actor } from "@/lib/inventario/movimientos";
@@ -44,7 +45,7 @@ export async function guardarCotizacion(db: Db, actor: Actor, id: string | null,
         const o = await tx.cotizacion.findUniqueOrThrow({ where: { id }, select: { id: true, numero: true } });
         return { ...o, nueva: false };
       }
-      const o = await tx.cotizacion.create({ data: { ...base, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: filas } }, select: { id: true, numero: true } });
+      const o = await tx.cotizacion.create({ data: { numero: await siguienteNumero(tx, "COTIZACION"), ...base, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: filas } }, select: { id: true, numero: true } });
       return { ...o, nueva: true };
     });
     await registrarCambio(db, actor, { modulo: "cotizaciones", entidad: "cotizacion", entidadId: r.id, descripcion: numeroCotizacion(r.numero), accion: r.nueva ? "crear" : "editar", despues: { lineas: d.lineas.length } });
@@ -99,7 +100,7 @@ export async function convertirEnPedido(db: Db, actor: Actor, id: string): Promi
       const t = calcularTotales(lineas.map((l) => l._e));
       const p = await tx.pedidoVenta.create({
         data: {
-          clienteId: c.clienteId, cotizacionId: id, fecha: hoyCaracas(), observaciones: c.observaciones, ...enc.columnas, ...t, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
+          numero: await siguienteNumero(tx, "PEDIDO"), clienteId: c.clienteId, cotizacionId: id, fecha: hoyCaracas(), observaciones: c.observaciones, ...enc.columnas, ...t, creadoPorId: actor.id, creadoPorNombre: actor.nombre,
           lineas: { create: lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total, bonificacion: l.bonificacion, presentacionId: l.presentacionId, factor: l.factor })) },
         },
         select: { id: true, numero: true },

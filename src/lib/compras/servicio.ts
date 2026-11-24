@@ -1,4 +1,5 @@
 import "server-only";
+import { siguienteNumero } from "@/lib/numeracion";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import { aplicarMovimiento, MovimientoRechazado, type Actor } from "@/lib/inventario/movimientos";
@@ -101,7 +102,7 @@ export async function guardarOrden(db: Db, actor: Actor, id: string | null, d: D
         return { ...o, nueva: false };
       }
       const o = await tx.ordenCompra.create({
-        data: { proveedorId: d.proveedorId, fecha: d.fecha, fechaEsperada: d.fechaEsperada, observaciones: d.observaciones, ...columnas, ...t, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: filas } },
+        data: { numero: await siguienteNumero(tx, "ORDEN_COMPRA"), proveedorId: d.proveedorId, fecha: d.fecha, fechaEsperada: d.fechaEsperada, observaciones: d.observaciones, ...columnas, ...t, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: filas } },
         select: { id: true, numero: true },
       });
       return { ...o, nueva: true };

@@ -1,4 +1,5 @@
 import "server-only";
+import { siguienteNumero } from "@/lib/numeracion";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import { aplicarMovimiento, MovimientoRechazado, type Actor } from "@/lib/inventario/movimientos";
@@ -108,7 +109,7 @@ export async function crearNotaVenta(db: Db, actor: Actor, d: DatosNotaVenta): P
 
       const nota = await tx.notaVenta.create({
         data: {
-          tipo: d.tipo, modo: d.modo, facturaId: f.id, clienteId: f.clienteId, almacenId: d.modo === "DEVOLUCION" ? d.almacenId : null, fecha: hoyCaracas(), motivo: d.motivo.trim(),
+          numero: await siguienteNumero(tx, "NOTA_VENTA"), tipo: d.tipo, modo: d.modo, facturaId: f.id, clienteId: f.clienteId, almacenId: d.modo === "DEVOLUCION" ? d.almacenId : null, fecha: hoyCaracas(), motivo: d.motivo.trim(),
           subtotal, iva, total, ivaPorcentaje, tasaUsd: tasa, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: lineasNota },
         },
         select: { id: true, numero: true },

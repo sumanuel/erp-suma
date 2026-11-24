@@ -1,4 +1,5 @@
 import "server-only";
+import { siguienteNumero } from "@/lib/numeracion";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import type { Actor } from "@/lib/inventario/movimientos";
@@ -129,7 +130,7 @@ export async function guardarPedido(db: Db, actor: Actor, id: string | null, d: 
         const o = await tx.pedidoVenta.findUniqueOrThrow({ where: { id }, select: { id: true, numero: true } });
         return { ...o, nuevo: false };
       }
-      const o = await tx.pedidoVenta.create({ data: { ...base, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: filas } }, select: { id: true, numero: true } });
+      const o = await tx.pedidoVenta.create({ data: { numero: await siguienteNumero(tx, "PEDIDO"), ...base, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: filas } }, select: { id: true, numero: true } });
       return { ...o, nuevo: true };
     });
     await registrarCambio(db, actor, {

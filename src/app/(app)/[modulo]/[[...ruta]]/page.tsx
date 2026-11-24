@@ -57,6 +57,7 @@ export default async function PaginaModulo({
 
   if (resto.length === 0) return <ListadoMaestro maestro={seccion.maestro} busqueda={await searchParams} />;
   if (seccion.maestro.soloConsulta) notFound();
+  if (resto[0] === "nuevo" && seccion.maestro.sinCrear) notFound();
   if (resto[0] === "importar" && seccion.maestro.importable) return <ImportarMaestro maestro={seccion.maestro} titulo={seccion.titulo} />;
   if (seccion.maestro.sinEdicion && resto[0] !== "nuevo") notFound();
   if (resto[0] === "nuevo") return <FichaMaestro maestro={seccion.maestro} clave={null} titulo={seccion.titulo} />;

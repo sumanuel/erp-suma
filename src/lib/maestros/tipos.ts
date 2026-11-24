@@ -58,6 +58,8 @@ export type Maestro = {
   // Registros que se crean pero no se editan (kardex, tasas históricas…): las filas no abren ficha.
   sinEdicion?: boolean;
   sinEliminar?: boolean;
+  // No se pueden agregar registros (vienen de fábrica y solo se editan).
+  sinCrear?: boolean;
   // Reemplaza la creación genérica (para registros que tocan varias tablas en una transacción). Devuelve errores por campo si no se pudo.
   crear?: (db: Db, usuario: { id: string; nombre: string }, datos: Fila) => Promise<{ errores?: Record<string, string> } | void>;
   // Contenido que se dibuja encima del listado (por ejemplo, tarjetas con la tasa vigente).
@@ -78,7 +80,7 @@ export type Maestro = {
   // Corre antes de guardar: devuelve errores por campo (por ejemplo, un NIT que no existe) o completa datos.
   // Corre justo después de leer el formulario, al crear y al editar: normaliza datos (quitar puntos de un documento, etc.).
   preparar?: (datos: Fila) => Fila;
-  validar?: (db: Db, datos: Fila, editando: boolean) => Promise<Record<string, string> | null>;
+  validar?: (db: Db, datos: Fila, editando: boolean, clave?: string | number | null) => Promise<Record<string, string> | null>;
   completar?: (db: Db, datos: Fila) => Promise<Fila>;
   mensajeDependientes?: string;
   mensajeDuplicado?: string;

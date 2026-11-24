@@ -2,6 +2,7 @@ import type { Maestro, ModuloMaestros } from "./tipos";
 import { alicuotas, aranceles, categorias, marcas, subcategorias, unidades } from "./catalogos";
 import { presentaciones, preciosLista, productos, promociones, proveedoresProducto, relacionesProducto } from "./productos";
 import { clientes, proveedores } from "./terceros";
+import { tiposDocumento } from "./numeracion";
 import { actividadesEconomicas, clasificacionesCliente, clasificacionesProveedor, colores, contactosCliente, contactosProveedor, divisiones, origenesVenta, reglasAprobacion, seriesFiscales, sucursales, sucursalesCliente, tallas, ubicacionesFisicas } from "./catalogos-extra";
 import { almacenes, existencias, movimientos } from "./existencias";
 import { monedas, tasas } from "./tasas";
@@ -61,6 +62,7 @@ export const modulosMaestros: ModuloMaestros[] = [
       { slug: "tipos-negocio", titulo: "Tipos de negocio", maestro: tiposNegocio },
       { slug: "transportes", titulo: "Transportes", maestro: transportes },
       { slug: "bancos", titulo: "Bancos", maestro: bancos },
+      { slug: "tipos-documento", titulo: "Numeración", maestro: tiposDocumento },
       { slug: "centros-costo", titulo: "Centros de costo", maestro: centrosCosto },
       { slug: "auxiliares", titulo: "Auxiliares contables", maestro: auxiliaresContables },
       { slug: "tarifas-islr", titulo: "Retenciones de ISLR", maestro: tarifasRetencion },

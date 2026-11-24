@@ -1,3 +1,4 @@
+import { siguienteNumero } from "../src/lib/numeracion";
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { emitirFacturaDePedido } from "../src/lib/facturacion/servicio";
@@ -97,7 +98,7 @@ describe("Aprobación gerencial de pedidos (reglas + pedido por aprobar)", () =>
     // Mora: una factura vencida con saldo
     const moroso = await crearCliente(e.db);
     const ayer = new Date(hoy().getTime() - 5 * 86_400_000);
-    const f = await e.db.factura.create({ data: { clienteId: moroso.id, almacenId: e.almacenId, fecha: ayer, fechaVencimiento: ayer, diasCredito: 1, subtotal: 10, iva: 0, total: 10, saldo: 10, tasaUsd: 40, totalBs: 400, estado: "EMITIDA", creadoPorNombre: "x" } });
+    const f = await e.db.factura.create({ data: { numero: await e.db.$transaction((tx) => siguienteNumero(tx, "FACTURA")), clienteId: moroso.id, almacenId: e.almacenId, fecha: ayer, fechaVencimiento: ayer, diasCredito: 1, subtotal: 10, iva: 0, total: 10, saldo: 10, tasaUsd: 40, totalBs: 400, estado: "EMITIDA", creadoPorNombre: "x" } });
     assert.ok(f.id);
     await regla(3, true);
     try {

@@ -1,0 +1,22 @@
+// Numeración por tipo de documento (equivale a admtipdoccli / admtipdocpro del sistema anterior: correlativo, serie fiscal y numeración fiscal).
+// Cada tipo de documento tiene un contador propio que se avanza dentro de la misma transacción que crea el documento (sin saltos ni repetidos).
+
+model TipoDocumento {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// FACTURA, NOTA_VENTA, PEDIDO, COTIZACION u ORDEN_COMPRA. Los tipos vienen de fábrica; el código no cambia.
+  codigo           String       @unique
+  nombre           String
+  /// Último número interno usado: el próximo documento toma este + 1 (o el mayor ya existente + 1, si es más alto).
+  ultimoNumero     Int          @default(0) @map("ultimo_numero")
+  /// Serie fiscal (impresora o imprenta) con la que sale este documento. Solo se usa en facturas.
+  serieFiscalId    String?      @map("serie_fiscal_id") @db.Uuid
+  serieFiscal      SerieFiscal? @relation(fields: [serieFiscalId], references: [id])
+  /// Si está activo, al emitir la factura el sistema le asigna el número fiscal y el de control con los contadores de abajo.
+  fiscalAutomatico Boolean      @default(false) @map("fiscal_automatico")
+  ultimoFiscal     Int          @default(0) @map("ultimo_fiscal")
+  ultimoControl    Int          @default(0) @map("ultimo_control")
+  creadoEn         DateTime     @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime     @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("tipo_documento")
+}

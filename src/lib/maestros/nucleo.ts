@@ -24,6 +24,7 @@ export async function guardarMaestro(id: string, claveTexto: string | null, prev
   const m = buscarMaestro(id);
   if (!m || m.soloConsulta) return { error: "Operación no disponible." };
   const editando = claveTexto !== null;
+  if (!editando && m.sinCrear) return { error: "Operación no disponible." };
   if (editando && m.sinEdicion) return { error: "Este registro no se puede editar." };
   const clave = claveDesdeUrl(m, claveTexto);
   if (editando && clave === null) return { error: "Registro no válido." };
@@ -38,7 +39,7 @@ export async function guardarMaestro(id: string, claveTexto: string | null, prev
     error: "Revisa los campos marcados.",
     intento,
   });
-  const errores = { ...f.errores, ...((await m.validar?.(db, f.datos, editando)) ?? {}) };
+  const errores = { ...f.errores, ...((await m.validar?.(db, f.datos, editando, editando ? claveTexto : null)) ?? {}) };
   if (Object.keys(errores).length > 0) return fallo(errores);
 
   let datos = f.datos as Record<string, unknown>;
@@ -102,7 +103,7 @@ export async function eliminarMaestro(id: string, claveTexto: string): Promise<{
  */
 export async function crearMaestroRapido(id: string, basicos: Record<string, string>): Promise<{ error?: string; errores?: Record<string, string>; fila?: Record<string, unknown> }> {
   const m = buscarMaestro(id);
-  if (!m || m.soloConsulta) return { error: "Operación no disponible." };
+  if (!m || m.soloConsulta || m.sinCrear) return { error: "Operación no disponible." };
   const { db, usuario } = await requerirPermisoAccion(m.modulo, "crear");
   const campos = await camposDe(m, db);
   const form = new FormData();

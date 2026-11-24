@@ -13,7 +13,7 @@ export async function ListadoMaestro({ maestro: m, busqueda }: { maestro: Maestr
   const { db } = ctx;
   const aviso = textoAviso(busqueda.aviso, { singular: m.singular }, m.genero);
   const clavePrimaria = m.clave.campo;
-  const puedeCrear = !m.soloConsulta && tienePermiso(ctx, m.modulo, "crear");
+  const puedeCrear = !m.soloConsulta && !m.sinCrear && tienePermiso(ctx, m.modulo, "crear");
   const puedeEliminar = !m.soloConsulta && !m.sinEliminar && tienePermiso(ctx, m.modulo, "eliminar");
 
   const definicion: Definicion<Fila, Fila> = {
