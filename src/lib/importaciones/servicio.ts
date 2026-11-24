@@ -1,4 +1,5 @@
 import "server-only";
+import { siguienteNumero } from "@/lib/numeracion";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import { aplicarMovimiento, MovimientoRechazado, type Actor } from "@/lib/inventario/movimientos";
@@ -78,7 +79,7 @@ export async function guardarImportacion(db: Db, actor: Actor, id: string | null
         const x = await tx.importacion.findUniqueOrThrow({ where: { id }, select: { id: true, numero: true } });
         return { ...x, nueva: false };
       }
-      const x = await tx.importacion.create({ data: { ...cabecera, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: lineas }, gastos: { create: gastos } }, select: { id: true, numero: true } });
+      const x = await tx.importacion.create({ data: { numero: await siguienteNumero(tx, "ORDEN_COMPRA"), ...cabecera, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: lineas }, gastos: { create: gastos } }, select: { id: true, numero: true } });
       return { ...x, nueva: true };
     });
     await registrarCambio(db, actor, { modulo: "importaciones", entidad: "importacion", entidadId: r.id, descripcion: numeroImportacion(r.numero), accion: r.nueva ? "crear" : "editar", despues: { productos: d.lineas.length, gastos: d.gastos.length } });

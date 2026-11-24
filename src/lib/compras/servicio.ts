@@ -148,7 +148,7 @@ export async function recibirOrden(db: Db, actor: Actor, ordenId: string, d: Dat
       if (orden.estado !== "EMITIDA" && orden.estado !== "RECIBIDA_PARCIAL") throw new ComprasError("Solo se recibe una orden emitida con pendientes.");
 
       const recepcion = await tx.recepcion.create({
-        data: { ordenId, almacenId: d.almacenId, documento: d.documento, observaciones: d.observaciones, usuarioId: actor.id, usuarioNombre: actor.nombre },
+        data: { numero: await siguienteNumero(tx, "RECEPCION"), ordenId, almacenId: d.almacenId, documento: d.documento, observaciones: d.observaciones, usuarioId: actor.id, usuarioNombre: actor.nombre },
         select: { id: true, numero: true },
       });
       const porId = new Map(orden.lineas.map((l) => [l.id, l]));

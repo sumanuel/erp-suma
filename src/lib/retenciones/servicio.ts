@@ -1,4 +1,5 @@
 import "server-only";
+import { siguienteComprobanteRetencion } from "@/lib/numeracion";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import type { Actor } from "@/lib/inventario/movimientos";
@@ -72,7 +73,7 @@ export async function registrarRetencionPracticada(db: Db, actor: Actor, d: Dato
       }
       const fecha = hoyCaracas();
       const numero = await siguienteNumero(tx);
-      const comprobante = d.tipo === "IVA" ? `${fecha.getUTCFullYear()}${String(fecha.getUTCMonth() + 1).padStart(2, "0")}${String(numero).padStart(8, "0")}` : `RI-${String(numero).padStart(6, "0")}`;
+      const comprobante = await siguienteComprobanteRetencion(tx, d.tipo === "IVA" ? "IVA" : "ISLR", fecha);
       const tasa = Number(f.tasaUsd);
       const ret = await tx.retencion.create({
         data: {

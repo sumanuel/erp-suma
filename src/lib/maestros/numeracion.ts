@@ -4,7 +4,7 @@ import type { Delegado, Maestro } from "./tipos";
 // Numeración por tipo de documento (original: admtipdoccli / admtipdocpro). Los tipos vienen de fábrica: aquí se ajusta el contador interno,
 // la serie fiscal y la numeración fiscal automática de las facturas.
 
-const numero = (prefijo: string, n: number) => `${prefijo}${String(n).padStart(6, "0")}`;
+const numero = (prefijo: string, n: number, digitos: number) => `${prefijo}${String(n).padStart(digitos, "0")}`;
 
 export const tiposDocumento: Maestro = {
   id: "tipos-documento", modulo: "tablas", ruta: "/tablas/tipos-documento", entidad: "tipo_documento", singular: "tipo de documento", plural: "tipos de documento", genero: "el",
@@ -25,7 +25,7 @@ export const tiposDocumento: Maestro = {
   columnas: [
     { id: "nombre", titulo: "Documento", campo: "nombre", fija: true },
     { id: "codigo", titulo: "Código", campo: "codigo", oculta: true },
-    { id: "ultimoNumero", titulo: "Último número", valor: (f) => { const t = TIPOS_NUMERADOS[f.codigo as TipoNumerado]; return t ? numero(t.prefijo.split("/")[0], Number(f.ultimoNumero)) : String(f.ultimoNumero); } },
+    { id: "ultimoNumero", titulo: "Último número", valor: (f) => { const t = TIPOS_NUMERADOS[f.codigo as TipoNumerado]; return t ? numero(t.prefijo.split("/")[0], Number(f.ultimoNumero), t.digitos) : String(f.ultimoNumero); } },
     { id: "serie", titulo: "Serie fiscal", valor: (f) => (f.serieFiscal as { serie?: string } | null | undefined)?.serie ?? "—" },
     { id: "fiscal", titulo: "Numeración fiscal", valor: (f) => (f.codigo !== "FACTURA" ? "—" : f.fiscalAutomatico ? `Automática (último ${f.ultimoFiscal})` : "Manual") },
   ],
@@ -37,7 +37,7 @@ export const tiposDocumento: Maestro = {
     const t = clave ? await db.tipoDocumento.findUnique({ where: { id: String(clave) }, select: { codigo: true } }) : null;
     if (!t) return null;
     for (const c of ["ultimoNumero", "ultimoFiscal", "ultimoControl"]) if (typeof d[c] === "number" && (d[c] as number) < 0) errores[c] = "No puede ser negativo.";
-    if (typeof d.ultimoNumero === "number" && TIPOS_NUMERADOS[t.codigo as TipoNumerado]) {
+    if (typeof d.ultimoNumero === "number" && TIPOS_NUMERADOS[t.codigo as TipoNumerado]?.tablas.length) {
       const mayor = await mayorNumeroExistente(db, t.codigo as TipoNumerado);
       if (d.ultimoNumero < mayor) errores.ultimoNumero = `Ya existe el número ${mayor}: el último usado no puede ser menor.`;
     }

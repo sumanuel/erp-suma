@@ -3,8 +3,9 @@ import { after, before, describe, it } from "node:test";
 import { emitirFactura } from "../src/lib/facturacion/servicio";
 import { guardarPedido } from "../src/lib/pedidos/servicio";
 import { tiposDocumento } from "../src/lib/maestros/numeracion";
-import { siguienteNumero } from "../src/lib/numeracion";
-import { abrirEntorno, crearCliente, crearProducto, fijarTasa, type Entorno } from "./soporte/entorno";
+import { registrarRecibo } from "../src/lib/cxc/servicio";
+import { mayorNumeroExistente, siguienteComprobanteRetencion, siguienteNumero, TIPOS_NUMERADOS, type TipoNumerado } from "../src/lib/numeracion";
+import { abrirEntorno, crearCajaTesoreria, crearCliente, crearProducto, fijarTasa, type Entorno } from "./soporte/entorno";
 
 describe("Numeración por tipo de documento", () => {
   let e: Entorno;
@@ -15,9 +16,9 @@ describe("Numeración por tipo de documento", () => {
   const facturar = async (clienteId: string, codigo: string, cantidad = 1) =>
     emitirFactura(e.db, e.actor, { clienteId, almacenId: e.almacenId, observaciones: null, diasCredito: 0, lineas: [{ productoCodigo: codigo, cantidad, precioUnitario: 10, descuento: 0 }] });
 
-  it("vienen de fábrica los cinco tipos, con el contador en el número más alto que ya existe", async () => {
+  it("vienen de fábrica los nueve tipos, con el contador en el número más alto que ya existe", async () => {
     const t = await e.db.tipoDocumento.findMany({ orderBy: { codigo: "asc" } });
-    assert.deepEqual(t.map((x) => x.codigo), ["COTIZACION", "FACTURA", "NOTA_VENTA", "ORDEN_COMPRA", "PEDIDO"]);
+    assert.deepEqual(t.map((x) => x.codigo), ["COTIZACION", "FACTURA", "NOTA_VENTA", "ORDEN_COMPRA", "PEDIDO", "RECEPCION", "RECIBO_COBRO", "RETENCION_IVA", "RETENCION_ISLR"].sort());
   });
 
   it("la factura toma el número del contador; subirlo salta números y avanza de a uno", async () => {
@@ -86,6 +87,33 @@ describe("Numeración por tipo de documento", () => {
     const c = await facturar(cli.id, p.codigo);
     assert.ok(c.ok);
     assert.equal((await e.db.factura.findUniqueOrThrow({ where: { id: c.id } })).numeroFiscal, null);
+  });
+
+  it("el recibo de ingreso toma su número del contador del recibo", async () => {
+    const cli = await crearCliente(e.db);
+    const caja = await crearCajaTesoreria(e, "USD", 0);
+    const antes = (await tipo("RECIBO_COBRO")).ultimoNumero;
+    await e.db.tipoDocumento.update({ where: { codigo: "RECIBO_COBRO" }, data: { ultimoNumero: antes + 300 } });
+    const r = await registrarRecibo(e.db, e.actor, { clienteId: cli.id, observaciones: null, anticipo: true, pagos: [{ formaPago: "ZELLE", moneda: "USD", monto: 25, cuentaId: caja.id }], aplicaciones: [] });
+    assert.ok(r.ok, r.ok ? "" : r.error);
+    assert.equal(r.numero, antes + 301);
+    assert.equal((await tipo("RECIBO_COBRO")).ultimoNumero, antes + 301);
+  });
+
+  it("comprobantes de retención: YYYYMM + 8 dígitos, contadores separados para IVA e ISLR, y no se gastan si la transacción se revierte", async () => {
+    const fecha = new Date(Date.UTC(2026, 10, 15));
+    const iva0 = (await tipo("RETENCION_IVA")).ultimoNumero, islr0 = (await tipo("RETENCION_ISLR")).ultimoNumero;
+    const [a, b] = await e.db.$transaction(async (tx) => [await siguienteComprobanteRetencion(tx, "IVA", fecha), await siguienteComprobanteRetencion(tx, "IVA", fecha)]);
+    assert.equal(a, `202611${String(iva0 + 1).padStart(8, "0")}`);
+    assert.equal(b, `202611${String(iva0 + 2).padStart(8, "0")}`);
+    assert.equal(await e.db.$transaction((tx) => siguienteComprobanteRetencion(tx, "ISLR", fecha)), `202611${String(islr0 + 1).padStart(8, "0")}`);
+    await assert.rejects(e.db.$transaction(async (tx) => { await siguienteComprobanteRetencion(tx, "IVA", fecha); throw new Error("revertir"); }));
+    assert.equal((await tipo("RETENCION_IVA")).ultimoNumero, iva0 + 2, "lo revertido no se gastó");
+  });
+
+  it("órdenes de compra e importaciones comparten contador y el mayor existente se calcula para cada tipo", async () => {
+    assert.deepEqual([...TIPOS_NUMERADOS.ORDEN_COMPRA.tablas], ["orden_compra", "importacion"]);
+    for (const t of Object.keys(TIPOS_NUMERADOS) as TipoNumerado[]) assert.ok((await mayorNumeroExistente(e.db, t)) >= 0, t);
   });
 
   it("validación del maestro: el último número no puede quedar por debajo del más alto existente ni usar fiscal en otros documentos", async () => {

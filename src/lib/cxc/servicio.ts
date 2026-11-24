@@ -1,4 +1,5 @@
 import "server-only";
+import { siguienteNumero } from "@/lib/numeracion";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
 import type { Actor, Tx } from "@/lib/inventario/movimientos";
@@ -204,7 +205,7 @@ export async function registrarRecibo(db: Db, actor: Actor, d: DatosRecibo): Pro
 
       const fecha = d.fecha ?? hoyCaracas();
       const recibo = await tx.reciboCobro.create({
-        data: { clienteId: d.clienteId, fecha, cobradorId: d.cobradorId || null, observaciones: d.observaciones, creadoPorId: actor.id, creadoPorNombre: actor.nombre },
+        data: { numero: await siguienteNumero(tx, "RECIBO_COBRO"), clienteId: d.clienteId, fecha, cobradorId: d.cobradorId || null, observaciones: d.observaciones, creadoPorId: actor.id, creadoPorNombre: actor.nombre },
         select: { id: true, numero: true },
       });
 

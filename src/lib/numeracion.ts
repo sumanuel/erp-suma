@@ -4,34 +4,56 @@ import type { Db } from "@/lib/tenant";
 // Numeración por tipo de documento (original: correlativo de admtipdoccli / admtipdocpro). Cada tipo tiene un contador en `tipo_documento`
 // que se avanza con un UPDATE dentro de la misma transacción que crea el documento: la fila queda bloqueada hasta confirmar, así que dos
 // emisiones simultáneas no repiten número y, si la transacción se revierte, el número no se gasta (sin saltos).
+// Como en el original, solo llevan correlativo los documentos que el sistema numera: los de proveedor que se transcriben (facturas, notas,
+// pagarés) y los pagos no lo tienen.
 
 type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
 
-/** Tipos de documento numerados y la tabla donde viven sus números (constantes: nunca vienen del usuario). */
+/**
+ * Tipos de documento con contador. `tablas`: dónde viven los números (constantes: nunca vienen del usuario); el contador nunca queda por
+ * debajo del mayor número que ya exista. Sin tablas = es un número de comprobante, no el correlativo de una tabla (las retenciones).
+ */
 export const TIPOS_NUMERADOS = {
-  FACTURA: { tabla: "factura", prefijo: "FAC-" },
-  NOTA_VENTA: { tabla: "nota_venta", prefijo: "NC-/ND-" },
-  PEDIDO: { tabla: "pedido_venta", prefijo: "PED-" },
-  COTIZACION: { tabla: "cotizacion", prefijo: "COT-" },
-  ORDEN_COMPRA: { tabla: "orden_compra", prefijo: "OC-" },
-} as const;
+  FACTURA: { tablas: ["factura"], prefijo: "FAC-", digitos: 6 },
+  NOTA_VENTA: { tablas: ["nota_venta"], prefijo: "NC-/ND-", digitos: 6 },
+  PEDIDO: { tablas: ["pedido_venta"], prefijo: "PED-", digitos: 6 },
+  COTIZACION: { tablas: ["cotizacion"], prefijo: "COT-", digitos: 6 },
+  // Las órdenes de importación comparten este correlativo (en el original ambas son el tipo ORC).
+  ORDEN_COMPRA: { tablas: ["orden_compra", "importacion"], prefijo: "OC-", digitos: 6 },
+  RECIBO_COBRO: { tablas: ["recibo_cobro"], prefijo: "RC-", digitos: 6 },
+  RECEPCION: { tablas: ["recepcion"], prefijo: "REC-", digitos: 6 },
+  RETENCION_IVA: { tablas: [], prefijo: "", digitos: 8 },
+  RETENCION_ISLR: { tablas: [], prefijo: "", digitos: 8 },
+} as const satisfies Record<string, { tablas: readonly string[]; prefijo: string; digitos: number }>;
 export type TipoNumerado = keyof typeof TIPOS_NUMERADOS;
+
+const mayorSql = (tipo: TipoNumerado) => TIPOS_NUMERADOS[tipo].tablas.map((t) => `COALESCE((SELECT MAX("numero") FROM "${t}"), 0)`);
 
 /** El mayor número que ya existe de ese documento (los contadores nunca pueden quedar por debajo). */
 export async function mayorNumeroExistente(db: Pick<Db, "$queryRawUnsafe">, tipo: TipoNumerado): Promise<number> {
-  const r = await db.$queryRawUnsafe<{ m: number | null }[]>(`SELECT MAX("numero")::int AS m FROM "${TIPOS_NUMERADOS[tipo].tabla}"`);
+  const partes = mayorSql(tipo);
+  if (partes.length === 0) return 0;
+  const r = await db.$queryRawUnsafe<{ m: number }[]>(`SELECT GREATEST(${partes.join(", ")})::int AS m`);
   return r[0]?.m ?? 0;
 }
 
-/** Siguiente número interno del tipo: el contador + 1, o el mayor existente + 1 si alguien creó documentos por fuera. */
+/** Siguiente número del tipo: el contador + 1, o el mayor existente + 1 si alguien creó documentos por fuera. */
 export async function siguienteNumero(tx: Tx, tipo: TipoNumerado): Promise<number> {
-  const { tabla } = TIPOS_NUMERADOS[tipo];
   const r = await tx.$queryRawUnsafe<{ n: number }[]>(
-    `UPDATE "tipo_documento" SET "ultimo_numero" = GREATEST("ultimo_numero", COALESCE((SELECT MAX("numero") FROM "${tabla}"), 0)) + 1, "actualizado_en" = now() WHERE "codigo" = $1 RETURNING "ultimo_numero" AS n`,
+    `UPDATE "tipo_documento" SET "ultimo_numero" = GREATEST("ultimo_numero"${mayorSql(tipo).map((p) => `, ${p}`).join("")}) + 1, "actualizado_en" = now() WHERE "codigo" = $1 RETURNING "ultimo_numero" AS n`,
     tipo,
   );
   if (!r[0]) throw new Error(`Falta el tipo de documento ${tipo} en la numeración.`);
   return r[0].n;
+}
+
+/**
+ * Número del comprobante de una retención que practicamos (original: YYYYMM + el correlativo de 8 dígitos de RIVA/RISL). Avanza el contador
+ * del tipo (IVA o ISLR) en la misma transacción.
+ */
+export async function siguienteComprobanteRetencion(tx: Tx, tipo: "IVA" | "ISLR", fecha: Date): Promise<string> {
+  const n = await siguienteNumero(tx, tipo === "IVA" ? "RETENCION_IVA" : "RETENCION_ISLR");
+  return `${fecha.getUTCFullYear()}${String(fecha.getUTCMonth() + 1).padStart(2, "0")}${String(n).padStart(8, "0")}`;
 }
 
 const fiscal = (n: number) => String(n).padStart(8, "0");
