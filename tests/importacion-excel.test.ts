@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import writeExcelFile from "write-excel-file/node";
 import { importarMaestro, plantillaMaestro } from "../src/lib/maestros/importacion";
+import { marcas } from "../src/lib/maestros/catalogos";
 import { productos } from "../src/lib/maestros/productos";
-import { bancos } from "../src/lib/maestros/tablas";
+import { bancos, transportes, vendedores } from "../src/lib/maestros/tablas";
 import { clientes, proveedores } from "../src/lib/maestros/terceros";
 import type { Maestro } from "../src/lib/maestros/tipos";
 import { abrirEntorno, unico, type Entorno } from "./soporte/entorno";
@@ -96,6 +97,23 @@ describe("Importación desde Excel de maestros", () => {
     const p = await e.db.producto.findFirstOrThrow({ where: { codigo: cod.toUpperCase() } });
     assert.equal(Number(p.precioLista), 12.5);
     assert.equal(p.categoriaId, cat.id);
+  });
+
+  it("vendedores, transportes y marcas: se importan y respetan valores iniciales y duplicados", async () => {
+    const cv = unico("V").slice(0, 10), ct = unico("T").slice(0, 10), cm = unico("M").slice(0, 20);
+    const rv = await importarMaestro(vendedores, e.db, e.actor, await camposDe(vendedores, e.db), await xlsx([["Código", "Nombre", "Cédula", "Es cobrador"], [cv, "Vendedora importada", "V12345678", "Sí"]]), true);
+    assert.equal(rv.confirmada, true, JSON.stringify(rv.filas));
+    const v = await e.db.vendedor.findFirstOrThrow({ where: { codigo: cv.toUpperCase() } });
+    assert.equal(v.esVendedor, true, "valor inicial: es vendedor");
+    assert.equal(v.esCobrador, true);
+    const rt = await importarMaestro(transportes, e.db, e.actor, await camposDe(transportes, e.db), await xlsx([["Código", "Descripción"], [ct, "Transporte importado"]]), true);
+    assert.equal(rt.confirmada, true, JSON.stringify(rt.filas));
+    const campM = await camposDe(marcas, e.db);
+    const rm = await importarMaestro(marcas, e.db, e.actor, campM, await xlsx([["Código", "Nombre"], [cm, "Marca importada"]]), true);
+    assert.equal(rm.confirmada, true, JSON.stringify(rm.filas));
+    const otra = await importarMaestro(marcas, e.db, e.actor, campM, await xlsx([["Código", "Nombre"], [cm, "Repetida"]]), true);
+    assert.equal(otra.confirmada, false);
+    assert.match(otra.filas[0].mensajes.join(" "), /Ya existe/);
   });
 
   it("proveedores: faltan columnas obligatorias", async () => {

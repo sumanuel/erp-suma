@@ -209,5 +209,6 @@ export const marcas: Maestro = {
   descripcion: (f) => `Código ${f.codigo}`,
   preparar: (d) => ({ ...d, codigo: typeof d.codigo === "string" ? d.codigo.toUpperCase() : d.codigo }),
   mensajeDuplicado: "Ya existe una marca con este código.",
+  importable: true,
   mensajeDependientes: "No se puede eliminar: hay productos de esta marca. Márcala como inactiva en su lugar.",
 };

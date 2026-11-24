@@ -77,6 +77,7 @@ export const vendedores: Maestro = {
   preparar: mayusculas,
   validar: async (_db, d) => (d.esVendedor === false && d.esCobrador === false ? { esVendedor: "Debe ser vendedor, cobrador o ambos." } : null),
   mensajeDuplicado: "Ya existe una persona con este código.",
+  importable: true,
 };
 
 export const tiposNegocio: Maestro = {
@@ -135,7 +136,7 @@ export const transportes: Maestro = {
   ],
   busqueda: { texto: "Buscar por código o descripción", campos: ["codigo", "nombre"] }, filtros: [filtroActivo],
   orden: { columna: "nombre", dir: "asc" }, titulo: (f) => String(f.nombre ?? ""), descripcion: (f) => `Código ${f.codigo}`,
-  preparar: mayusculas, mensajeDuplicado: "Ya existe un transporte con este código.",
+  preparar: mayusculas, mensajeDuplicado: "Ya existe un transporte con este código.", importable: true,
 };
 
 export const bancos: Maestro = {
