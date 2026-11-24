@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SelectorPersonal } from "@/components/selector-tercero";
 import { Tarjeta, claseControl } from "@/components/ui";
 import { descuentoGlobal } from "@/lib/pedidos/calculos";
 
@@ -98,10 +99,7 @@ export function CondicionesVenta({ cond, datos, onCondicion }: { cond: Condicion
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className={campo}>
           <label htmlFor="vendedorId" className={etiqueta}>Vendedor <span className="font-normal text-gris-500">(opcional)</span></label>
-          <select id="vendedorId" value={cond.vendedorId} onChange={(e) => cond.setVendedorId(e.target.value)} className={`${claseControl} pr-9`}>
-            <option value="">Sin vendedor</option>
-            {datos.vendedores.map((v) => <option key={v.valor} value={v.valor}>{v.etiqueta}</option>)}
-          </select>
+          <SelectorPersonal rol="vendedor" id="vendedorId" valor={cond.vendedorId} opciones={datos.vendedores} vacio="Sin vendedor" placeholder="Buscar vendedor por nombre o código…" onCambio={cond.setVendedorId} onElegido={() => document.getElementById("buscar-producto")?.focus()} />
         </div>
         <div className={campo}>
           <label htmlFor="condicionPagoId" className={etiqueta}>Condición de pago <span className="font-normal text-gris-500">(opcional)</span></label>

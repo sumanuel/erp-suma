@@ -95,3 +95,36 @@ export async function eliminarMaestro(id: string, claveTexto: string): Promise<{
   }
   redirect(`${m.ruta}?aviso=eliminado`);
 }
+
+/**
+ * Alta rápida de un registro desde otra pantalla (p. ej. un cliente nuevo mientras se factura): usa las mismas reglas del maestro,
+ * parte de sus valores iniciales y solo pide lo básico. No redirige: devuelve el registro creado.
+ */
+export async function crearMaestroRapido(id: string, basicos: Record<string, string>): Promise<{ error?: string; errores?: Record<string, string>; fila?: Record<string, unknown> }> {
+  const m = buscarMaestro(id);
+  if (!m || m.soloConsulta) return { error: "Operación no disponible." };
+  const { db, usuario } = await requerirPermisoAccion(m.modulo, "crear");
+  const campos = await camposDe(m, db);
+  const form = new FormData();
+  for (const c of campos) {
+    const v: string | boolean | undefined = c.nombre in basicos ? basicos[c.nombre] : m.valoresIniciales?.[c.nombre];
+    if (c.tipo === "booleano") {
+      if (v === true || v === "on") form.set(c.nombre, "on");
+    } else if (v !== undefined && v !== "") form.set(c.nombre, String(v));
+    else if (c.tipo === "seleccion" && c.requerido && c.opciones?.[0]) form.set(c.nombre, c.opciones[0].valor);
+  }
+  const f = leerFormulario(campos, form, false);
+  if (m.preparar) f.datos = m.preparar(f.datos) as typeof f.datos;
+  const errores = { ...f.errores, ...((await m.validar?.(db, f.datos, false)) ?? {}) };
+  if (Object.keys(errores).length > 0) return { errores, error: "Revisa los datos." };
+  let datos = f.datos as Record<string, unknown>;
+  if (m.completar) datos = await m.completar(db, datos);
+  try {
+    const creado = await m.delegado(db).create({ data: datos });
+    await registrarCambio(db, usuario, { modulo: m.modulo, entidad: m.entidad, entidadId: String(creado[m.clave.campo] ?? ""), descripcion: m.titulo(creado), accion: "crear", despues: datos });
+    return { fila: creado };
+  } catch (e) {
+    if (esViolacionUnica(e)) return { error: m.mensajeDuplicado ?? "Ya existe un registro con esos datos." };
+    throw e;
+  }
+}

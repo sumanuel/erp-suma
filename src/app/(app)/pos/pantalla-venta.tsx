@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SelectorTercero } from "@/components/selector-tercero";
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
@@ -169,10 +170,7 @@ export function PantallaVenta({ turnoId, tasa, clientes, cuentas }: { turnoId: s
         <Tarjeta className="flex flex-col gap-3 p-5">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="clientePos" className="text-[13px] font-medium">Cliente <span className="font-normal text-gris-500">(opcional)</span></label>
-            <select id="clientePos" value={clienteId} onChange={(e) => setClienteId(e.target.value)} className={`${claseControl} pr-9`}>
-              <option value="">Consumidor final</option>
-              {clientes.map((c) => <option key={c.valor} value={c.valor}>{c.etiqueta}</option>)}
-            </select>
+            <SelectorTercero tipo="cliente" id="clientePos" valor={clienteId} opciones={clientes} vacio="Consumidor final" placeholder="Consumidor final — buscar por nombre o cédula/RIF…" onCambio={setClienteId} />
             {lista !== "A" ? <p className="text-[12.5px] text-gris-500">Precios de la lista {lista}.</p> : null}
           </div>
           <dl className="flex flex-col gap-1 text-[13.5px]">

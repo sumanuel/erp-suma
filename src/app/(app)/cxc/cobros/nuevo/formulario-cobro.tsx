@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SelectorPersonal } from "@/components/selector-tercero";
 import { Plus, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
@@ -74,9 +75,7 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa, cuen
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="cobradorId" className="text-[13px] font-medium">Cobrador <span className="font-normal text-gris-500">(opcional)</span></label>
-            <select id="cobradorId" value={cobradorId} onChange={(e) => setCobradorId(e.target.value)} className={`${claseControl} pr-9`}>
-              <option value="">Sin cobrador</option>{cobradores.map((c) => <option key={c.valor} value={c.valor}>{c.etiqueta}</option>)}
-            </select>
+            <SelectorPersonal rol="cobrador" id="cobradorId" valor={cobradorId} opciones={cobradores} vacio="Sin cobrador" placeholder="Buscar cobrador…" onCambio={setCobradorId} />
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="comprobante" className="text-[13px] font-medium">N.º de comprobante <span className="font-normal text-gris-500">(opcional)</span></label>

@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
+import { BuscadorProducto, alEnter, enfocarBuscador, enfocarCampo } from "@/components/buscador-producto";
+import { SelectorBuscable } from "@/components/selector-buscable";
+import { SelectorTercero } from "@/components/selector-tercero";
 import { CondicionesCompra, useCondicionesCompra, type CondicionesCompraInicial, type DatosCompraForm } from "@/components/compras/condiciones-compra";
 import { calcularLinea, calcularTotales } from "@/lib/compras/calculos";
 import { descuentoEfectivo, descuentoGlobal } from "@/lib/pedidos/calculos";
@@ -28,25 +31,9 @@ export function FormularioOrden({ id, inicial, proveedores, compras }: { id: str
   const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
 
-  // Buscador de productos con espera corta entre teclas; descarta respuestas que llegan fuera de orden.
-  const [texto, setTexto] = useState("");
-  const [resultados, setResultados] = useState<ProductoBusqueda[]>([]);
-  const ultima = useRef(0);
-  useEffect(() => {
-    const q = texto.trim();
-    if (q.length < 2) return;
-    const turno = ++ultima.current;
-    const t = setTimeout(async () => {
-      const r = await buscarProductos(q).catch(() => []);
-      if (turno === ultima.current) setResultados(r);
-    }, 250);
-    return () => clearTimeout(t);
-  }, [texto]);
-  const visibles = texto.trim().length < 2 ? [] : resultados;
 
   function agregar(p: ProductoBusqueda) {
-    setTexto("");
-    setResultados([]);
+    enfocarCampo(p.codigo, "descuento");
     setLineas((ls) => (ls.some((l) => l.productoCodigo === p.codigo) ? ls : [...ls, { productoCodigo: p.codigo, descripcion: p.descripcion, ivaPorcentaje: p.ivaPorcentaje, cantidad: "1", costoUnitario: String(p.ultimoCosto), descuento: "0", descuento2: "0", descuento3: "0", arancelId: "" }]));
   }
   const cambiar = (i: number, campo: "cantidad" | "costoUnitario" | "descuento" | "descuento2" | "descuento3" | "arancelId", v: string) => setLineas((ls) => ls.map((l, k) => (k === i ? { ...l, [campo]: v } : l)));
@@ -76,10 +63,7 @@ export function FormularioOrden({ id, inicial, proveedores, compras }: { id: str
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="proveedorId" className="text-[13px] font-medium">Proveedor</label>
-            <select id="proveedorId" value={proveedorId} onChange={(e) => { setProveedorId(e.target.value); cond.elegirProveedor(e.target.value); }} required className={`${claseControl} pr-9`}>
-              <option value="">Elegir…</option>
-              {proveedores.map((p) => <option key={p.valor} value={p.valor}>{p.etiqueta}</option>)}
-            </select>
+            <SelectorTercero tipo="proveedor" id="proveedorId" valor={proveedorId} opciones={proveedores} requerido placeholder="Buscar proveedor por nombre o RIF…" onCambio={(v) => { setProveedorId(v); cond.elegirProveedor(v); }} onElegido={() => document.getElementById("buscar-producto")?.focus()} />
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="fecha" className="text-[13px] font-medium">Fecha</label>
@@ -99,22 +83,7 @@ export function FormularioOrden({ id, inicial, proveedores, compras }: { id: str
       <CondicionesCompra cond={cond} datos={compras} />
 
       <Tarjeta recortar={false}>
-        <div className="relative p-4">
-          <label htmlFor="buscar-producto" className="mb-1.5 block text-[13px] font-medium">Agregar producto</label>
-          <input id="buscar-producto" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Código, descripción o código de barras" autoComplete="off" className={`${claseControl} max-w-xl`} />
-          {visibles.length > 0 ? (
-            <ul className="absolute z-10 mt-1 max-h-72 w-full max-w-xl overflow-auto rounded-[10px] border border-borde bg-white py-1 shadow-lg">
-              {visibles.map((p) => (
-                <li key={p.codigo}>
-                  <button type="button" onClick={() => agregar(p)} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-[13.5px] hover:bg-hover">
-                    <span className="min-w-0 truncate"><span className="font-semibold">{p.codigo}</span> · {p.descripcion}</span>
-                    <span className="shrink-0 text-gris-500">{formatoUsd(p.ultimoCosto)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
+        <BuscadorProducto buscar={buscarProductos} onElegir={agregar} derecha={(p) => formatoUsd(p.ultimoCosto)} />
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[13.5px]">
             <thead>
@@ -129,9 +98,9 @@ export function FormularioOrden({ id, inicial, proveedores, compras }: { id: str
               ) : lineas.map((l, i) => (
                 <tr key={l.productoCodigo} className="border-b border-linea last:border-0">
                   <td className="px-4 py-2"><span className="font-semibold">{l.productoCodigo}</span> · {l.descripcion}</td>
-                  <td className={cel}><input aria-label={`Cantidad de ${l.productoCodigo}`} inputMode="decimal" value={l.cantidad} onChange={(e) => cambiar(i, "cantidad", e.target.value)} className={`${claseControl} w-24 text-right`} /></td>
+                  <td className={cel}><input aria-label={`Cantidad de ${l.productoCodigo}`} data-linea={l.productoCodigo} data-campo="cantidad" onKeyDown={(e) => alEnter(e, () => enfocarBuscador())} inputMode="decimal" value={l.cantidad} onChange={(e) => cambiar(i, "cantidad", e.target.value)} className={`${claseControl} w-24 text-right`} /></td>
                   <td className={cel}><input aria-label={`Costo de ${l.productoCodigo}`} inputMode="decimal" value={l.costoUnitario} onChange={(e) => cambiar(i, "costoUnitario", e.target.value)} className={`${claseControl} w-28 text-right`} /></td>
-                  <td className={cel}><input aria-label={`Descuento de ${l.productoCodigo}`} inputMode="decimal" value={l.descuento} onChange={(e) => cambiar(i, "descuento", e.target.value)} className={`${claseControl} w-20 text-right`} /></td>
+                  <td className={cel}><input aria-label={`Descuento de ${l.productoCodigo}`} data-linea={l.productoCodigo} data-campo="descuento" onKeyDown={(e) => alEnter(e, () => enfocarCampo(l.productoCodigo, "cantidad"))} inputMode="decimal" value={l.descuento} onChange={(e) => cambiar(i, "descuento", e.target.value)} className={`${claseControl} w-20 text-right`} /></td>
                   <td className={cel}><input aria-label={`Descuento 2 de ${l.productoCodigo}`} inputMode="decimal" value={l.descuento2} onChange={(e) => cambiar(i, "descuento2", e.target.value)} className={`${claseControl} w-16 text-right`} /></td>
                   <td className={cel}><input aria-label={`Descuento 3 de ${l.productoCodigo}`} inputMode="decimal" value={l.descuento3} onChange={(e) => cambiar(i, "descuento3", e.target.value)} className={`${claseControl} w-16 text-right`} /></td>
                   <td className={cel}>

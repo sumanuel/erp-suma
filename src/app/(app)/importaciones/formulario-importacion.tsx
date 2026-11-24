@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
+import { BuscadorProducto, alEnter, enfocarBuscador, enfocarCampo } from "@/components/buscador-producto";
+import { SelectorBuscable } from "@/components/selector-buscable";
+import { SelectorTercero } from "@/components/selector-tercero";
 import { liquidarImportacion } from "@/lib/importaciones/calculos";
 import { buscarProductosImportacion, guardarImportacionForm, type ProductoImportacion } from "./acciones";
 
@@ -30,24 +33,9 @@ export function FormularioImportacion({ id, inicial, proveedores, almacenes }: {
   const [pendiente, iniciar] = useTransition();
   const campo = (k: keyof Omit<InicialImportacion, "lineas" | "gastos">, v: string) => setF((x) => ({ ...x, [k]: v }));
 
-  const [texto, setTexto] = useState("");
-  const [resultados, setResultados] = useState<ProductoImportacion[]>([]);
-  const ultima = useRef(0);
-  useEffect(() => {
-    const q = texto.trim();
-    if (q.length < 2) return;
-    const turno = ++ultima.current;
-    const t = setTimeout(async () => {
-      const r = await buscarProductosImportacion(q).catch(() => []);
-      if (turno === ultima.current) setResultados(r);
-    }, 250);
-    return () => clearTimeout(t);
-  }, [texto]);
-  const visibles = texto.trim().length < 2 ? [] : resultados;
 
   const agregar = (p: ProductoImportacion) => {
-    setTexto("");
-    setResultados([]);
+    enfocarCampo(p.codigo, "cantidad");
     setLineas((ls) => (ls.some((l) => l.productoCodigo === p.codigo) ? ls : [...ls, { productoCodigo: p.codigo, descripcion: p.descripcion, cantidad: "1", fobUnitario: "0", arancelPct: String(p.arancelPct) }]));
   };
   const cambiarLinea = (i: number, k: "cantidad" | "fobUnitario" | "arancelPct", v: string) => setLineas((ls) => ls.map((l, j) => (j === i ? { ...l, [k]: v } : l)));
@@ -76,9 +64,7 @@ export function FormularioImportacion({ id, inicial, proveedores, almacenes }: {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="flex flex-col gap-1.5 xl:col-span-2">
             <label htmlFor="proveedorId" className="text-[13px] font-medium">Proveedor del exterior</label>
-            <select id="proveedorId" value={f.proveedorId} onChange={(e) => campo("proveedorId", e.target.value)} required className={`${claseControl} pr-9`}>
-              <option value="">Elegir…</option>{proveedores.map((p) => <option key={p.valor} value={p.valor}>{p.etiqueta}</option>)}
-            </select>
+            <SelectorTercero tipo="proveedor" id="proveedorId" valor={f.proveedorId} opciones={proveedores} requerido placeholder="Buscar proveedor por nombre o RIF…" onCambio={(v) => { campo("proveedorId", v); }} onElegido={() => document.getElementById("buscar-producto")?.focus()} />
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="documento" className="text-[13px] font-medium">Documento (factura del proveedor)</label>
@@ -121,22 +107,7 @@ export function FormularioImportacion({ id, inicial, proveedores, almacenes }: {
       </Tarjeta>
 
       <Tarjeta recortar={false}>
-        <div className="relative p-4">
-          <label htmlFor="buscar-producto" className="mb-1.5 block text-[13px] font-medium">Agregar producto</label>
-          <input id="buscar-producto" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Código, descripción o código de barras" autoComplete="off" className={`${claseControl} max-w-xl`} />
-          {visibles.length > 0 ? (
-            <ul className="absolute z-10 mt-1 max-h-72 w-full max-w-xl overflow-auto rounded-[10px] border border-borde bg-white py-1 shadow-lg">
-              {visibles.map((p) => (
-                <li key={p.codigo}>
-                  <button type="button" onClick={() => agregar(p)} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-[13.5px] hover:bg-hover">
-                    <span className="min-w-0 truncate"><span className="font-semibold">{p.codigo}</span> · {p.descripcion}</span>
-                    <span className="shrink-0 text-gris-500">arancel {p.arancelPct} %</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
+        <BuscadorProducto buscar={buscarProductosImportacion} onElegir={agregar} derecha={(p) => `arancel ${p.arancelPct} %`} />
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[13.5px]">
             <thead>
@@ -150,8 +121,8 @@ export function FormularioImportacion({ id, inicial, proveedores, almacenes }: {
               {lineas.length === 0 ? <tr><td colSpan={11} className="px-4 py-8 text-center text-gris-500">Busca y agrega los productos de la importación.</td></tr> : lineas.map((l, i) => (
                 <tr key={l.productoCodigo} className="border-b border-linea last:border-0">
                   <td className="px-4 py-2"><span className="font-semibold">{l.productoCodigo}</span> · {l.descripcion}</td>
-                  <td className={cel}><input aria-label={`Cantidad de ${l.productoCodigo}`} inputMode="decimal" value={l.cantidad} onChange={(e) => cambiarLinea(i, "cantidad", e.target.value)} className={`${claseControl} w-24 text-right`} /></td>
-                  <td className={cel}><input aria-label={`FOB de ${l.productoCodigo}`} inputMode="decimal" value={l.fobUnitario} onChange={(e) => cambiarLinea(i, "fobUnitario", e.target.value)} className={`${claseControl} w-28 text-right`} /></td>
+                  <td className={cel}><input aria-label={`Cantidad de ${l.productoCodigo}`} data-linea={l.productoCodigo} data-campo="cantidad" onKeyDown={(e) => alEnter(e, () => enfocarCampo(l.productoCodigo, "fob"))} inputMode="decimal" value={l.cantidad} onChange={(e) => cambiarLinea(i, "cantidad", e.target.value)} className={`${claseControl} w-24 text-right`} /></td>
+                  <td className={cel}><input aria-label={`FOB de ${l.productoCodigo}`} data-linea={l.productoCodigo} data-campo="fob" onKeyDown={(e) => alEnter(e, () => enfocarBuscador())} inputMode="decimal" value={l.fobUnitario} onChange={(e) => cambiarLinea(i, "fobUnitario", e.target.value)} className={`${claseControl} w-28 text-right`} /></td>
                   <td className={cel}><input aria-label={`Arancel de ${l.productoCodigo}`} inputMode="decimal" value={l.arancelPct} onChange={(e) => cambiarLinea(i, "arancelPct", e.target.value)} className={`${claseControl} w-20 text-right`} /></td>
                   <td className={`${cel} text-right tabular-nums`}>{fmt(liq.filas[i].fobUsd)}</td><td className={`${cel} text-right tabular-nums`}>{fmt(liq.filas[i].cifUsd)}</td>
                   <td className={`${cel} text-right tabular-nums`}>{fmt(liq.filas[i].gastoUsd)}</td><td className={`${cel} text-right tabular-nums`}>{fmt(liq.filas[i].arancelUsd)}</td>

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { SelectorBuscable } from "@/components/selector-buscable";
+import { SelectorTercero } from "@/components/selector-tercero";
 import { Plus, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
@@ -87,9 +89,7 @@ export function FormularioFacturaProveedor({ hoy, catalogos }: { hoy: string; ca
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className={`${campo} xl:col-span-2`}>
             <label htmlFor="proveedorId" className={et}>Proveedor</label>
-            <select id="proveedorId" value={proveedorId} onChange={(e) => elegirProveedor(e.target.value)} required className={`${claseControl} pr-9`}>
-              <option value="">Elegir…</option>{catalogos.proveedores.map((p) => <option key={p.valor} value={p.valor}>{p.etiqueta}</option>)}
-            </select>
+            <SelectorTercero tipo="proveedor" id="proveedorId" valor={proveedorId} opciones={catalogos.proveedores} requerido placeholder="Buscar proveedor por nombre o RIF…" onCambio={elegirProveedor} />
           </div>
           <div className={`${campo} xl:col-span-2`}>
             <label htmlFor="ordenId" className={et}>Orden de compra{opc}</label>
