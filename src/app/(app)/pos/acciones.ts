@@ -25,9 +25,9 @@ export async function abrirTurnoCaja(datos: unknown): Promise<{ error?: string }
   return {};
 }
 
-export async function buscarProductosPos(texto: string, lista = "A"): Promise<ProductoVenta[]> {
+export async function buscarProductosPos(texto: string, lista = "A", limite?: number): Promise<ProductoVenta[]> {
   const { db } = await requerirPermisoAccion("pos", "crear");
-  return buscarProductosVenta(db, texto, lista);
+  return buscarProductosVenta(db, texto, lista, limite);
 }
 
 const Venta = z.object({

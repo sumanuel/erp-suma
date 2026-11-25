@@ -1,6 +1,8 @@
 "use client";
 
+import { LayoutList } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { CatalogoProductos } from "@/components/catalogo-productos";
 import { claseControl } from "@/components/ui";
 
 // Buscador de productos para documentos con líneas (original: se escribe el código o parte de la descripción, Enter elige y el cursor pasa
@@ -32,7 +34,7 @@ export function alEnter(e: KeyboardEvent, siguiente: () => void) {
 }
 
 export function BuscadorProducto<T extends Base>({ buscar, onElegir, derecha, id = "buscar-producto", etiqueta = "Agregar producto", autoFocus = false, className = "max-w-xl", contenedor = "relative p-4", onEnterVacio }: {
-  buscar: (texto: string) => Promise<T[]>; onElegir: (p: T) => void; derecha?: (p: T) => ReactNode; id?: string; etiqueta?: string; autoFocus?: boolean; className?: string;
+  buscar: (texto: string, limite?: number) => Promise<T[]>; onElegir: (p: T) => void; derecha?: (p: T) => ReactNode; id?: string; etiqueta?: string; autoFocus?: boolean; className?: string;
   /// Clases del bloque que envuelve al buscador (para meterlo en una fila de captura).
   contenedor?: string;
   /// Enter con el buscador vacío (por ejemplo, para pasar a cobrar).
@@ -43,6 +45,7 @@ export function BuscadorProducto<T extends Base>({ buscar, onElegir, derecha, id
   const [indice, setIndice] = useState(0);
   const [abierto, setAbierto] = useState(false);
   const ultima = useRef(0);
+  const [catalogo, setCatalogo] = useState(false);
   const q = texto.trim();
 
   useEffect(() => {
@@ -85,11 +88,17 @@ export function BuscadorProducto<T extends Base>({ buscar, onElegir, derecha, id
   return (
     <div className={contenedor}>
       <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium">{etiqueta}</label>
+      <div className={`flex items-center gap-2 ${className}`}>
       <input
         id={id} value={texto} autoFocus={autoFocus} autoComplete="off" role="combobox" aria-expanded={abierto && visibles.length > 0} aria-controls={`${id}-lista`} aria-autocomplete="list"
-        placeholder="Código, descripción o código de barras — Enter para agregar" className={`${claseControl} ${className}`}
+        placeholder="Código, descripción o código de barras — Enter para agregar" className={`${claseControl} min-w-0 flex-1`}
         onChange={(e) => { setTexto(e.target.value); setAbierto(true); }} onFocus={() => setAbierto(true)} onBlur={() => setAbierto(false)} onKeyDown={alTeclear}
       />
+        <button type="button" aria-label="Ver todos los productos" title="Ver todos los productos" onClick={() => { setAbierto(false); setCatalogo(true); }} className="inline-flex size-10 shrink-0 items-center justify-center rounded-[9px] border border-borde text-gris-700 hover:bg-hover hover:text-tinta">
+          <LayoutList className="size-4" aria-hidden />
+        </button>
+      </div>
+      {catalogo ? <CatalogoProductos buscar={buscar} inicial={q} derecha={derecha} onElegir={(p) => { setCatalogo(false); elegir(p); }} onCerrar={() => { setCatalogo(false); enfocarBuscador(id); }} /> : null}
       {abierto && visibles.length > 0 ? (
         <ul id={`${id}-lista`} role="listbox" className={`absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-[10px] border border-borde bg-white py-1 shadow-lg ${className}`}>
           {visibles.map((p, i) => (

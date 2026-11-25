@@ -26,9 +26,9 @@ const Pedido = z.object({
 });
 
 /** Busca productos activos para armar el pedido, con su precio de lista y lo disponible (existencia menos reservas). */
-export async function buscarProductosPedido(texto: string, lista = "A"): Promise<ProductoVenta[]> {
+export async function buscarProductosPedido(texto: string, lista = "A", limite?: number): Promise<ProductoVenta[]> {
   const { db } = await requerirPermisoAccion("pedidos", "ver");
-  return buscarProductosVenta(db, texto, lista);
+  return buscarProductosVenta(db, texto, lista, limite);
 }
 
 export async function guardarPedidoVenta(id: string | null, datos: unknown): Promise<EstadoPedidoForm> {

@@ -30,9 +30,9 @@ const Cotizacion = z.object({
 });
 
 /** Busca productos activos para armar la cotización, con su precio de lista y lo disponible (informativo: no reserva). */
-export async function buscarProductosCotizacion(texto: string, lista = "A"): Promise<ProductoVenta[]> {
+export async function buscarProductosCotizacion(texto: string, lista = "A", limite?: number): Promise<ProductoVenta[]> {
   const { db } = await requerirPermisoAccion("cotizaciones", "ver");
-  return buscarProductosVenta(db, texto, lista);
+  return buscarProductosVenta(db, texto, lista, limite);
 }
 
 export async function guardarCotizacionVenta(id: string | null, datos: unknown): Promise<EstadoCotizacionForm> {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { facturarYCobrar, type PagoFactura } from "../src/lib/facturacion/contado";
+import { acumularPago } from "../src/lib/ventas/reparto-pagos";
 import { confirmarPedido, guardarPedido } from "../src/lib/pedidos/servicio";
 import { abrirEntorno, automatica, crearCajaTesoreria, crearCliente, crearProducto, descuadreContable, fijarTasa, hoy, type Entorno } from "./soporte/entorno";
 
@@ -21,6 +22,14 @@ describe("Factura de contado cobrada en la misma operación", () => {
     return { cli, p, usd, ves, datos };
   }
   const pago = (formaPago: string, moneda: "USD" | "VES", recibido: number, cuentaId: string, referencia?: string): PagoFactura => ({ formaPago, moneda, recibido, cuentaId, referencia });
+
+  it("dos pagos iguales se suman en un renglón, que queda de último; con otra caja o número siguen aparte", () => {
+    const a = pago("EFECTIVO", "VES", 1000, "caja");
+    const punto = pago("PUNTO_VENTA", "VES", 500, "banco", "01");
+    assert.deepEqual(acumularPago([a], pago("EFECTIVO", "VES", 1000.5, "caja")).map((p) => p.recibido), [2000.5]);
+    assert.deepEqual(acumularPago([a, punto], a).map((p) => [p.formaPago, p.recibido]), [["PUNTO_VENTA", 500], ["EFECTIVO", 2000]]);
+    for (const otro of [pago("EFECTIVO", "VES", 1, "otra"), pago("EFECTIVO", "USD", 1, "caja"), pago("PUNTO_VENTA", "VES", 1, "banco", "02")]) assert.equal(acumularPago([a, punto], otro).length, 3);
+  });
 
   it("con dos formas de pago deja la factura en cero, un recibo con dos cobros y el dinero en cada cuenta", async () => {
     const x = await venta();

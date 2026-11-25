@@ -8,6 +8,17 @@ export type PagoContado = {
   recibido: number;
 };
 
+/**
+ * Agrega un pago. Si ya había uno igual (forma, moneda, cuenta y número), se suman en un solo renglón, que queda de último: solo el último
+ * puede dar vuelto.
+ */
+export function acumularPago<P extends PagoContado & { cuentaId?: string | null; referencia?: string | null }>(pagos: P[], nuevo: P): P[] {
+  const igual = (p: P) => p.formaPago === nuevo.formaPago && p.moneda === nuevo.moneda && (p.cuentaId ?? "") === (nuevo.cuentaId ?? "") && (p.referencia ?? "") === (nuevo.referencia ?? "");
+  const previo = pagos.find(igual);
+  if (!previo) return [...pagos, nuevo];
+  return [...pagos.filter((p) => !igual(p)), { ...nuevo, recibido: r2(previo.recibido + nuevo.recibido) }];
+}
+
 export type ParteReparto<P> = { p: P; montoUsd: number; montoMoneda: number; exceso: number };
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;

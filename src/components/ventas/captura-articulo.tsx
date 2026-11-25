@@ -35,7 +35,7 @@ export function agregarLinea<T extends LineaCapturada>(lineas: T[], nueva: T): {
 }
 
 export function CapturaArticulo<T extends LineaCapturada>({ buscar, lineas, onCambio, puedeCambiarPrecio, descuentoGlobal, almacenes, onEnterVacio }: {
-  buscar: (texto: string) => Promise<ProductoVenta[]>; lineas: T[]; onCambio: (lineas: T[]) => void; puedeCambiarPrecio: boolean; descuentoGlobal: number;
+  buscar: (texto: string, limite?: number) => Promise<ProductoVenta[]>; lineas: T[]; onCambio: (lineas: T[]) => void; puedeCambiarPrecio: boolean; descuentoGlobal: number;
   /// Si se dan (factura con varios almacenes), la línea puede salir de uno distinto al del documento.
   almacenes?: { valor: string; etiqueta: string }[];
   onEnterVacio?: () => void;

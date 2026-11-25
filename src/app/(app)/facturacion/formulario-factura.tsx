@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { useState, useTransition } from "react";
+import { Tecla, useAtajos } from "@/components/atajos";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { CamposBasicos, CamposMas, MasDatos, avanzarDesde, enterEnFormulario, resumenMasDatos, useCondiciones, type CondicionesInicial, type DatosVentaForm } from "@/components/ventas/condiciones-venta";
 import { Articulos, CapturaArticulo, TablaLineas, type LineaCapturada } from "@/components/ventas/captura-articulo";
@@ -83,6 +84,10 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes, ventas
     });
   }
 
+  // F5 confirma (y no recarga la página) y F8 cancela.
+  useAtajos({ F5: () => { if (!pendiente) emitir(); }, F8: () => document.getElementById("cancelar-factura")?.click() });
+  const hayCaptura = (!fijo && lineas.length > 0) || pagos.length > 0;
+
   const resumen = resumenMasDatos(cond, [...(observaciones.trim() ? ["observaciones"] : []), ...(aprobar ? ["aprobación gerencial"] : [])]);
   const celda = "flex flex-col gap-1.5";
   const etiqueta = "text-[13px] font-medium";
@@ -142,7 +147,7 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes, ventas
           </Tarjeta>
 
           <Articulos>
-            {fijo ? null : <CapturaArticulo buscar={(q) => buscarProductosFactura(q, cond.lista)} lineas={lineas} onCambio={setLineas} puedeCambiarPrecio={puedeCambiarPrecio} descuentoGlobal={global} almacenes={almacenes} onEnterVacio={irACobrar} />}
+            {fijo ? null : <CapturaArticulo buscar={(q, limite) => buscarProductosFactura(q, cond.lista, limite)} lineas={lineas} onCambio={setLineas} puedeCambiarPrecio={puedeCambiarPrecio} descuentoGlobal={global} almacenes={almacenes} onEnterVacio={irACobrar} />}
             <TablaLineas lineas={lineas} onQuitar={fijo ? undefined : (i) => setLineas((ls) => ls.filter((_x, k) => k !== i))} descuentoGlobal={global} vacio="Busca y agrega los productos de la factura." almacenes={almacenes} />
           </Articulos>
         </div>
@@ -170,8 +175,8 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes, ventas
           </Tarjeta>
 
           <div className="flex items-center gap-3">
-            <button id="confirmar-factura" type="button" onClick={emitir} disabled={pendiente} className={`${clasesBoton("primario")} flex-1 justify-center`}><Check className="size-4" aria-hidden />{pendiente ? "Emitiendo…" : cobra ? "Confirmar y cobrar" : "Emitir factura"}</button>
-            <Link href={fijo ? `/pedidos/${pedido.id}` : "/facturacion"} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+            <button id="confirmar-factura" type="button" onClick={emitir} disabled={pendiente} className={`${clasesBoton("primario")} flex-1 justify-center`}><Check className="size-4" aria-hidden />{pendiente ? "Emitiendo…" : cobra ? "Confirmar y cobrar" : "Emitir factura"} <Tecla>F5</Tecla></button>
+            <Link id="cancelar-factura" href={fijo ? `/pedidos/${pedido.id}` : "/facturacion"} onClick={(e) => { if (hayCaptura && !confirm("¿Cancelar? Se pierde lo que cargaste en esta factura.")) e.preventDefault(); }} className="flex items-center gap-1.5 px-2 text-sm text-gris-700 hover:text-tinta">Cancelar <Tecla>F8</Tecla></Link>
           </div>
         </div>
       </div>

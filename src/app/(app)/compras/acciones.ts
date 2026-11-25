@@ -1,5 +1,6 @@
 "use server";
 
+import { tope } from "@/lib/busqueda-productos";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -37,15 +38,15 @@ const Orden = z.object({
 });
 
 /** Busca productos activos por código, descripción o código de barras para armar las líneas de la orden. */
-export async function buscarProductos(texto: string): Promise<ProductoBusqueda[]> {
+export async function buscarProductos(texto: string, limite?: number): Promise<ProductoBusqueda[]> {
   const { db } = await requerirPermisoAccion("compras", "ver");
   const q = texto.trim().slice(0, 60);
-  if (q.length < 2) return [];
+  if (q.length < 2 && !limite) return [];
   const r = await db.producto.findMany({
     where: { activo: true, OR: [{ codigo: { contains: q, mode: "insensitive" } }, { descripcion: { contains: q, mode: "insensitive" } }, { codigoBarras: q }] },
     include: { alicuotaIva: { select: { porcentajeCompra: true } } },
     orderBy: { descripcion: "asc" },
-    take: 12,
+    take: tope(limite),
   });
   return r.map((p) => ({ codigo: p.codigo, descripcion: p.descripcion, ultimoCosto: Number(p.ultimoCosto), ivaPorcentaje: Number(p.alicuotaIva.porcentajeCompra) }));
 }

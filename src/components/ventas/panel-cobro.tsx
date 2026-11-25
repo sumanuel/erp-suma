@@ -3,9 +3,10 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { clasesBoton, claseControl } from "@/components/ui";
+import { ListaRapida, Tecla, useAtajos } from "@/components/atajos";
 import { alEnter } from "@/components/buscador-producto";
 import { FORMAS_PAGO } from "@/lib/cxc/estados";
-import { recibidoEnBs, repartirPagos } from "@/lib/ventas/reparto-pagos";
+import { acumularPago, recibidoEnBs, repartirPagos } from "@/lib/ventas/reparto-pagos";
 
 // Cobro en la misma pantalla de la factura (original: panel «Cancelar factura»): forma de pago, cuenta, número, monto; y los totales
 // recibidos, lo que falta y el vuelto. Se recorre con Enter. El servidor vuelve a calcular todo.
@@ -15,6 +16,7 @@ export type PagoCapturado = { formaPago: string; moneda: "USD" | "VES"; recibido
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const m = (n: number) => n.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const MONEDAS: [string, string][] = [["VES", "Bolívares"], ["USD", "Dólares"]];
 const simbolo = (x: string) => (x === "VES" ? "Bs." : "USD");
 const nombreForma = (f: string) => FORMAS_PAGO[f as keyof typeof FORMAS_PAGO] ?? f;
 
@@ -48,6 +50,7 @@ export function PanelCobro({ pagos, onCambio, cuentas, totalUsd, totalBs, tasa, 
   const [referencia, setReferencia] = useState("");
   const [monto, setMonto] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lista, setLista] = useState<"forma" | "moneda" | null>(null);
 
   const opciones = cuentasPara(cuentas, forma, moneda);
   const cuentaId = opciones.some((c) => c.id === cuentaElegida) ? cuentaElegida : opciones[0]?.id ?? "";
@@ -70,7 +73,7 @@ export function PanelCobro({ pagos, onCambio, cuentas, totalUsd, totalBs, tasa, 
     if (!(valor > 0)) { setError(r.faltaBs > 0 ? "Escribe el monto recibido." : "La factura ya está cubierta."); return; }
     if (!cuentaId) { setError(`No hay una cuenta de tesorería en ${simbolo(moneda)}.`); return; }
     if (forma === "CHEQUE" && !referencia.trim()) { setError("Escribe el número del cheque."); ir("cobro-referencia"); return; }
-    const nuevos = [...pagos, { formaPago: forma, moneda, recibido: r2(valor), cuentaId, referencia: referencia.trim() }];
+    const nuevos = acumularPago(pagos, { formaPago: forma, moneda, recibido: r2(valor), cuentaId, referencia: referencia.trim() });
     const despues = resumirCobro(nuevos, totalUsd, totalBs, tasa);
     if (despues.problema) { setError(despues.problema); return; }
     setError(null);
@@ -81,19 +84,25 @@ export function PanelCobro({ pagos, onCambio, cuentas, totalUsd, totalBs, tasa, 
     else ir("cobro-forma");
   }
 
+  // F9 y F10 abren las listas de modo de pago y moneda. Al elegir, el cursor queda en lo que falta llenar.
+  useAtajos({ F9: () => setLista("forma"), F10: () => setLista("moneda") });
+  const seguir = (formaElegida: string) => { setLista(null); setError(null); ir(formaElegida === "EFECTIVO" ? "cobro-monto" : "cobro-cuenta"); };
+
   const campo = "flex flex-col gap-1";
   const etiqueta = "text-[12.5px] font-medium";
   return (
     <div className="flex flex-col gap-3">
+      {lista === "forma" ? <ListaRapida titulo="Modo de pago" opciones={Object.entries(FORMAS_PAGO)} valor={forma} onElegir={(v) => { setForma(v); seguir(v); }} onCerrar={() => { setLista(null); ir("cobro-forma"); }} /> : null}
+      {lista === "moneda" ? <ListaRapida titulo="Moneda" opciones={MONEDAS} valor={moneda} onElegir={(v) => { setMoneda(v as "USD" | "VES"); setMonto(null); seguir(forma); }} onCerrar={() => { setLista(null); ir("cobro-moneda"); }} /> : null}
       <div className="grid grid-cols-2 gap-2">
-        <div className={campo}><label htmlFor="cobro-forma" className={etiqueta}>Modo de pago</label>
+        <div className={campo}><label htmlFor="cobro-forma" className={`${etiqueta} flex items-center justify-between`}>Modo de pago <Tecla>F9</Tecla></label>
           <select id="cobro-forma" value={forma} onChange={(e) => setForma(e.target.value)} onKeyDown={(e) => alEnter(e, () => ir("cobro-moneda"))} className={`${claseControl} pr-8`}>
             {Object.entries(FORMAS_PAGO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
-        <div className={campo}><label htmlFor="cobro-moneda" className={etiqueta}>Moneda</label>
+        <div className={campo}><label htmlFor="cobro-moneda" className={`${etiqueta} flex items-center justify-between`}>Moneda <Tecla>F10</Tecla></label>
           <select id="cobro-moneda" value={moneda} onChange={(e) => { setMoneda(e.target.value as "USD" | "VES"); setMonto(null); }} onKeyDown={(e) => alEnter(e, () => ir(forma === "EFECTIVO" ? "cobro-monto" : "cobro-cuenta"))} className={`${claseControl} pr-8`}>
-            <option value="VES">Bolívares</option><option value="USD">Dólares</option>
+            {MONEDAS.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
         <div className={`${campo} col-span-2`}><label htmlFor="cobro-cuenta" className={etiqueta}>{forma === "EFECTIVO" ? "Caja" : "Banco o cuenta"}</label>

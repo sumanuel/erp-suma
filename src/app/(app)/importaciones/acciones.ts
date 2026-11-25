@@ -1,5 +1,6 @@
 "use server";
 
+import { tope } from "@/lib/busqueda-productos";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -27,15 +28,15 @@ const Importacion = z.object({
 export type ProductoImportacion = { codigo: string; descripcion: string; arancelPct: number };
 
 /** Busca productos para el expediente, con el arancel de su ficha. */
-export async function buscarProductosImportacion(texto: string): Promise<ProductoImportacion[]> {
+export async function buscarProductosImportacion(texto: string, limite?: number): Promise<ProductoImportacion[]> {
   const { db } = await requerirPermisoAccion("importaciones", "ver");
   const q = texto.trim().slice(0, 60);
-  if (q.length < 2) return [];
+  if (q.length < 2 && !limite) return [];
   const r = await db.producto.findMany({
     where: { activo: true, OR: [{ codigo: { contains: q, mode: "insensitive" } }, { descripcion: { contains: q, mode: "insensitive" } }, { codigoBarras: q }] },
     include: { arancel: { select: { porcentaje: true } } },
     orderBy: { descripcion: "asc" },
-    take: 12,
+    take: tope(limite),
   });
   return r.map((p) => ({ codigo: p.codigo, descripcion: p.descripcion, arancelPct: Number(p.arancel?.porcentaje ?? 0) }));
 }

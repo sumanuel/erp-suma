@@ -26,7 +26,7 @@ export const totalLinea = (l: LineaCompra, cambio: number, global: number) =>
   calcularLinea({ cantidad: num(l.cantidad), costoUnitario: cambio > 0 ? num(l.costoUnitario) / cambio : num(l.costoUnitario), descuento: descuentoEfectivo(descuentoGlobal([num(l.descuento), num(l.descuento2), num(l.descuento3)]), global), ivaPorcentaje: l.ivaPorcentaje });
 
 export function CapturaCompra({ buscar, lineas, onCambio, cambio, global, moneda, aranceles, onEnterVacio }: {
-  buscar: (texto: string) => Promise<ProductoCompra[]>; lineas: LineaCompra[]; onCambio: (l: LineaCompra[]) => void;
+  buscar: (texto: string, limite?: number) => Promise<ProductoCompra[]>; lineas: LineaCompra[]; onCambio: (l: LineaCompra[]) => void;
   /// Bs. por USD si la orden es en bolívares; 0 si es en dólares.
   cambio: number; global: number; moneda: "USD" | "VES"; aranceles: { valor: string; etiqueta: string }[]; onEnterVacio?: () => void;
 }) {

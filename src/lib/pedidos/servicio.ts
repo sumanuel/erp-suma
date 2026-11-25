@@ -1,4 +1,5 @@
 import "server-only";
+import { tope } from "@/lib/busqueda-productos";
 import { siguienteNumero } from "@/lib/numeracion";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
@@ -243,14 +244,14 @@ export async function resolverAprobacion(db: Db, actor: Actor, id: string, decis
 export type ProductoVenta = { presentaciones?: OpcionesUnidad["presentaciones"]; codigo: string; descripcion: string; precioLista: number; ivaPorcentaje: number; disponible: number; descuentoSugerido?: number; descuentoMax?: number; origenPrecio?: "BASE" | "LISTA" | "PROMOCION" };
 
 /** Busca productos activos para armar un documento de venta, con su precio de lista y lo disponible (existencia menos reservas). */
-export async function buscarProductosVenta(db: Db, texto: string, lista = "A"): Promise<ProductoVenta[]> {
+export async function buscarProductosVenta(db: Db, texto: string, lista = "A", limite?: number): Promise<ProductoVenta[]> {
   const q = texto.trim().slice(0, 60);
-  if (q.length < 2) return [];
+  if (q.length < 2 && !limite) return [];
   const r = await db.producto.findMany({
     where: { activo: true, OR: [{ codigo: { contains: q, mode: "insensitive" } }, { descripcion: { contains: q, mode: "insensitive" } }, { codigoBarras: q }] },
     include: { alicuotaIva: { select: { porcentajeVenta: true } } },
     orderBy: { descripcion: "asc" },
-    take: 12,
+    take: tope(limite),
   });
   const codigos = r.map((p) => p.codigo);
   const listaOk = /^[A-Z]$/.test(lista) ? lista : "A";

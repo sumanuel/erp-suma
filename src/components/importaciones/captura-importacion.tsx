@@ -21,7 +21,7 @@ const cant = (n: number) => n.toLocaleString("es-VE", { maximumFractionDigits: 4
 const r4 = (n: number) => Math.round(n * 10000) / 10000;
 
 export function CapturaImportacion({ buscar, lineas, onCambio, cambioUsd, moneda, onEnterVacio }: {
-  buscar: (texto: string) => Promise<ProductoImportacionCaptura[]>; lineas: LineaImp[]; onCambio: (l: LineaImp[]) => void;
+  buscar: (texto: string, limite?: number) => Promise<ProductoImportacionCaptura[]>; lineas: LineaImp[]; onCambio: (l: LineaImp[]) => void;
   /// USD por 1 unidad de la moneda del FOB.
   cambioUsd: number; moneda: string; onEnterVacio?: () => void;
 }) {

@@ -41,9 +41,9 @@ const Factura = z.object({
 /** La aprobación solo vale si quien emite tiene el permiso especial: si no, se ignora y rige el control de crédito normal. */
 const aprobacionDe = (ctx: Parameters<typeof tienePermisoEspecial>[0], a: { motivo: string } | null | undefined) => (a && tienePermisoEspecial(ctx, "ventas.aprobar") ? { motivo: a.motivo } : undefined);
 
-export async function buscarProductosFactura(texto: string, lista = "A"): Promise<ProductoVenta[]> {
+export async function buscarProductosFactura(texto: string, lista = "A", limite?: number): Promise<ProductoVenta[]> {
   const { db } = await requerirPermisoAccion("facturacion", "crear");
-  return buscarProductosVenta(db, texto, lista);
+  return buscarProductosVenta(db, texto, lista, limite);
 }
 
 /** Emite una factura directa o, si trae `pedidoId`, la del pedido confirmado (con sus líneas y precios). */

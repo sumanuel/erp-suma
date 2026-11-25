@@ -77,7 +77,7 @@ export function FormularioCotizacion({ id, inicial, clientes, ventas, puedeCambi
       </Tarjeta>
 
       <Articulos>
-        <CapturaArticulo buscar={(q) => buscarProductosCotizacion(q, cond.lista)} lineas={lineas} onCambio={setLineas} puedeCambiarPrecio={puedeCambiarPrecio} descuentoGlobal={cond.global} onEnterVacio={irAGuardar} />
+        <CapturaArticulo buscar={(q, limite) => buscarProductosCotizacion(q, cond.lista, limite)} lineas={lineas} onCambio={setLineas} puedeCambiarPrecio={puedeCambiarPrecio} descuentoGlobal={cond.global} onEnterVacio={irAGuardar} />
         <TablaLineas lineas={lineas} onQuitar={(i) => setLineas((ls) => ls.filter((_x, k) => k !== i))} descuentoGlobal={cond.global} vacio="Busca y agrega los productos de la cotización." />
         <dl className="ml-auto flex w-full max-w-xs flex-col gap-1 p-4 text-[13.5px]">
           <div className="flex justify-between"><dt className="text-gris-600">Subtotal</dt><dd className="tabular-nums">{formatoUsd(totales.subtotal)}</dd></div>
