@@ -15,7 +15,9 @@ type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
  */
 export const TIPOS_NUMERADOS = {
   FACTURA: { tablas: ["factura"], prefijo: "FAC-", digitos: 6 },
-  NOTA_VENTA: { tablas: ["nota_venta"], prefijo: "NC-/ND-", digitos: 6 },
+  // Créditos y débitos viven en la misma tabla pero cada uno lleva su correlativo (en el original: DEV y NDE).
+  NOTA_CREDITO: { tablas: ["nota_venta"], donde: `"tipo" = 'CREDITO'`, prefijo: "NC-", digitos: 6 },
+  NOTA_DEBITO: { tablas: ["nota_venta"], donde: `"tipo" = 'DEBITO'`, prefijo: "ND-", digitos: 6 },
   PEDIDO: { tablas: ["pedido_venta"], prefijo: "PED-", digitos: 6 },
   COTIZACION: { tablas: ["cotizacion"], prefijo: "COT-", digitos: 6 },
   // Las órdenes de importación comparten este correlativo (en el original ambas son el tipo ORC).
@@ -24,10 +26,13 @@ export const TIPOS_NUMERADOS = {
   RECEPCION: { tablas: ["recepcion"], prefijo: "REC-", digitos: 6 },
   RETENCION_IVA: { tablas: [], prefijo: "", digitos: 8 },
   RETENCION_ISLR: { tablas: [], prefijo: "", digitos: 8 },
-} as const satisfies Record<string, { tablas: readonly string[]; prefijo: string; digitos: number }>;
+} as const satisfies Record<string, { tablas: readonly string[]; donde?: string; prefijo: string; digitos: number }>;
 export type TipoNumerado = keyof typeof TIPOS_NUMERADOS;
 
-const mayorSql = (tipo: TipoNumerado) => TIPOS_NUMERADOS[tipo].tablas.map((t) => `COALESCE((SELECT MAX("numero") FROM "${t}"), 0)`);
+const mayorSql = (tipo: TipoNumerado) => {
+  const d: { tablas: readonly string[]; donde?: string } = TIPOS_NUMERADOS[tipo];
+  return d.tablas.map((t) => `COALESCE((SELECT MAX("numero") FROM "${t}"${d.donde ? ` WHERE ${d.donde}` : ""}), 0)`);
+};
 
 /** El mayor número que ya existe de ese documento (los contadores nunca pueden quedar por debajo). */
 export async function mayorNumeroExistente(db: Pick<Db, "$queryRawUnsafe">, tipo: TipoNumerado): Promise<number> {

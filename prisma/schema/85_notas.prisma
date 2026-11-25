@@ -5,8 +5,8 @@
 /// Nota de crédito (reduce lo que el cliente debe) o de débito (lo aumenta) sobre una factura de venta.
 model NotaVenta {
   id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  /// Número correlativo compartido por créditos y débitos (se muestra NC-000001 o ND-000001 según el tipo).
-  numero          Int              @unique @default(autoincrement())
+  /// Número correlativo propio de cada tipo, como en el original (se muestra NC-000001 o ND-000001). Único por tipo.
+  numero          Int              @default(autoincrement())
   /// CREDITO o DEBITO
   tipo            String
   /// DEVOLUCION (crédito con mercancía que regresa al almacén), AJUSTE (crédito por monto: descuento, error de precio) o CARGO (débito por monto).
@@ -39,6 +39,7 @@ model NotaVenta {
   motivoAnulacion String?          @map("motivo_anulacion")
   lineas          NotaVentaLinea[]
 
+  @@unique([tipo, numero])
   @@index([facturaId])
   @@index([clienteId])
   @@index([estado, fecha(sort: Desc)])

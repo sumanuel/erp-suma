@@ -25,7 +25,7 @@ export const tiposDocumento: Maestro = {
   columnas: [
     { id: "nombre", titulo: "Documento", campo: "nombre", fija: true },
     { id: "codigo", titulo: "Código", campo: "codigo", oculta: true },
-    { id: "ultimoNumero", titulo: "Último número", valor: (f) => { const t = TIPOS_NUMERADOS[f.codigo as TipoNumerado]; return t ? numero(t.prefijo.split("/")[0], Number(f.ultimoNumero), t.digitos) : String(f.ultimoNumero); } },
+    { id: "ultimoNumero", titulo: "Último número", valor: (f) => { const t = TIPOS_NUMERADOS[f.codigo as TipoNumerado]; return t ? numero(t.prefijo, Number(f.ultimoNumero), t.digitos) : String(f.ultimoNumero); } },
     { id: "serie", titulo: "Serie fiscal", valor: (f) => (f.serieFiscal as { serie?: string } | null | undefined)?.serie ?? "—" },
     { id: "fiscal", titulo: "Numeración fiscal", valor: (f) => (f.codigo !== "FACTURA" ? "—" : f.fiscalAutomatico ? `Automática (último ${f.ultimoFiscal})` : "Manual") },
   ],

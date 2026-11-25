@@ -3,7 +3,7 @@
 
 model TipoDocumento {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  /// FACTURA, NOTA_VENTA, PEDIDO, COTIZACION u ORDEN_COMPRA. Los tipos vienen de fábrica; el código no cambia.
+  /// Código fijo del tipo (FACTURA, NOTA_CREDITO, PEDIDO…; ver TIPOS_NUMERADOS). Los tipos vienen de fábrica.
   codigo           String       @unique
   nombre           String
   /// Último número interno usado: el próximo documento toma este + 1 (o el mayor ya existente + 1, si es más alto).

@@ -10,15 +10,17 @@ export default async function ListaNotasVenta({ searchParams }: { searchParams: 
   const ctx = await requerirSesion();
   const { q = "", tipo = "", estado = "" } = await searchParams;
   const texto = q.trim().slice(0, 60);
-  const numero = /^(NC|ND)?-?0*(\d{1,9})$/i.exec(texto)?.[2];
+  const buscado = /^(NC|ND)?-?0*(\d{1,9})$/i.exec(texto);
+  // Cada tipo numera por separado: «NC-5» y «ND-5» son notas distintas; sin prefijo salen las dos.
+  const porNumero = buscado ? { numero: Number(buscado[2]), ...(buscado[1] ? { tipo: buscado[1].toUpperCase() === "NC" ? "CREDITO" : "DEBITO" } : {}) } : null;
   const notas = await ctx.db.notaVenta.findMany({
     where: {
       ...(tipo === "CREDITO" || tipo === "DEBITO" ? { tipo } : {}),
       ...(estado in ESTADOS_NOTA ? { estado } : {}),
-      ...(texto ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { cliente: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { motivo: { contains: texto, mode: "insensitive" as const } }] } : {}),
+      ...(texto ? { OR: [...(porNumero ? [porNumero] : []), { cliente: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { motivo: { contains: texto, mode: "insensitive" as const } }] } : {}),
     },
     include: { cliente: { select: { razonSocial: true } }, factura: { select: { numero: true } } },
-    orderBy: { numero: "desc" },
+    orderBy: { creadoEn: "desc" },
     take: 200,
   });
   return (

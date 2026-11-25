@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { emitirFactura } from "../src/lib/facturacion/servicio";
+import { crearNotaVenta } from "../src/lib/notas/servicio";
 import { guardarPedido } from "../src/lib/pedidos/servicio";
 import { tiposDocumento } from "../src/lib/maestros/numeracion";
 import { registrarRecibo } from "../src/lib/cxc/servicio";
@@ -16,9 +17,9 @@ describe("Numeración por tipo de documento", () => {
   const facturar = async (clienteId: string, codigo: string, cantidad = 1) =>
     emitirFactura(e.db, e.actor, { clienteId, almacenId: e.almacenId, observaciones: null, diasCredito: 0, lineas: [{ productoCodigo: codigo, cantidad, precioUnitario: 10, descuento: 0 }] });
 
-  it("vienen de fábrica los nueve tipos, con el contador en el número más alto que ya existe", async () => {
+  it("vienen de fábrica los diez tipos, con el contador en el número más alto que ya existe", async () => {
     const t = await e.db.tipoDocumento.findMany({ orderBy: { codigo: "asc" } });
-    assert.deepEqual(t.map((x) => x.codigo), ["COTIZACION", "FACTURA", "NOTA_VENTA", "ORDEN_COMPRA", "PEDIDO", "RECEPCION", "RECIBO_COBRO", "RETENCION_IVA", "RETENCION_ISLR"].sort());
+    assert.deepEqual(t.map((x) => x.codigo), ["COTIZACION", "FACTURA", "NOTA_CREDITO", "NOTA_DEBITO", "ORDEN_COMPRA", "PEDIDO", "RECEPCION", "RECIBO_COBRO", "RETENCION_IVA", "RETENCION_ISLR"].sort());
   });
 
   it("la factura toma el número del contador; subirlo salta números y avanza de a uno", async () => {
@@ -114,6 +115,28 @@ describe("Numeración por tipo de documento", () => {
   it("órdenes de compra e importaciones comparten contador y el mayor existente se calcula para cada tipo", async () => {
     assert.deepEqual([...TIPOS_NUMERADOS.ORDEN_COMPRA.tablas], ["orden_compra", "importacion"]);
     for (const t of Object.keys(TIPOS_NUMERADOS) as TipoNumerado[]) assert.ok((await mayorNumeroExistente(e.db, t)) >= 0, t);
+  });
+
+  it("notas de crédito y de débito numeran por separado y pueden repetir número entre sí", async () => {
+    const cli = await crearCliente(e.db);
+    const p = await crearProducto(e, { existencia: 20, precio: 10, costo: 4, exento: true });
+    const f = await emitirFactura(e.db, e.actor, { clienteId: cli.id, almacenId: e.almacenId, observaciones: null, diasCredito: 0, lineas: [{ productoCodigo: p.codigo, cantidad: 10, precioUnitario: 10, descuento: 0 }] });
+    assert.ok(f.ok);
+    // Se igualan los dos contadores muy por encima de lo existente para que ambos tipos den el mismo número.
+    const tope = Math.max((await tipo("NOTA_CREDITO")).ultimoNumero, (await tipo("NOTA_DEBITO")).ultimoNumero) + 700;
+    await e.db.tipoDocumento.updateMany({ where: { codigo: { in: ["NOTA_CREDITO", "NOTA_DEBITO"] } }, data: { ultimoNumero: tope } });
+    const nota = async (tipoNota: "CREDITO" | "DEBITO") => {
+      const r = await crearNotaVenta(e.db, e.actor, { modo: tipoNota === "CREDITO" ? "AJUSTE" : "CARGO", tipo: tipoNota, facturaId: f.id, motivo: "Prueba de numeración", base: 1, ivaPorcentaje: 0 } as Parameters<typeof crearNotaVenta>[2]);
+      assert.ok(r.ok, r.ok ? "" : r.error);
+      return e.db.notaVenta.findUniqueOrThrow({ where: { id: r.id } });
+    };
+    const nc1 = await nota("CREDITO");
+    const nd1 = await nota("DEBITO");
+    const nc2 = await nota("CREDITO");
+    assert.deepEqual([nc1.numero, nd1.numero, nc2.numero], [tope + 1, tope + 1, tope + 2]);
+    assert.equal((await tipo("NOTA_CREDITO")).ultimoNumero, tope + 2);
+    assert.equal((await tipo("NOTA_DEBITO")).ultimoNumero, tope + 1);
+    assert.equal(await mayorNumeroExistente(e.db, "NOTA_DEBITO"), tope + 1, "el mayor se calcula solo sobre su tipo");
   });
 
   it("validación del maestro: el último número no puede quedar por debajo del más alto existente ni usar fiscal en otros documentos", async () => {

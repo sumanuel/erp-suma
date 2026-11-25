@@ -109,7 +109,7 @@ export async function crearNotaVenta(db: Db, actor: Actor, d: DatosNotaVenta): P
 
       const nota = await tx.notaVenta.create({
         data: {
-          numero: await siguienteNumero(tx, "NOTA_VENTA"), tipo: d.tipo, modo: d.modo, facturaId: f.id, clienteId: f.clienteId, almacenId: d.modo === "DEVOLUCION" ? d.almacenId : null, fecha: hoyCaracas(), motivo: d.motivo.trim(),
+          numero: await siguienteNumero(tx, d.tipo === "CREDITO" ? "NOTA_CREDITO" : "NOTA_DEBITO"), tipo: d.tipo, modo: d.modo, facturaId: f.id, clienteId: f.clienteId, almacenId: d.modo === "DEVOLUCION" ? d.almacenId : null, fecha: hoyCaracas(), motivo: d.motivo.trim(),
           subtotal, iva, total, ivaPorcentaje, tasaUsd: tasa, creadoPorId: actor.id, creadoPorNombre: actor.nombre, lineas: { create: lineasNota },
         },
         select: { id: true, numero: true },
