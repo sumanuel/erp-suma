@@ -33,7 +33,7 @@ export const areas: AreaMenu[] = [
     id: "compras", etiqueta: "Compras", icono: "compras",
     items: [
       { href: "/proveedores", etiqueta: "Proveedores", descripcion: "Proveedores y sus datos de pago.", icono: "proveedores", modulo: "proveedores" },
-      { href: "/compras", etiqueta: "Compras", descripcion: "Órdenes de compra, recepción y compras sugeridas.", icono: "ordenes", modulo: "compras" },
+      { href: "/compras", etiqueta: "Compras", descripcion: "Órdenes de compra y recepción de mercancía.", icono: "ordenes", modulo: "compras" },
       { href: "/importaciones", etiqueta: "Importaciones", descripcion: "Expedientes de importación y su liquidación de costos.", icono: "importaciones", modulo: "importaciones" },
     ],
   },
@@ -57,7 +57,10 @@ export const areas: AreaMenu[] = [
   },
   {
     id: "analisis", etiqueta: "Análisis", icono: "analisis",
-    items: [{ href: "/reportes", etiqueta: "Reportes", descripcion: "Reportes gerenciales y fiscales para exportar.", icono: "reportes", modulo: "reportes" }],
+    items: [
+      { href: "/gerencial", etiqueta: "Gerencial", descripcion: "Consultas y listados de gestión: artículos, movimientos, ventas y compras.", icono: "reportes", modulo: "reportes" },
+      { href: "/reportes", etiqueta: "Reportes", descripcion: "Reportes gerenciales y fiscales para exportar.", icono: "reportes", modulo: "reportes" },
+    ],
   },
   {
     id: "configuracion", etiqueta: "Configuración", icono: "configuracion", alPie: true,

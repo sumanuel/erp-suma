@@ -31,7 +31,7 @@ async function ejecutar<T>(trabajo: () => Promise<ResultadoFactura<T>>): Promise
 
 /** Aprobación de excepciones de crédito: la da quien emite (permiso) o, si el pedido ya la tenía, el gerente que lo aprobó (`por`). */
 type Aprobacion = { motivo: string; por?: { id: string | null; nombre: string } };
-type LineaLista = { productoCodigo: string; descripcion: string; cantidad: number; precioUnitario: number; descuento: number; descuentoLinea?: number | null; ivaPorcentaje: number; total: number; bonificacion?: boolean; almacenId?: string | null; presentacionId?: string | null; factor?: number };
+type LineaLista = { productoCodigo: string; descripcion: string; cantidad: number; precioUnitario: number; precioOriginal?: number | null; descuento: number; descuentoLinea?: number | null; ivaPorcentaje: number; total: number; bonificacion?: boolean; almacenId?: string | null; presentacionId?: string | null; factor?: number };
 
 /** Crea la factura y descuenta el inventario, todo dentro de la transacción recibida. */
 async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedidoId: string | null; almacenId: string; observaciones: string | null; diasCredito: number; lineas: LineaLista[]; encabezado: Awaited<ReturnType<typeof validarEncabezado>>["columnas"]; aprobacion?: Aprobacion }) {
@@ -56,7 +56,7 @@ async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedido
       numero: await siguienteNumero(tx, "FACTURA"), ...(fis ?? {}), clienteId: d.clienteId, pedidoId: d.pedidoId, almacenId: d.almacenId, fecha, observaciones: d.observaciones, ...d.encabezado, ...t,
       diasCredito: d.diasCredito, fechaVencimiento: vence, saldo: t.total, ...aprobacion,
       tasaUsd: tasa.valor, totalBs: aBolivares(t.total, tasa.valor), creadoPorId: actor.id, creadoPorNombre: actor.nombre,
-      lineas: { create: d.lineas.map((l, i) => ({ linea: i + 1, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea ?? null, ivaPorcentaje: l.ivaPorcentaje, total: l.total, costoUnitario: costos.get(l.productoCodigo) ?? 0, bonificacion: l.bonificacion ?? false, almacenId: l.almacenId && l.almacenId !== d.almacenId ? l.almacenId : null, presentacionId: l.presentacionId ?? null, factor: l.factor ?? 1 })) },
+      lineas: { create: d.lineas.map((l, i) => ({ linea: i + 1, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, precioOriginal: l.precioOriginal ?? null, descuento: l.descuento, descuentoLinea: l.descuentoLinea ?? null, ivaPorcentaje: l.ivaPorcentaje, total: l.total, costoUnitario: costos.get(l.productoCodigo) ?? 0, bonificacion: l.bonificacion ?? false, almacenId: l.almacenId && l.almacenId !== d.almacenId ? l.almacenId : null, presentacionId: l.presentacionId ?? null, factor: l.factor ?? 1 })) },
     },
     select: { id: true, numero: true },
   });
@@ -114,6 +114,7 @@ export async function emitirFacturaDePedido(db: Db, actor: Actor, pedidoId: stri
       if (u.count === 0) throw new FacturaError("Solo se factura un pedido confirmado. Recarga la página.");
       const p = await tx.pedidoVenta.findUniqueOrThrow({ where: { id: pedidoId }, include: { lineas: { orderBy: { linea: "asc" } } } });
       const lineas: LineaLista[] = p.lineas.map((l) => ({
+        precioOriginal: l.precioOriginal === null ? null : Number(l.precioOriginal),
         productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: Number(l.cantidad), precioUnitario: Number(l.precioUnitario),
         descuento: Number(l.descuento), descuentoLinea: l.descuentoLinea === null ? null : Number(l.descuentoLinea), ivaPorcentaje: Number(l.ivaPorcentaje), total: Number(l.total), bonificacion: l.bonificacion, almacenId: l.almacenId, presentacionId: l.presentacionId, factor: Number(l.factor),
       }));

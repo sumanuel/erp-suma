@@ -14,6 +14,7 @@ export function resolverParametros(def: Parametro[], pedidos: Record<string, str
   for (const p of def) {
     const v = pedidos[p.id];
     if (p.tipo === "fecha") r[p.id] = v && FECHA.test(v) && !Number.isNaN(new Date(`${v}T00:00:00.000Z`).getTime()) ? v : defectoFecha[p.defecto];
+    else if (p.tipo === "texto") r[p.id] = (v ?? "").trim().slice(0, 60);
     else r[p.id] = v && p.opciones.some((o) => o.valor === v) ? v : p.defecto;
   }
   // Si el rango viene al revés, se acomoda.
@@ -22,3 +23,6 @@ export function resolverParametros(def: Parametro[], pedidos: Record<string, str
 }
 
 export const aFecha = (s: string) => new Date(`${s}T00:00:00.000Z`);
+
+/** El día de Caracas de un momento (con hora), como fecha de calendario: para mostrar movimientos hechos de noche con su fecha local. */
+export const diaCaracas = (momento: Date) => aFecha(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas" }).format(momento));

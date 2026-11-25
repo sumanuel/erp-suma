@@ -69,6 +69,8 @@ model PedidoVentaLinea {
   cantidad       Decimal     @db.Decimal(18, 4)
   /// Precio unitario en USD, antes de descuento.
   precioUnitario Decimal     @map("precio_unitario") @db.Decimal(18, 8)
+  /// Precio que proponía el sistema (lista o promoción) por unidad base; sirve para «Precios cambiados».
+  precioOriginal Decimal? @map("precio_original") @db.Decimal(18, 8)
   descuento      Decimal     @default(0) @db.Decimal(7, 4)
   /// Descuento que se escribió en la línea (%), sin los globales; `descuento` es el efectivo (línea + globales) con el que se calcula el total.
   descuentoLinea Decimal? @map("descuento_linea") @db.Decimal(7, 4)

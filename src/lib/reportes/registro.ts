@@ -1,5 +1,6 @@
 import "server-only";
 import type { Db } from "@/lib/tenant";
+import { REPORTES_GERENCIALES } from "./gerencial-registro";
 import { reporteLibroCompras, reporteLibroVentas, reporteResumenIva, reporteRetenciones } from "./fiscal";
 import { reporteBalanceGeneral, reporteEstadoResultados, reporteEstructuraCostos, reporteLibroDiario } from "./financieros";
 import { reporteInventarioValorado } from "./inventario";
@@ -49,4 +50,4 @@ export const REPORTES: DefReporte[] = [
   },
 ];
 
-export const buscarReporte = (id: string) => REPORTES.find((r) => r.id === id);
+export const buscarReporte = (id: string) => REPORTES.find((r) => r.id === id) ?? REPORTES_GERENCIALES.find((r) => r.id === id);

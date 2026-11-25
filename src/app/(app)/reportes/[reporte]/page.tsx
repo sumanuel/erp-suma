@@ -22,7 +22,7 @@ export default async function PaginaReporte({ params, searchParams }: { params: 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <Link href="/reportes" className="inline-flex items-center gap-1.5 text-sm text-gris-700 hover:text-tinta"><ArrowLeft className="size-4" aria-hidden />Todos los reportes</Link>
+        <Link href={def.grupo === "Gerencial" ? "/gerencial" : "/reportes"} className="inline-flex items-center gap-1.5 text-sm text-gris-700 hover:text-tinta"><ArrowLeft className="size-4" aria-hidden />{def.grupo === "Gerencial" ? "Módulo gerencial" : "Todos los reportes"}</Link>
         <div className="flex gap-2">
           <BotonImprimir />
           {tienePermiso(ctx, "reportes", "exportar") ? <a href={`/reportes/${def.id}/exportar?${consulta}`} className={clasesBoton("secundario")}><Download className="size-4" aria-hidden />Exportar a Excel (CSV)</a> : null}
@@ -34,18 +34,20 @@ export default async function PaginaReporte({ params, searchParams }: { params: 
           <p className="text-[13px] text-gris-500">{def.descripcion}</p>
         </div>
         <form className="flex flex-wrap items-end gap-3 px-4 pb-4 print:hidden" role="search">
-          {parametros.map((p) => (
+          {parametros.map((p) => (p.tipo === "texto" && p.oculto ? <input key={p.id} type="hidden" name={p.id} value={valores[p.id]} /> : (
             <div key={p.id} className="flex flex-col gap-1.5">
               <label htmlFor={p.id} className="text-[13px] font-medium">{p.etiqueta}</label>
               {p.tipo === "fecha" ? (
                 <input id={p.id} name={p.id} type="date" defaultValue={valores[p.id]} className={`${claseControl} w-44`} />
+              ) : p.tipo === "texto" ? (
+                <input id={p.id} name={p.id} defaultValue={valores[p.id]} maxLength={60} placeholder={p.ayuda} className={`${claseControl} w-52`} />
               ) : (
                 <select id={p.id} name={p.id} defaultValue={valores[p.id]} className={`${claseControl} min-w-48 pr-9`}>
                   {p.opciones.map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>)}
                 </select>
               )}
             </div>
-          ))}
+          )))}
           {parametros.length > 0 ? <button type="submit" className={clasesBoton("primario")}>Ver reporte</button> : null}
         </form>
         <p className="hidden px-4 pb-2 text-[12.5px] text-gris-600 print:block">{Object.entries(valores).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join(" · ")}</p>
@@ -62,7 +64,7 @@ export default async function PaginaReporte({ params, searchParams }: { params: 
               ) : resultado.filas.map((f, n) => (
                 <tr key={n} className={`border-b border-linea last:border-0 ${f._negrita ? "bg-neutro-suave/40 font-semibold" : ""}`}>
                   {resultado.columnas.map((c, i) => (
-                    <td key={c.clave} className={`px-3 py-2.5 ${i === 0 ? "pl-4" : ""} ${alinear(c.tipo)}`} style={i === 0 && f._nivel ? { paddingLeft: `${1 + f._nivel * 1.1}rem` } : undefined}>{textoCelda(f[c.clave], c.tipo)}</td>
+                    <td key={c.clave} className={`px-3 py-2.5 ${i === 0 ? "pl-4" : ""} ${alinear(c.tipo)}`} style={i === 0 && f._nivel ? { paddingLeft: `${1 + f._nivel * 1.1}rem` } : undefined}>{i === 0 && f._enlace ? <Link href={f._enlace} className="font-semibold text-marca-texto hover:underline">{textoCelda(f[c.clave], c.tipo)}</Link> : textoCelda(f[c.clave], c.tipo)}</td>
                   ))}
                 </tr>
               ))}

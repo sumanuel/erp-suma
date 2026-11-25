@@ -1,29 +1,28 @@
 import "server-only";
 import type { Db } from "@/lib/tenant";
-import { calcularLinea } from "@/lib/pedidos/calculos";
 import { aFecha, redondear2 } from "./ayudas";
+import { documentosDeVenta, lineasDeVenta } from "./movimientos-venta";
 import type { Fila, Resultado } from "./tipos";
 
-// Ventas, costo y margen en USD (los montos en Bs. son los de cada factura con su tasa congelada). Solo facturas EMITIDAS: las anuladas no cuentan.
+// Ventas netas, costo y margen en USD: facturas emitidas, menos las notas de crédito (devoluciones y ajustes), más las notas de débito (cargos),
+// cada una en la fecha de su documento. Los montos en Bs. son los de cada documento con la tasa congelada de su factura.
 type Acum = { facturas: number; ventas: number; iva: number; total: number; totalBs: number; costo: number };
 const vacio = (): Acum => ({ facturas: 0, ventas: 0, iva: 0, total: 0, totalBs: 0, costo: 0 });
 
 export async function reporteVentas(db: Db, v: Record<string, string>): Promise<Resultado> {
   const desde = aFecha(v.desde), hasta = aFecha(v.hasta);
-  const facturas = await db.factura.findMany({
-    where: { estado: "EMITIDA", fecha: { gte: desde, lte: hasta } },
-    include: { cliente: { select: { id: true, razonSocial: true, documento: true } }, lineas: { include: { producto: { select: { descripcion: true } } } } },
-    orderBy: { fecha: "asc" },
-  });
   const porcentaje = (a: number, b: number) => (a > 0 ? redondear2(((a - b) / a) * 100) : 0);
 
   if (v.agrupar === "producto") {
     const m = new Map<string, { codigo: string; descripcion: string; cantidad: number; ventas: number; costo: number }>();
-    for (const f of facturas) for (const l of f.lineas) {
-      const x = m.get(l.productoCodigo) ?? { codigo: l.productoCodigo, descripcion: l.producto.descripcion, cantidad: 0, ventas: 0, costo: 0 };
-      x.cantidad += Number(l.cantidad);
-      x.ventas += calcularLinea({ cantidad: Number(l.cantidad), costoUnitario: Number(l.precioUnitario), descuento: Number(l.descuento), ivaPorcentaje: 0 }).neto;
-      x.costo += Number(l.cantidad) * Number(l.costoUnitario);
+    const lineas = await lineasDeVenta(db, desde, hasta);
+    const productos = new Map((await db.producto.findMany({ where: { codigo: { in: [...new Set(lineas.map((l) => l.productoCodigo))] } }, select: { codigo: true, descripcion: true } })).map((p) => [p.codigo, p.descripcion]));
+    for (const l of lineas) {
+      const x = m.get(l.productoCodigo) ?? { codigo: l.productoCodigo, descripcion: productos.get(l.productoCodigo) ?? l.descripcion, cantidad: 0, ventas: 0, costo: 0 };
+      const signo = l.tipo === "DEV" ? -1 : 1;
+      x.cantidad += signo * l.cantidad;
+      x.ventas += signo * l.monto;
+      x.costo += signo * l.costo;
       m.set(l.productoCodigo, x);
     }
     const lista = [...m.values()].sort((x, y) => y.ventas - x.ventas);
@@ -31,26 +30,34 @@ export async function reporteVentas(db: Db, v: Record<string, string>): Promise<
     const t = lista.reduce((s, x) => ({ cantidad: s.cantidad + x.cantidad, ventas: s.ventas + x.ventas, costo: s.costo + x.costo }), { cantidad: 0, ventas: 0, costo: 0 });
     return {
       columnas: [
-        { clave: "codigo", titulo: "Código", tipo: "texto" }, { clave: "descripcion", titulo: "Producto", tipo: "texto" }, { clave: "cantidad", titulo: "Cantidad vendida", tipo: "numero" },
-        { clave: "ventas", titulo: "Ventas USD (sin IVA)", tipo: "moneda" }, { clave: "costo", titulo: "Costo USD", tipo: "moneda" }, { clave: "margen", titulo: "Margen USD", tipo: "moneda" }, { clave: "pct", titulo: "Margen %", tipo: "numero" },
+        { clave: "codigo", titulo: "Código", tipo: "texto" }, { clave: "descripcion", titulo: "Producto", tipo: "texto" }, { clave: "cantidad", titulo: "Cantidad neta", tipo: "numero" },
+        { clave: "ventas", titulo: "Ventas netas USD (sin IVA)", tipo: "moneda" }, { clave: "costo", titulo: "Costo USD", tipo: "moneda" }, { clave: "margen", titulo: "Margen USD", tipo: "moneda" }, { clave: "pct", titulo: "Margen %", tipo: "numero" },
       ],
       filas, totales: { cantidad: t.cantidad, ventas: redondear2(t.ventas), costo: redondear2(t.costo), margen: redondear2(t.ventas - t.costo) },
-      notas: ["El costo es el costo promedio que tenía el producto al facturar. Ventas sin IVA, después de descuentos."],
+      notas: [
+        "Cantidades y montos netos: se restan las devoluciones. El costo es el que tenía el producto al facturar. Ventas sin IVA, después de descuentos.",
+        "Las notas por monto (ajustes de crédito y cargos de débito) no son de un producto: aquí no aparecen, y sí en las otras formas de agrupar.",
+      ],
     };
   }
 
   // «Ventas por vendedor» (original: lbxCosultaVentaXVendedor): el vendedor es el del documento.
+  const documentos = (await documentosDeVenta(db, desde, hasta)).sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
   const vendedores = v.agrupar === "vendedor" ? new Map((await db.vendedor.findMany({ select: { id: true, codigo: true, nombre: true } })).map((x) => [x.id, `${x.nombre} (${x.codigo})`])) : new Map<string, string>();
   const grupos = new Map<string, { etiqueta: string; extra: string; fecha?: Date; a: Acum }>();
-  for (const f of facturas) {
-    const clave = v.agrupar === "dia" ? f.fecha.toISOString().slice(0, 10) : v.agrupar === "mes" ? f.fecha.toISOString().slice(0, 7) : v.agrupar === "vendedor" ? f.vendedorId ?? "SIN" : f.cliente.id;
-    const g = grupos.get(clave) ?? { etiqueta: v.agrupar === "cliente" ? f.cliente.razonSocial : v.agrupar === "vendedor" ? (f.vendedorId ? vendedores.get(f.vendedorId) ?? "Vendedor eliminado" : "Sin vendedor") : clave, extra: v.agrupar === "cliente" ? f.cliente.documento : "", fecha: v.agrupar === "dia" ? f.fecha : undefined, a: vacio() };
-    g.a.facturas += 1;
-    g.a.ventas += Number(f.subtotal);
-    g.a.iva += Number(f.iva);
-    g.a.total += Number(f.total);
-    g.a.totalBs += Number(f.totalBs);
-    g.a.costo += f.lineas.reduce((s, l) => s + Number(l.cantidad) * Number(l.costoUnitario), 0);
+  for (const d of documentos) {
+    const clave = v.agrupar === "dia" ? d.fecha.toISOString().slice(0, 10) : v.agrupar === "mes" ? d.fecha.toISOString().slice(0, 7) : v.agrupar === "vendedor" ? d.vendedorId ?? "SIN" : d.clienteId;
+    const g = grupos.get(clave) ?? {
+      etiqueta: v.agrupar === "cliente" ? d.clienteNombre : v.agrupar === "vendedor" ? (d.vendedorId ? vendedores.get(d.vendedorId) ?? "Vendedor eliminado" : "Sin vendedor") : clave,
+      extra: v.agrupar === "cliente" ? d.clienteDocumento : "", fecha: v.agrupar === "dia" ? d.fecha : undefined, a: vacio(),
+    };
+    const signo = d.tipo === "DEV" ? -1 : 1;
+    if (d.tipo === "FAV") g.a.facturas += 1;
+    g.a.ventas += signo * d.base;
+    g.a.iva += signo * d.iva;
+    g.a.total += signo * d.total;
+    g.a.totalBs += signo * d.totalBs;
+    g.a.costo += signo * d.costo;
     grupos.set(clave, g);
   }
   const lista = [...grupos.values()];
@@ -65,11 +72,11 @@ export async function reporteVentas(db: Db, v: Record<string, string>): Promise<
     columnas: [
       { clave: "grupo", titulo, tipo: v.agrupar === "dia" ? "fecha" : "texto" },
       ...(v.agrupar === "cliente" ? [{ clave: "documento", titulo: "RIF", tipo: "texto" as const }] : []),
-      { clave: "facturas", titulo: "Facturas", tipo: "entero" }, { clave: "ventas", titulo: "Ventas USD (sin IVA)", tipo: "moneda" }, { clave: "iva", titulo: "IVA USD", tipo: "moneda" },
+      { clave: "facturas", titulo: "Facturas", tipo: "entero" }, { clave: "ventas", titulo: "Ventas netas USD (sin IVA)", tipo: "moneda" }, { clave: "iva", titulo: "IVA USD", tipo: "moneda" },
       { clave: "total", titulo: "Total USD", tipo: "moneda" }, { clave: "totalBs", titulo: "Total Bs.", tipo: "moneda" }, { clave: "costo", titulo: "Costo USD", tipo: "moneda" }, { clave: "margen", titulo: "Margen USD", tipo: "moneda" },
     ],
     filas,
     totales: { facturas: filas.reduce((s, f) => s + (f.facturas as number), 0), ventas: sum("ventas"), iva: sum("iva"), total: sum("total"), totalBs: sum("totalBs"), costo: sum("costo"), margen: sum("margen") },
-    notas: ["Solo facturas emitidas (las anuladas no cuentan). El total en Bs. es el de cada factura con su tasa del día."],
+    notas: ["Ventas netas: facturas emitidas menos notas de crédito más notas de débito, cada una en la fecha de su documento (las anuladas no cuentan). El total en Bs. usa la tasa de la factura."],
   };
 }

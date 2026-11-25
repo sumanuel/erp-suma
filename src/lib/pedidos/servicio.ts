@@ -99,14 +99,14 @@ export async function prepararLineasVenta(tx: Tx, d: Pick<DatosPedido, "clienteI
     if (d.sinCambiarPrecio && listaPres !== null && Math.abs(l.precioUnitario - listaPres) > 1e-4) throw new PedidoError(`${l.productoCodigo}: no tienes permiso para cambiar el precio (la lista ${cliente.listaPrecio} dice ${listaPres}).`);
     if (tope && tope.origen === "LISTA" && tope.descuentoMaxPct > 0 && l.descuento > tope.descuentoMaxPct + 1e-9) throw new PedidoError(`${l.productoCodigo}: el descuento máximo de la lista ${cliente.listaPrecio} es ${tope.descuentoMaxPct} %.`);
     const calc = calcularLinea({ cantidad, costoUnitario: precioBase, descuento: efectivo, ivaPorcentaje });
-    return { linea: i + 1, productoCodigo: l.productoCodigo, descripcion: p.descripcion, cantidad, precioUnitario: precioBase, descuento: efectivo, descuentoLinea: l.descuento as number | null, ivaPorcentaje, total: calc.total, bonificacion: false, almacenId: l.almacenId ?? null, presentacionId: l.presentacionId ?? null, factor, _e: { cantidad, costoUnitario: precioBase, descuento: efectivo, ivaPorcentaje } };
+    return { linea: i + 1, productoCodigo: l.productoCodigo, descripcion: p.descripcion, cantidad, precioUnitario: precioBase, precioOriginal: listaPres === null ? null : listaPres / factor, descuento: efectivo, descuentoLinea: l.descuento as number | null, ivaPorcentaje, total: calc.total, bonificacion: false, almacenId: l.almacenId ?? null, presentacionId: l.presentacionId ?? null, factor, _e: { cantidad, costoUnitario: precioBase, descuento: efectivo, ivaPorcentaje } };
   });
   // Promociones «compra N, llévate M»: el sistema agrega la línea regalada (precio 0) al final.
   const regalos = normales.flatMap((l) => {
     const promo = lleve.get(l.productoCodigo);
     const extra = promo ? cantidadBonificada(promo, l.cantidad) : 0;
     if (extra <= 0) return [];
-    return [{ productoCodigo: l.productoCodigo, descripcion: `${l.descripcion} (bonificación)`, cantidad: extra, precioUnitario: 0, descuento: 0, descuentoLinea: null as number | null, ivaPorcentaje: l.ivaPorcentaje, total: 0, bonificacion: true, almacenId: l.almacenId, presentacionId: null as string | null, factor: 1, _e: { cantidad: extra, costoUnitario: 0, descuento: 0, ivaPorcentaje: l.ivaPorcentaje } }];
+    return [{ productoCodigo: l.productoCodigo, descripcion: `${l.descripcion} (bonificación)`, cantidad: extra, precioUnitario: 0, precioOriginal: null as number | null, descuento: 0, descuentoLinea: null as number | null, ivaPorcentaje: l.ivaPorcentaje, total: 0, bonificacion: true, almacenId: l.almacenId, presentacionId: null as string | null, factor: 1, _e: { cantidad: extra, costoUnitario: 0, descuento: 0, ivaPorcentaje: l.ivaPorcentaje } }];
   });
   if (normales.length + regalos.length > 500) throw new PedidoError("Máximo 500 líneas por documento (con las bonificaciones).");
   return [...normales, ...regalos.map((r, k) => ({ ...r, linea: normales.length + k + 1 }))];
@@ -118,7 +118,7 @@ export async function guardarPedido(db: Db, actor: Actor, id: string | null, d: 
       const enc = await validarEncabezado(tx, d.encabezado);
       const lineas = await prepararLineasVenta(tx, { ...d, descuentos: enc.descuentos });
       const t = calcularTotales(lineas.map((l) => l._e));
-      const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total, bonificacion: l.bonificacion, almacenId: l.almacenId, presentacionId: l.presentacionId, factor: l.factor }));
+      const filas = lineas.map((l) => ({ linea: l.linea, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, precioOriginal: l.precioOriginal, descuento: l.descuento, descuentoLinea: l.descuentoLinea, ivaPorcentaje: l.ivaPorcentaje, total: l.total, bonificacion: l.bonificacion, almacenId: l.almacenId, presentacionId: l.presentacionId, factor: l.factor }));
       // Editar el pedido borra la decisión de gerencia anterior: lo que se aprobó ya no es lo que hay.
       const base = { clienteId: d.clienteId, fecha: d.fecha, observaciones: d.observaciones, ...enc.columnas, ...t, reglaRechazoId: null, aprobacionEstado: null, aprobadoPorId: null, aprobadoPorNombre: null, aprobadoEn: null, aprobacionMotivo: null };
       if (id) {
