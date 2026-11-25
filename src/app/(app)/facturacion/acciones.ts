@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requerirPermisoAccion, tienePermisoEspecial } from "@/lib/dal";
+import { requerirPermisoAccion, tienePermiso, tienePermisoEspecial } from "@/lib/dal";
+import { facturarYCobrar } from "@/lib/facturacion/contado";
 import { EncabezadoVentaZ } from "@/lib/ventas/esquemas";
 import { anularFactura, emitirFactura, emitirFacturaDePedido, registrarNumerosFiscales } from "@/lib/facturacion/servicio";
 import { anularNotaVenta, crearNotaVenta, registrarDatosFiscalesNota } from "@/lib/notas/servicio";
@@ -13,8 +14,15 @@ export type EstadoFacturaForm = { error?: string };
 
 const Aprobacion = z.object({ motivo: z.string().trim().min(3, "Escribe el motivo de la aprobación").max(300) }).nullable().optional();
 
+const Cobro = z.object({
+  pagos: z.array(z.object({ formaPago: z.string().max(30), moneda: z.enum(["USD", "VES"]), recibido: z.number().finite(), cuentaId: z.string().uuid("Elige la caja o cuenta de cada pago"), referencia: z.string().max(60).optional() })).min(1, "Indica cómo paga el cliente").max(10),
+  monedaVuelto: z.enum(["USD", "VES"]).optional(),
+  cajaVueltoId: z.string().uuid().nullable().optional(),
+}).nullable().optional();
+
 const Factura = z.object({
   aprobacion: Aprobacion,
+  cobro: Cobro,
   encabezado: EncabezadoVentaZ.optional(),
   clienteId: z.string().uuid("Elige un cliente"),
   almacenId: z.string().uuid("Elige un almacén"),
@@ -41,21 +49,46 @@ export async function buscarProductosFactura(texto: string, lista = "A"): Promis
 /** Emite una factura directa o, si trae `pedidoId`, la del pedido confirmado (con sus líneas y precios). */
 export async function emitirFacturaVenta(pedidoId: string | null, datos: unknown): Promise<EstadoFacturaForm> {
   const ctx = await requerirPermisoAccion("facturacion", "crear");
+  const sinCobro = (dias: number, cobro: unknown) => {
+    // Cobrar es un permiso aparte: quien lo tiene debe cobrar la venta de contado aquí; quien no, la deja por cobrar.
+    if (cobro && !tienePermiso(ctx, "cxc", "crear")) return "No tienes permiso para registrar cobros.";
+    if (cobro && dias !== 0) return "Solo la factura de contado se cobra al emitirla.";
+    if (!cobro && dias === 0 && tienePermiso(ctx, "cxc", "crear")) return "La factura es de contado: registra el cobro.";
+    return null;
+  };
   let res;
+  let cobrada = false;
+  let vuelto: { moneda: string; monto: number } | null = null;
   if (pedidoId) {
-    const r = z.object({ aprobacion: Aprobacion, almacenId: z.string().uuid("Elige un almacén"), observaciones: z.string().trim().max(1000).transform((v) => v || null), diasCredito: z.number().int("Días de crédito inválidos").min(0).max(365) }).safeParse(datos);
+    const r = z.object({ aprobacion: Aprobacion, cobro: Cobro, almacenId: z.string().uuid("Elige un almacén"), observaciones: z.string().trim().max(1000).transform((v) => v || null), diasCredito: z.number().int("Días de crédito inválidos").min(0).max(365) }).safeParse(datos);
     if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
-    res = await emitirFacturaDePedido(ctx.db, ctx.usuario, pedidoId, r.data.almacenId, r.data.observaciones, r.data.diasCredito, aprobacionDe(ctx, r.data.aprobacion));
+    const falta = sinCobro(r.data.diasCredito, r.data.cobro);
+    if (falta) return { error: falta };
+    if (r.data.cobro) {
+      const c = await facturarYCobrar(ctx.db, ctx.usuario, { pedidoId, almacenId: r.data.almacenId, observaciones: r.data.observaciones, aprobacion: aprobacionDe(ctx, r.data.aprobacion) }, r.data.cobro);
+      res = c;
+      if (c.ok) { cobrada = true; vuelto = c.vuelto; }
+    } else res = await emitirFacturaDePedido(ctx.db, ctx.usuario, pedidoId, r.data.almacenId, r.data.observaciones, r.data.diasCredito, aprobacionDe(ctx, r.data.aprobacion));
   } else {
     const r = Factura.safeParse(datos);
     if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
-    res = await emitirFactura(ctx.db, ctx.usuario, { ...r.data, aprobacion: aprobacionDe(ctx, r.data.aprobacion), sinCambiarPrecio: !tienePermisoEspecial(ctx, "ventas.cambiar_precio") });
+    const falta = sinCobro(r.data.diasCredito, r.data.cobro);
+    if (falta) return { error: falta };
+    const { cobro, ...factura } = r.data;
+    const doc = { ...factura, aprobacion: aprobacionDe(ctx, factura.aprobacion), sinCambiarPrecio: !tienePermisoEspecial(ctx, "ventas.cambiar_precio") };
+    if (cobro) {
+      const c = await facturarYCobrar(ctx.db, ctx.usuario, { pedidoId: null, datos: doc }, cobro);
+      res = c;
+      if (c.ok) { cobrada = true; vuelto = c.vuelto; }
+    } else res = await emitirFactura(ctx.db, ctx.usuario, doc);
   }
   if (!res.ok) return { error: res.error };
   revalidatePath("/facturacion");
   revalidatePath("/pedidos");
   revalidatePath("/existencias");
-  redirect(`/facturacion/${res.id}`);
+  revalidatePath("/cxc", "layout");
+  revalidatePath("/tesoreria", "layout");
+  redirect(`/facturacion/${res.id}${cobrada ? `?cobrada=1${vuelto ? `&vuelto=${vuelto.monto}&moneda=${vuelto.moneda}` : ""}` : ""}`);
 }
 
 export async function anularFacturaVenta(id: string, motivo: string): Promise<string | null> {

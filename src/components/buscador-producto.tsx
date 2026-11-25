@@ -31,8 +31,12 @@ export function alEnter(e: KeyboardEvent, siguiente: () => void) {
   siguiente();
 }
 
-export function BuscadorProducto<T extends Base>({ buscar, onElegir, derecha, id = "buscar-producto", etiqueta = "Agregar producto", autoFocus = false, className = "max-w-xl" }: {
+export function BuscadorProducto<T extends Base>({ buscar, onElegir, derecha, id = "buscar-producto", etiqueta = "Agregar producto", autoFocus = false, className = "max-w-xl", contenedor = "relative p-4", onEnterVacio }: {
   buscar: (texto: string) => Promise<T[]>; onElegir: (p: T) => void; derecha?: (p: T) => ReactNode; id?: string; etiqueta?: string; autoFocus?: boolean; className?: string;
+  /// Clases del bloque que envuelve al buscador (para meterlo en una fila de captura).
+  contenedor?: string;
+  /// Enter con el buscador vacío (por ejemplo, para pasar a cobrar).
+  onEnterVacio?: () => void;
 }) {
   const [texto, setTexto] = useState("");
   const [resultados, setResultados] = useState<T[]>([]);
@@ -67,7 +71,7 @@ export function BuscadorProducto<T extends Base>({ buscar, onElegir, derecha, id
     if (e.key === "Escape") { setAbierto(false); return; }
     if (e.key !== "Enter") return;
     e.preventDefault();
-    if (q.length === 0) return;
+    if (q.length === 0) { onEnterVacio?.(); return; }
     // Se busca de nuevo para no depender de la espera del buscador (un lector de códigos de barras escribe y pulsa Enter al instante).
     const turno = ++ultima.current;
     const r = q.length < 2 ? [] : await buscar(q).catch(() => []);
@@ -79,7 +83,7 @@ export function BuscadorProducto<T extends Base>({ buscar, onElegir, derecha, id
   }
 
   return (
-    <div className="relative p-4">
+    <div className={contenedor}>
       <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium">{etiqueta}</label>
       <input
         id={id} value={texto} autoFocus={autoFocus} autoComplete="off" role="combobox" aria-expanded={abierto && visibles.length > 0} aria-controls={`${id}-lista`} aria-autocomplete="list"

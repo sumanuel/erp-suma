@@ -1,5 +1,7 @@
 import { notFound, redirect } from "next/navigation";
-import { requerirPermiso, tienePermisoEspecial } from "@/lib/dal";
+import { requerirPermiso, tienePermiso, tienePermisoEspecial } from "@/lib/dal";
+import { hoyCaracas, tasaVigente } from "@/lib/tasas";
+import { formatoFecha } from "../formato";
 import { presentacionesVenta } from "@/lib/pedidos/servicio";
 import { enUnidadDeLinea } from "@/lib/ventas/presentaciones";
 import { datosVentaForm } from "@/lib/ventas/formularios";
@@ -14,9 +16,11 @@ export default async function NuevaFactura({ searchParams }: { searchParams: Pro
   const ctx = await requerirPermiso("facturacion", "crear");
   const { db } = ctx;
   const { pedido: pedidoId } = await searchParams;
-  const [venta, almacenes] = await Promise.all([
+  const [venta, almacenes, tasa, cuentas] = await Promise.all([
     datosVentaForm(db),
     db.almacen.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
+    tasaVigente(db, "USD"),
+    db.cuentaTesoreria.findMany({ where: { activo: true }, orderBy: [{ tipo: "desc" }, { codigo: "asc" }], select: { id: true, codigo: true, nombre: true, tipo: true, moneda: true } }),
   ]);
   const opcionesAlmacen = almacenes.map((a) => ({ valor: a.id, etiqueta: `${a.codigo} · ${a.nombre}` }));
   const almacenInicial = almacenes.length === 1 ? almacenes[0].id : "";
@@ -37,5 +41,11 @@ export default async function NuevaFactura({ searchParams }: { searchParams: Pro
       lineas: p.lineas.map((l) => ({ productoCodigo: l.productoCodigo, descripcion: l.descripcion, ivaPorcentaje: Number(l.ivaPorcentaje), ...enUnidadDeLinea(l), presentacionId: l.presentacionId ?? "", presentaciones: unidades.get(l.productoCodigo)?.presentaciones, descuento: String(Number(l.descuento)), bonificacion: l.bonificacion })),
     };
   }
-  return <FormularioFactura pedido={pedido} inicial={inicial} clientes={opcionesCliente} almacenes={opcionesAlmacen} ventas={venta.datos} puedeAprobar={tienePermisoEspecial(ctx, "ventas.aprobar")} />;
+  return (
+    <FormularioFactura
+      pedido={pedido} inicial={inicial} clientes={opcionesCliente} almacenes={opcionesAlmacen} ventas={venta.datos}
+      puedeAprobar={tienePermisoEspecial(ctx, "ventas.aprobar")} puedeCambiarPrecio={tienePermisoEspecial(ctx, "ventas.cambiar_precio")} puedeCobrar={tienePermiso(ctx, "cxc", "crear")}
+      cuentas={cuentas.map((c) => ({ id: c.id, etiqueta: `${c.codigo} · ${c.nombre}`, moneda: c.moneda, tipo: c.tipo }))} tasa={tasa?.valor ?? null} fecha={formatoFecha(hoyCaracas())}
+    />
+  );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
+import { Aviso, Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
 import { FilasCondiciones } from "@/components/ventas/filas-condiciones";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { ESTADOS_FACTURA, numeroFactura, type EstadoFactura } from "@/lib/facturacion/estados";
@@ -16,8 +16,10 @@ import { registrarNumerosFiscalesFactura } from "../acciones";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default async function DetalleFactura({ params }: { params: Promise<{ id: string }> }) {
+export default async function DetalleFactura({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ cobrada?: string; vuelto?: string; moneda?: string }> }) {
   const { id } = await params;
+  const aviso = await searchParams;
+  const vuelto = Number(aviso.vuelto);
   if (!UUID.test(id)) notFound();
   const ctx = await requerirSesion();
   const f = await ctx.db.factura.findUnique({
@@ -33,6 +35,15 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
 
   return (
     <div className="flex flex-col gap-6">
+      {aviso.cobrada === "1" ? (
+        <Aviso tono="exito">
+          <span className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <span>Factura cobrada.</span>
+            {vuelto > 0 && (aviso.moneda === "VES" || aviso.moneda === "USD") ? <strong className="text-[20px] tabular-nums">Entregar cambio: {formatoUsd(vuelto)} {aviso.moneda === "VES" ? "Bs." : "USD"}</strong> : null}
+            <Link href="/facturacion/nueva" autoFocus className={clasesBoton("primario")}>Nueva factura</Link>
+          </span>
+        </Aviso>
+      ) : null}
       <Tarjeta className="p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex flex-col gap-1">

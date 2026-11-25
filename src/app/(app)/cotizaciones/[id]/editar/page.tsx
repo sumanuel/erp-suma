@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { requerirPermiso } from "@/lib/dal";
+import { requerirPermiso, tienePermisoEspecial } from "@/lib/dal";
 import { presentacionesVenta } from "@/lib/pedidos/servicio";
 import { enUnidadDeLinea } from "@/lib/ventas/presentaciones";
 import { condicionesDe, datosVentaForm } from "@/lib/ventas/formularios";
@@ -10,7 +10,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export default async function EditarCotizacion({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();
-  const { db } = await requerirPermiso("cotizaciones", "editar");
+  const ctx = await requerirPermiso("cotizaciones", "editar");
+  const { db } = ctx;
   const p = await db.cotizacion.findUnique({ where: { id }, include: { lineas: { orderBy: { linea: "asc" } } } });
   if (!p) notFound();
   if (p.estado !== "BORRADOR") redirect(`/cotizaciones/${id}`);
@@ -20,6 +21,7 @@ export default async function EditarCotizacion({ params }: { params: Promise<{ i
   const unidades = await presentacionesVenta(db, p.lineas.map((l) => l.productoCodigo), lista);
   return (
     <FormularioCotizacion
+      puedeCambiarPrecio={tienePermisoEspecial(ctx, "ventas.cambiar_precio")}
       id={id}
       clientes={clientes}
       ventas={ventas}

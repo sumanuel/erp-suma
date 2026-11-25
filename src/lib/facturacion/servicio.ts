@@ -58,7 +58,7 @@ async function crearFactura(tx: Tx, actor: Actor, d: { clienteId: string; pedido
       tasaUsd: tasa.valor, totalBs: aBolivares(t.total, tasa.valor), creadoPorId: actor.id, creadoPorNombre: actor.nombre,
       lineas: { create: d.lineas.map((l, i) => ({ linea: i + 1, productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, precioOriginal: l.precioOriginal ?? null, descuento: l.descuento, descuentoLinea: l.descuentoLinea ?? null, ivaPorcentaje: l.ivaPorcentaje, total: l.total, costoUnitario: costos.get(l.productoCodigo) ?? 0, bonificacion: l.bonificacion ?? false, almacenId: l.almacenId && l.almacenId !== d.almacenId ? l.almacenId : null, presentacionId: l.presentacionId ?? null, factor: l.factor ?? 1 })) },
     },
-    select: { id: true, numero: true },
+    select: { id: true, numero: true, fecha: true },
   });
   for (const l of d.lineas) {
     try {
@@ -105,24 +105,27 @@ export async function emitirFactura(db: Db, actor: Actor, d: DatosFactura): Prom
   });
 }
 
+/** Factura un pedido confirmado DENTRO de la transacción recibida (con sus cobros si es de contado). Lanza si no procede. */
+export async function emitirFacturaDePedidoEnTx(tx: Tx, actor: Actor, pedidoId: string, almacenId: string, observaciones: string | null, diasCredito: number, aprobacion?: Aprobacion) {
+    // El estado se cambia primero y solo si sigue CONFIRMADO: dos personas no pueden facturar el mismo pedido.
+    const u = await tx.pedidoVenta.updateMany({ where: { id: pedidoId, estado: "CONFIRMADO" }, data: { estado: "FACTURADO" } });
+    if (u.count === 0) throw new FacturaError("Solo se factura un pedido confirmado. Recarga la página.");
+    const p = await tx.pedidoVenta.findUniqueOrThrow({ where: { id: pedidoId }, include: { lineas: { orderBy: { linea: "asc" } } } });
+    const lineas: LineaLista[] = p.lineas.map((l) => ({
+      precioOriginal: l.precioOriginal === null ? null : Number(l.precioOriginal),
+      productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: Number(l.cantidad), precioUnitario: Number(l.precioUnitario),
+      descuento: Number(l.descuento), descuentoLinea: l.descuentoLinea === null ? null : Number(l.descuentoLinea), ivaPorcentaje: Number(l.ivaPorcentaje), total: Number(l.total), bonificacion: l.bonificacion, almacenId: l.almacenId, presentacionId: l.presentacionId, factor: Number(l.factor),
+    }));
+    const enc = await validarEncabezado(tx, encabezadoDe(p));
+    // Un pedido que la gerencia aprobó (reglas de aprobación) pasa también el control de crédito de la factura, a nombre de quien lo aprobó.
+    const deGerencia: Aprobacion | undefined = p.aprobacionEstado === "APROBADO" ? { motivo: `Pedido ${numeroPedido(p.numero)} aprobado por gerencia`, por: { id: p.aprobadoPorId, nombre: p.aprobadoPorNombre ?? "Gerencia" } } : undefined;
+    return crearFactura(tx, actor, { clienteId: p.clienteId, pedidoId, almacenId, observaciones, diasCredito, lineas, encabezado: enc.columnas, aprobacion: aprobacion ?? deGerencia });
+}
+
 /** Factura un pedido confirmado con sus mismas líneas y precios. La reserva del pedido se consume con la salida de inventario. */
 export async function emitirFacturaDePedido(db: Db, actor: Actor, pedidoId: string, almacenId: string, observaciones: string | null, diasCredito: number, aprobacion?: Aprobacion): Promise<ResultadoFactura<{ id: string; numero: number }>> {
   return ejecutar(async () => {
-    const r = await db.$transaction(async (tx) => {
-      // El estado se cambia primero y solo si sigue CONFIRMADO: dos personas no pueden facturar el mismo pedido.
-      const u = await tx.pedidoVenta.updateMany({ where: { id: pedidoId, estado: "CONFIRMADO" }, data: { estado: "FACTURADO" } });
-      if (u.count === 0) throw new FacturaError("Solo se factura un pedido confirmado. Recarga la página.");
-      const p = await tx.pedidoVenta.findUniqueOrThrow({ where: { id: pedidoId }, include: { lineas: { orderBy: { linea: "asc" } } } });
-      const lineas: LineaLista[] = p.lineas.map((l) => ({
-        precioOriginal: l.precioOriginal === null ? null : Number(l.precioOriginal),
-        productoCodigo: l.productoCodigo, descripcion: l.descripcion, cantidad: Number(l.cantidad), precioUnitario: Number(l.precioUnitario),
-        descuento: Number(l.descuento), descuentoLinea: l.descuentoLinea === null ? null : Number(l.descuentoLinea), ivaPorcentaje: Number(l.ivaPorcentaje), total: Number(l.total), bonificacion: l.bonificacion, almacenId: l.almacenId, presentacionId: l.presentacionId, factor: Number(l.factor),
-      }));
-      const enc = await validarEncabezado(tx, encabezadoDe(p));
-      // Un pedido que la gerencia aprobó (reglas de aprobación) pasa también el control de crédito de la factura, a nombre de quien lo aprobó.
-      const deGerencia: Aprobacion | undefined = p.aprobacionEstado === "APROBADO" ? { motivo: `Pedido ${numeroPedido(p.numero)} aprobado por gerencia`, por: { id: p.aprobadoPorId, nombre: p.aprobadoPorNombre ?? "Gerencia" } } : undefined;
-      return crearFactura(tx, actor, { clienteId: p.clienteId, pedidoId, almacenId, observaciones, diasCredito, lineas, encabezado: enc.columnas, aprobacion: aprobacion ?? deGerencia });
-    });
+    const r = await db.$transaction((tx) => emitirFacturaDePedidoEnTx(tx, actor, pedidoId, almacenId, observaciones, diasCredito, aprobacion));
     await auditarEmision(db, actor, r, pedidoId);
     return { ok: true, id: r.id, numero: r.numero };
   });

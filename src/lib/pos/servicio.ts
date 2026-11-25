@@ -8,6 +8,7 @@ import { CobroError, cobrarEnTx } from "@/lib/cxc/servicio";
 import { ContaError } from "@/lib/contabilidad/servicio";
 import { intercambioVuelto, TesoreriaRechazada } from "@/lib/tesoreria/movimientos";
 import { VentaError, type EncabezadoVenta } from "@/lib/ventas/condiciones";
+import { repartirPagos } from "@/lib/ventas/reparto-pagos";
 import { esViolacionUnica } from "@/lib/formularios";
 import { FORMAS_PAGO_POS, numeroTurno, numeroVentaPos } from "./estados";
 
@@ -143,37 +144,14 @@ export async function registrarVentaPos(db: Db, actor: Actor, d: DatosVentaPos):
       const f = await tx.factura.findUniqueOrThrow({ where: { id: fac.id }, select: { total: true, totalBs: true, tasaUsd: true } });
       const total = Number(f.total), tasa = Number(f.tasaUsd), totalBs = Number(f.totalBs);
 
-      // ¿Alcanza? Se compara en bolívares (lo que realmente se cuenta) con lo recibido en ambas monedas.
-      const recibidoBs = r2(d.pagos.reduce((s, p) => s + (p.moneda === "VES" ? p.recibido : p.recibido * tasa), 0));
-      if (recibidoBs + 0.005 < totalBs) throw new PosError(`Falta cobrar ${(totalBs - recibidoBs).toLocaleString("es-VE", { minimumFractionDigits: 2 })} Bs. (total ${totalBs.toLocaleString("es-VE", { minimumFractionDigits: 2 })} Bs. = ${total.toLocaleString("es-VE", { minimumFractionDigits: 2 })} USD).`);
-
-      // Reparto del total entre los pagos, en orden: cada uno aplica lo que pueda hasta completar; el último puede dejar excedente (vuelto).
-      let faltaUsd = total;
-      const reparto: { p: PagoPos; montoUsd: number; montoMoneda: number; exceso: number; cuentaId: string }[] = [];
-      for (const p of d.pagos) {
-        if (faltaUsd <= 0) throw new PosError("Sobra un pago: la venta ya estaba cubierta por los anteriores.");
-        const usdEq = r4(p.moneda === "USD" ? p.recibido : p.recibido / tasa);
-        let cuentaId: string;
-        if (p.formaPago === "EFECTIVO") cuentaId = p.moneda === "VES" ? turno.cajaVesId : turno.cajaUsdId;
-        else {
-          if (!p.cuentaId) throw new PosError(`Elige la cuenta que recibe el pago por ${FORMAS_PAGO_POS[p.formaPago as keyof typeof FORMAS_PAGO_POS]}.`);
-          cuentaId = p.cuentaId;
-        }
-        const montoUsd = Math.min(faltaUsd, usdEq);
-        const completo = usdEq <= faltaUsd + 1e-9;
-        const montoMoneda = completo ? p.recibido : r2(p.moneda === "USD" ? montoUsd : montoUsd * tasa);
-        const exceso = r2(p.recibido - montoMoneda);
-        if (exceso > 0 && p.formaPago !== "EFECTIVO") throw new PosError(`El pago por ${FORMAS_PAGO_POS[p.formaPago as keyof typeof FORMAS_PAGO_POS]} supera lo que falta por cobrar: solo el efectivo da vuelto.`);
-        reparto.push({ p, montoUsd: completo ? usdEq : r4(montoUsd), montoMoneda, exceso, cuentaId });
-        faltaUsd = r4(faltaUsd - (completo ? usdEq : montoUsd));
-      }
-      // Un resto de centavos por redondeo se carga al último pago (no cambia lo que se recibió).
-      if (faltaUsd > 0) {
-        if (r2(faltaUsd * tasa) > 0.01) throw new PosError("Falta cobrar parte de la venta.");
-        reparto[reparto.length - 1].montoUsd = r4(reparto[reparto.length - 1].montoUsd + faltaUsd);
-        faltaUsd = 0;
-      }
-      if (reparto.slice(0, -1).some((x) => x.exceso > 0)) throw new PosError("Solo el último pago puede generar vuelto.");
+      const plan = repartirPagos(total, totalBs, tasa, d.pagos, (x) => FORMAS_PAGO_POS[x as keyof typeof FORMAS_PAGO_POS]);
+      if ("error" in plan) throw new PosError(plan.error);
+      // El efectivo entra a las cajas del turno; el resto, a la cuenta que eligió el cajero.
+      const reparto = plan.reparto.map((x) => {
+        if (x.p.formaPago === "EFECTIVO") return { ...x, cuentaId: x.p.moneda === "VES" ? turno.cajaVesId : turno.cajaUsdId };
+        if (!x.p.cuentaId) throw new PosError(`Elige la cuenta que recibe el pago por ${FORMAS_PAGO_POS[x.p.formaPago as keyof typeof FORMAS_PAGO_POS]}.`);
+        return { ...x, cuentaId: x.p.cuentaId };
+      });
 
       const venta = await tx.ventaPos.create({ data: { turnoId: turno.id, facturaId: fac.id, clienteId }, select: { id: true, numero: true } });
       const documento = numeroVentaPos(venta.numero);
