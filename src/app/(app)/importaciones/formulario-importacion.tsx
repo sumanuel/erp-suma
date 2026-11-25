@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
+import { AccionesDocumento } from "@/components/acciones-documento";
 import { useState, useTransition, type KeyboardEvent } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { alEnter } from "@/components/buscador-producto";
@@ -154,10 +154,7 @@ export function FormularioImportacion({ id, inicial, proveedores, almacenes }: {
         </dl>
       </Tarjeta>
 
-      <div className="flex items-center gap-3">
-        <button id="guardar-importacion" type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : id ? "Guardar cambios" : "Crear importación"}</button>
-        <Link href={id ? `/importaciones/${id}` : "/importaciones"} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
-      </div>
+      <AccionesDocumento idGuardar="guardar-importacion" texto={id ? "Guardar cambios" : "Crear importación"} pendiente={pendiente} volver={id ? `/importaciones/${id}` : "/importaciones"} huella={JSON.stringify([f, lineas, gastos])} />
     </form>
   );
 }

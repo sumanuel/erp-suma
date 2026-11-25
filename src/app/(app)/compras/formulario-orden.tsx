@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { AccionesDocumento } from "@/components/acciones-documento";
 import { useState, useTransition } from "react";
-import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
+import { Aviso, Tarjeta, claseControl } from "@/components/ui";
 import { SelectorTercero } from "@/components/selector-tercero";
 import { CapturaCompra, TablaCompra, totalLinea, type LineaCompra } from "@/components/compras/captura-compra";
 import { MasDatos } from "@/components/ventas/condiciones-venta";
@@ -87,10 +87,7 @@ export function FormularioOrden({ id, inicial, proveedores, compras }: { id: str
         </dl>
       </Tarjeta>
 
-      <div className="flex items-center gap-3">
-        <button id="guardar-documento" type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : id ? "Guardar cambios" : "Crear orden"}</button>
-        <Link href={id ? `/compras/${id}` : "/compras"} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
-      </div>
+      <AccionesDocumento texto={id ? "Guardar cambios" : "Crear orden"} pendiente={pendiente} volver={id ? `/compras/${id}` : "/compras"} huella={JSON.stringify([proveedorId, fecha, fechaEsperada, observaciones, cond.encabezado(), lineas])} />
     </form>
   );
 }

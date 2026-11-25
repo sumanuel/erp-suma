@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { AccionesDocumento } from "@/components/acciones-documento";
 import { useState, useTransition } from "react";
-import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
+import { Aviso, Tarjeta, claseControl } from "@/components/ui";
 import { SelectorTercero } from "@/components/selector-tercero";
 import { Articulos, CapturaArticulo, TablaLineas, type LineaCapturada } from "@/components/ventas/captura-articulo";
 import { CamposBasicos, CamposMas, MasDatos, avanzarDesde, enterEnFormulario, resumenMasDatos, useCondiciones, type CondicionesInicial, type DatosVentaForm } from "@/components/ventas/condiciones-venta";
@@ -86,10 +86,7 @@ export function FormularioCotizacion({ id, inicial, clientes, ventas, puedeCambi
         </dl>
       </Articulos>
 
-      <div className="flex items-center gap-3">
-        <button id="guardar-documento" type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : id ? "Guardar cambios" : "Crear cotización"}</button>
-        <Link href={id ? `/cotizaciones/${id}` : "/cotizaciones"} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
-      </div>
+      <AccionesDocumento texto={id ? "Guardar cambios" : "Crear cotización"} pendiente={pendiente} volver={id ? `/cotizaciones/${id}` : "/cotizaciones"} huella={JSON.stringify([clienteId, fecha, validezDias, observaciones, cond.encabezado(), lineas])} />
     </form>
   );
 }
