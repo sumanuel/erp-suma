@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
+import { Tecla } from "@/components/atajos";
 import { AccionesDocumento } from "@/components/acciones-documento";
 import { useState, useTransition, type KeyboardEvent } from "react";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
@@ -75,7 +76,7 @@ export function FormularioImportacion({ id, inicial, proveedores, almacenes }: {
       <Tarjeta className="p-6">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="flex flex-col gap-1.5 xl:col-span-2">
-            <label htmlFor="proveedorId" className="text-[13px] font-medium">Proveedor del exterior</label>
+            <label htmlFor="proveedorId" className="text-[13px] font-medium">Proveedor del exterior <Tecla>F1</Tecla></label>
             <SelectorTercero tipo="proveedor" id="proveedorId" valor={f.proveedorId} opciones={proveedores} requerido placeholder="Buscar proveedor por nombre o RIF…" onCambio={(v) => { campo("proveedorId", v); }} onElegido={() => avanzar("proveedorId")} />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -93,7 +94,7 @@ export function FormularioImportacion({ id, inicial, proveedores, almacenes }: {
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="moneda" className="text-[13px] font-medium">Moneda del FOB</label>
+            <label htmlFor="moneda" className="text-[13px] font-medium">Moneda del FOB <Tecla>F8</Tecla></label>
             <input id="moneda" value={f.moneda} onChange={(e) => campo("moneda", e.target.value.toUpperCase())} required maxLength={3} className={claseControl} />
           </div>
           <div className="flex flex-col gap-1.5">

@@ -2,6 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { useState, type KeyboardEvent, type ReactNode } from "react";
+import { Tecla } from "@/components/atajos";
 import { SelectorPersonal } from "@/components/selector-tercero";
 import { claseControl } from "@/components/ui";
 import { descuentoGlobal } from "@/lib/pedidos/calculos";
@@ -127,7 +128,7 @@ export function CamposBasicos({ cond, datos, onCondicion, plazo }: { cond: Condi
   return (
     <>
       <div className={`${campo} xl:col-span-2`}>
-        <label htmlFor="vendedorId" className={etiqueta}>Vendedor</label>
+        <label htmlFor="vendedorId" className={etiqueta}>Vendedor <Tecla>F2</Tecla></label>
         <SelectorPersonal rol="vendedor" id="vendedorId" valor={cond.vendedorId} opciones={datos.vendedores} vacio="Sin vendedor" placeholder="Buscar vendedor por nombre o código…" onCambio={cond.setVendedorId} onElegido={() => avanzarDesde("vendedorId")} />
       </div>
       <div className={campo}>
@@ -136,7 +137,7 @@ export function CamposBasicos({ cond, datos, onCondicion, plazo }: { cond: Condi
       </div>
       {plazo}
       <div className={campo}>
-        <label htmlFor="condicionPagoId" className={etiqueta}>Condición de pago</label>
+        <label htmlFor="condicionPagoId" className={etiqueta}>Condición de pago <Tecla>F3</Tecla></label>
         <select
           id="condicionPagoId" value={cond.condicionPagoId}
           onChange={(e) => {
@@ -150,7 +151,7 @@ export function CamposBasicos({ cond, datos, onCondicion, plazo }: { cond: Condi
         </select>
       </div>
       <div className={campo}>
-        <label htmlFor="origenVentaId" className={etiqueta}>Origen de la venta</label>
+        <label htmlFor="origenVentaId" className={etiqueta}>Origen de la venta <Tecla>F4</Tecla></label>
         <select id="origenVentaId" value={cond.origenVentaId} onChange={(e) => cond.setOrigenVentaId(e.target.value)} className={`${claseControl} pr-9`}>
           <option value="">Sin origen</option>
           {datos.origenes.map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>)}

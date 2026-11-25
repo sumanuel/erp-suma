@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-// Teclas de función de una pantalla (F5, F8…) y la lista que se recorre con las flechas y Enter.
+// Teclas de función de una pantalla (F1 a F10) y la lista que se recorre con las flechas y Enter.
 
 /**
- * Atiende las teclas dadas mientras la pantalla está montada. Siempre anula lo que haría el navegador (F5 recargaría y se perdería el documento);
- * con una ventana abierta encima no se hace nada más.
+ * Atiende las teclas dadas mientras la pantalla está montada. Siempre anula lo que haría el navegador (recargar, abrir la ayuda, buscar);
+ * con una ventana abierta encima no se hace nada más. Con Ctrl o Shift el navegador responde normal (Ctrl+F5 recarga).
  */
 export function useAtajos(atajos: Record<string, () => void>) {
   const actuales = useRef(atajos);
@@ -23,6 +23,58 @@ export function useAtajos(atajos: Record<string, () => void>) {
     window.addEventListener("keydown", alTeclear);
     return () => window.removeEventListener("keydown", alTeclear);
   }, []);
+}
+
+/** Teclas reservadas en la pantalla de un documento: las que no tengan acción no hacen nada (ni lo del navegador, como recargar con F5). */
+const RESERVADAS: Record<string, () => void> = Object.fromEntries(Array.from({ length: 10 }, (_x, i) => [`F${i + 1}`, () => {}]));
+
+/** Lleva el cursor a un buscador y abre su lista (aunque ya estuviera en él). */
+function irABuscador(id: string) {
+  const el = document.getElementById(id);
+  if (!(el instanceof HTMLInputElement) || el.disabled) return;
+  el.blur();
+  requestAnimationFrame(() => { el.focus(); el.select(); });
+}
+
+/** Cambia un <select> como si lo hubiera hecho el usuario, para que corra su onChange. */
+function elegirEnSelect(el: HTMLSelectElement, valor: string) {
+  Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set?.call(el, valor);
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+/**
+ * Teclas de un documento: F1 cliente o proveedor, F2 vendedor, F3 condición de pago, F4 origen de la venta, F6 productos, F9 confirmar o
+ * guardar y F10 salir. F8 moneda; F7 (modo de pago) y la moneda del cobro las atiende
+ * el panel de cobro. Devuelve la ventana de opciones de F3, F4 y F8.
+ */
+export function useTeclasDocumento({ guardar, salir }: { guardar: () => void; salir: () => void }) {
+  const [lista, setLista] = useState<{ id: string; titulo: string; opciones: [string, string][]; valor: string } | null>(null);
+  function abrirLista(id: string, titulo: string) {
+    const el = document.getElementById(id);
+    if (el instanceof HTMLSelectElement && !el.disabled) setLista({ id, titulo, valor: el.value, opciones: [...el.options].map((o) => [o.value, o.text]) });
+  }
+  useAtajos({
+    ...RESERVADAS,
+    F1: () => irABuscador(document.getElementById("clienteId") ? "clienteId" : "proveedorId"),
+    F2: () => irABuscador("vendedorId"),
+    F3: () => abrirLista("condicionPagoId", "Condición de pago"),
+    F4: () => abrirLista("origenVentaId", "Origen de la venta"),
+    F6: () => document.querySelector<HTMLButtonElement>("[data-ver-productos]")?.click(),
+    // Moneda del documento (compras e importaciones); en la factura es la del cobro y la atiende ese panel.
+    F8: () => {
+      const el = document.getElementById("moneda");
+      if (el instanceof HTMLInputElement) { el.focus(); el.select(); } else abrirLista("moneda", "Moneda");
+    },
+    F9: guardar,
+    F10: salir,
+  });
+  const cerrar = (id: string) => { setLista(null); requestAnimationFrame(() => document.getElementById(id)?.focus()); };
+  return lista ? (
+    <ListaRapida
+      titulo={lista.titulo} opciones={lista.opciones} valor={lista.valor} onCerrar={() => cerrar(lista.id)}
+      onElegir={(v) => { const el = document.getElementById(lista.id); if (el instanceof HTMLSelectElement) elegirEnSelect(el, v); cerrar(lista.id); }}
+    />
+  ) : null;
 }
 
 export const Tecla = ({ children }: { children: ReactNode }) => <kbd className="rounded-[5px] border border-current px-1 font-sans text-[11px] font-semibold leading-[1.4] opacity-70">{children}</kbd>;

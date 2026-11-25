@@ -1,5 +1,6 @@
 "use client";
 
+import { Tecla } from "@/components/atajos";
 import { AccionesDocumento } from "@/components/acciones-documento";
 import { useState, useTransition } from "react";
 import { Aviso, Tarjeta, claseControl } from "@/components/ui";
@@ -55,7 +56,7 @@ export function FormularioOrden({ id, inicial, proveedores, compras }: { id: str
       <Tarjeta className="flex flex-col gap-4 p-4" recortar={false}>
         <div className="grid gap-x-4 gap-y-3 md:grid-cols-2 xl:grid-cols-4">
           <div className={`${celda} xl:col-span-2`}>
-            <label htmlFor="proveedorId" className={etiqueta}>Proveedor</label>
+            <label htmlFor="proveedorId" className={etiqueta}>Proveedor <Tecla>F1</Tecla></label>
             <SelectorTercero tipo="proveedor" id="proveedorId" valor={proveedorId} opciones={proveedores} requerido placeholder="RIF o nombre del proveedor…" onCambio={(v) => { setProveedorId(v); cond.elegirProveedor(v); }} onElegido={() => avanzarCompra("proveedorId")} />
           </div>
           <div className={celda}>

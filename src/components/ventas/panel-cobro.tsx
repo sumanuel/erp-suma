@@ -84,8 +84,8 @@ export function PanelCobro({ pagos, onCambio, cuentas, totalUsd, totalBs, tasa, 
     else ir("cobro-forma");
   }
 
-  // F9 y F10 abren las listas de modo de pago y moneda. Al elegir, el cursor queda en lo que falta llenar.
-  useAtajos({ F9: () => setLista("forma"), F10: () => setLista("moneda") });
+  // F7 y F8 abren las listas de modo de pago y moneda. Al elegir, el cursor queda en lo que falta llenar.
+  useAtajos({ F7: () => setLista("forma"), F8: () => setLista("moneda") });
   const seguir = (formaElegida: string) => { setLista(null); setError(null); ir(formaElegida === "EFECTIVO" ? "cobro-monto" : "cobro-cuenta"); };
 
   const campo = "flex flex-col gap-1";
@@ -95,12 +95,12 @@ export function PanelCobro({ pagos, onCambio, cuentas, totalUsd, totalBs, tasa, 
       {lista === "forma" ? <ListaRapida titulo="Modo de pago" opciones={Object.entries(FORMAS_PAGO)} valor={forma} onElegir={(v) => { setForma(v); seguir(v); }} onCerrar={() => { setLista(null); ir("cobro-forma"); }} /> : null}
       {lista === "moneda" ? <ListaRapida titulo="Moneda" opciones={MONEDAS} valor={moneda} onElegir={(v) => { setMoneda(v as "USD" | "VES"); setMonto(null); seguir(forma); }} onCerrar={() => { setLista(null); ir("cobro-moneda"); }} /> : null}
       <div className="grid grid-cols-2 gap-2">
-        <div className={campo}><label htmlFor="cobro-forma" className={`${etiqueta} flex items-center justify-between`}>Modo de pago <Tecla>F9</Tecla></label>
+        <div className={campo}><label htmlFor="cobro-forma" className={`${etiqueta} flex items-center justify-between`}>Modo de pago <Tecla>F7</Tecla></label>
           <select id="cobro-forma" value={forma} onChange={(e) => setForma(e.target.value)} onKeyDown={(e) => alEnter(e, () => ir("cobro-moneda"))} className={`${claseControl} pr-8`}>
             {Object.entries(FORMAS_PAGO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
-        <div className={campo}><label htmlFor="cobro-moneda" className={`${etiqueta} flex items-center justify-between`}>Moneda <Tecla>F10</Tecla></label>
+        <div className={campo}><label htmlFor="cobro-moneda" className={`${etiqueta} flex items-center justify-between`}>Moneda <Tecla>F8</Tecla></label>
           <select id="cobro-moneda" value={moneda} onChange={(e) => { setMoneda(e.target.value as "USD" | "VES"); setMonto(null); }} onKeyDown={(e) => alEnter(e, () => ir(forma === "EFECTIVO" ? "cobro-monto" : "cobro-cuenta"))} className={`${claseControl} pr-8`}>
             {MONEDAS.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>

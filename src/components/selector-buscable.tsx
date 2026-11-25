@@ -32,6 +32,8 @@ export function SelectorBuscable({ id, valor, opciones, onCambio, placeholder = 
   const [texto, setTexto] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [indice, setIndice] = useState(0);
+  // Se movió con las flechas sin escribir: Enter o Tab eligen la fila resaltada.
+  const [movido, setMovido] = useState(false);
   const lista = useRef<HTMLUListElement>(null);
   const q = texto ?? "";
 
@@ -59,6 +61,7 @@ export function SelectorBuscable({ id, valor, opciones, onCambio, placeholder = 
   function elegir(v: string, pasar: boolean) {
     onCambio(v);
     setTexto(null);
+    setMovido(false);
     setAbierto(false);
     if (pasar) onElegido?.();
   }
@@ -71,7 +74,11 @@ export function SelectorBuscable({ id, valor, opciones, onCambio, placeholder = 
   }
 
   function confirmar(pasar: boolean) {
-    if (texto === null) return false;
+    if (texto === null && !movido) return false;
+    if (q.trim() === "" && movido && visibles[indice]) {
+      elegir(visibles[indice].valor, pasar);
+      return true;
+    }
     if (q.trim() === "") {
       if (vacio !== null) elegir("", pasar);
       else setTexto(null);
@@ -98,20 +105,26 @@ export function SelectorBuscable({ id, valor, opciones, onCambio, placeholder = 
       <input
         id={idc} role="combobox" aria-expanded={abierto} aria-autocomplete="list" aria-controls={`${idc}-lista`} autoComplete="off" disabled={deshabilitado} required={requerido && !valor}
         value={texto ?? actual?.etiqueta ?? ""} placeholder={actual || texto !== null ? undefined : placeholder} className={`${claseControl} w-full`}
-        onFocus={(e) => { setAbierto(true); if (actual) e.currentTarget.select(); }}
-        onChange={(e) => { setTexto(e.target.value); setIndice(0); setAbierto(true); }}
+        onFocus={(e) => {
+          setAbierto(true); setMovido(false);
+          // La lista se abre parada en lo que ya está elegido.
+          setIndice(Math.max(visibles.findIndex((o) => o.valor === valor), 0));
+          if (actual) e.currentTarget.select();
+        }}
+        onChange={(e) => { setTexto(e.target.value); setMovido(false); setIndice(0); setAbierto(true); }}
         onBlur={() => {
           // Al salir con Tab se toma la coincidencia exacta o la resaltada; si no hay, se restaura lo elegido.
           if (!(visibles.length > 0 || exacta()) || !confirmar(false)) setTexto(null);
           setAbierto(false);
+          setMovido(false);
         }}
         onKeyDown={(e) => {
-          if (e.key === "ArrowDown") { e.preventDefault(); setAbierto(true); setIndice((i) => Math.min(i + 1, Math.max(filas - 1, 0))); }
-          else if (e.key === "ArrowUp") { e.preventDefault(); setIndice((i) => Math.max(i - 1, 0)); }
-          else if (e.key === "Escape") { setTexto(null); setAbierto(false); }
+          if (e.key === "ArrowDown") { e.preventDefault(); setAbierto(true); setMovido(true); setIndice((i) => Math.min(i + 1, Math.max(filas - 1, 0))); }
+          else if (e.key === "ArrowUp") { e.preventDefault(); setMovido(true); setIndice((i) => Math.max(i - 1, 0)); }
+          else if (e.key === "Escape") { setTexto(null); setMovido(false); setAbierto(false); }
           else if (e.key === "Enter") {
             e.preventDefault();
-            if (!confirmar(true) && texto === null) onElegido?.();
+            if (!confirmar(true) && texto === null) { setAbierto(false); onElegido?.(); }
           }
         }}
       />

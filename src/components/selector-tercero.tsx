@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { Tecla } from "@/components/atajos";
 import { Aviso, clasesBoton, claseControl } from "@/components/ui";
 import { SelectorBuscable, type OpcionBuscable } from "@/components/selector-buscable";
 import { crearPersonalRapido, crearTerceroRapido, type ResultadoTercero } from "@/components/acciones-tercero";
@@ -88,7 +89,11 @@ function DialogoAlta({ config, textoInicial, onCerrar, onCreado }: { config: Con
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onCerrar(); }}>
       <form
         role="dialog" aria-modal="true" aria-label={`Nuevo ${config.nombre}`} onSubmit={(e) => { e.preventDefault(); void guardar(); }}
-        onKeyDown={(e) => { if (e.key === "Escape") onCerrar(); }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onCerrar();
+          else if (e.key === "F9") { e.preventDefault(); if (!pendiente && confirm(`¿Crear el ${config.nombre}?`)) e.currentTarget.requestSubmit(); }
+          else if (e.key === "F10") { e.preventDefault(); if (confirm(`¿Salir sin crear el ${config.nombre}?`)) onCerrar(); }
+        }}
         className="flex w-full max-w-lg flex-col gap-4 rounded-[14px] bg-white p-6 shadow-xl"
       >
         <div>
@@ -107,8 +112,8 @@ function DialogoAlta({ config, textoInicial, onCerrar, onCreado }: { config: Con
           </div>
         ))}
         <div className="flex items-center gap-3">
-          <button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : `Crear ${config.nombre}`}</button>
-          <button type="button" onClick={onCerrar} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</button>
+          <button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : `Crear ${config.nombre}`} <Tecla>F9</Tecla></button>
+          <button type="button" onClick={onCerrar} className="flex items-center gap-1.5 px-2 text-sm text-gris-700 hover:text-tinta">Cancelar <Tecla>F10</Tecla></button>
         </div>
       </form>
     </div>,

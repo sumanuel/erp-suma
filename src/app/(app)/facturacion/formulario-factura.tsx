@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { useState, useTransition } from "react";
-import { Tecla, useAtajos } from "@/components/atajos";
+import { Tecla, useTeclasDocumento } from "@/components/atajos";
 import { Aviso, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { CamposBasicos, CamposMas, MasDatos, avanzarDesde, enterEnFormulario, resumenMasDatos, useCondiciones, type CondicionesInicial, type DatosVentaForm } from "@/components/ventas/condiciones-venta";
 import { Articulos, CapturaArticulo, TablaLineas, type LineaCapturada } from "@/components/ventas/captura-articulo";
@@ -84,8 +84,8 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes, ventas
     });
   }
 
-  // F5 confirma (y no recarga la página) y F8 cancela.
-  useAtajos({ F5: () => { if (!pendiente) emitir(); }, F8: () => document.getElementById("cancelar-factura")?.click() });
+  // Las teclas del documento; F7 y F8 (modo de pago y moneda) las atiende el panel de cobro.
+  const ventana = useTeclasDocumento({ guardar: () => { if (!pendiente) emitir(); }, salir: () => document.getElementById("cancelar-factura")?.click() });
   const hayCaptura = (!fijo && lineas.length > 0) || pagos.length > 0;
 
   const resumen = resumenMasDatos(cond, [...(observaciones.trim() ? ["observaciones"] : []), ...(aprobar ? ["aprobación gerencial"] : [])]);
@@ -101,6 +101,7 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes, ventas
 
   return (
     <form onSubmit={(e) => e.preventDefault()} onKeyDown={enterEnFormulario} className="flex flex-col gap-4">
+      {ventana}
       {error ? <Aviso tono="error">{error}</Aviso> : null}
       {fijo ? <Aviso tono="marca">Facturando el pedido {pedido.etiqueta}: se usan sus líneas y precios.</Aviso> : null}
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
@@ -108,7 +109,7 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes, ventas
           <Tarjeta className="flex flex-col gap-4 p-4" recortar={false}>
             <div className="grid gap-x-4 gap-y-3 md:grid-cols-2 xl:grid-cols-4">
               <div className={`${celda} xl:col-span-2`}>
-                <label htmlFor="clienteId" className={etiqueta}>Cliente</label>
+                <label htmlFor="clienteId" className={etiqueta}>Cliente <Tecla>F1</Tecla></label>
                 <SelectorTercero tipo="cliente" id="clienteId" valor={clienteId} opciones={clientes} requerido deshabilitado={fijo} placeholder="Cédula, RIF o nombre…" onCambio={(v) => { setClienteId(v); setDiasCredito(String(cond.elegirCliente(v))); }} onElegido={() => avanzarDesde("clienteId")} />
               </div>
               {fijo ? plazo : <CamposBasicos cond={cond} datos={ventas} onCondicion={(dias) => setDiasCredito(String(dias))} plazo={plazo} />}
@@ -175,8 +176,8 @@ export function FormularioFactura({ pedido, inicial, clientes, almacenes, ventas
           </Tarjeta>
 
           <div className="flex items-center gap-3">
-            <button id="confirmar-factura" type="button" onClick={emitir} disabled={pendiente} className={`${clasesBoton("primario")} flex-1 justify-center`}><Check className="size-4" aria-hidden />{pendiente ? "Emitiendo…" : cobra ? "Confirmar y cobrar" : "Emitir factura"} <Tecla>F5</Tecla></button>
-            <Link id="cancelar-factura" href={fijo ? `/pedidos/${pedido.id}` : "/facturacion"} onClick={(e) => { if (hayCaptura && !confirm("¿Cancelar? Se pierde lo que cargaste en esta factura.")) e.preventDefault(); }} className="flex items-center gap-1.5 px-2 text-sm text-gris-700 hover:text-tinta">Cancelar <Tecla>F8</Tecla></Link>
+            <button id="confirmar-factura" type="button" onClick={emitir} disabled={pendiente} className={`${clasesBoton("primario")} flex-1 justify-center`}><Check className="size-4" aria-hidden />{pendiente ? "Emitiendo…" : cobra ? "Confirmar y cobrar" : "Emitir factura"} <Tecla>F9</Tecla></button>
+            <Link id="cancelar-factura" href={fijo ? `/pedidos/${pedido.id}` : "/facturacion"} onClick={(e) => { if (!confirm(hayCaptura ? "¿Salir? Se pierde lo que cargaste en esta factura." : "¿Salir de la factura?")) e.preventDefault(); }} className="flex items-center gap-1.5 px-2 text-sm text-gris-700 hover:text-tinta">Cancelar <Tecla>F10</Tecla></Link>
           </div>
         </div>
       </div>

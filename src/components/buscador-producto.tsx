@@ -2,6 +2,7 @@
 
 import { LayoutList } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { Tecla } from "@/components/atajos";
 import { CatalogoProductos } from "@/components/catalogo-productos";
 import { claseControl } from "@/components/ui";
 
@@ -87,14 +88,14 @@ export function BuscadorProducto<T extends Base>({ buscar, onElegir, derecha, id
 
   return (
     <div className={contenedor}>
-      <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium">{etiqueta}</label>
+      <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium">{etiqueta} <Tecla>F6</Tecla></label>
       <div className={`flex items-center gap-2 ${className}`}>
       <input
         id={id} value={texto} autoFocus={autoFocus} autoComplete="off" role="combobox" aria-expanded={abierto && visibles.length > 0} aria-controls={`${id}-lista`} aria-autocomplete="list"
         placeholder="Código, descripción o código de barras — Enter para agregar" className={`${claseControl} min-w-0 flex-1`}
         onChange={(e) => { setTexto(e.target.value); setAbierto(true); }} onFocus={() => setAbierto(true)} onBlur={() => setAbierto(false)} onKeyDown={alTeclear}
       />
-        <button type="button" aria-label="Ver todos los productos" title="Ver todos los productos" onClick={() => { setAbierto(false); setCatalogo(true); }} className="inline-flex size-10 shrink-0 items-center justify-center rounded-[9px] border border-borde text-gris-700 hover:bg-hover hover:text-tinta">
+        <button type="button" data-ver-productos aria-label="Ver todos los productos" title="Ver todos los productos" onClick={() => { setAbierto(false); setCatalogo(true); }} className="inline-flex size-10 shrink-0 items-center justify-center rounded-[9px] border border-borde text-gris-700 hover:bg-hover hover:text-tinta">
           <LayoutList className="size-4" aria-hidden />
         </button>
       </div>

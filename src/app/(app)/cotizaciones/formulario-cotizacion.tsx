@@ -1,5 +1,6 @@
 "use client";
 
+import { Tecla } from "@/components/atajos";
 import { AccionesDocumento } from "@/components/acciones-documento";
 import { useState, useTransition } from "react";
 import { Aviso, Tarjeta, claseControl } from "@/components/ui";
@@ -54,7 +55,7 @@ export function FormularioCotizacion({ id, inicial, clientes, ventas, puedeCambi
       <Tarjeta className="flex flex-col gap-4 p-4" recortar={false}>
             <div className="grid gap-x-4 gap-y-3 md:grid-cols-2 xl:grid-cols-4">
               <div className={`${celda} xl:col-span-2`}>
-                <label htmlFor="clienteId" className={etiqueta}>Cliente</label>
+                <label htmlFor="clienteId" className={etiqueta}>Cliente <Tecla>F1</Tecla></label>
                 <SelectorTercero tipo="cliente" id="clienteId" valor={clienteId} opciones={clientes} requerido placeholder="Cédula, RIF o nombre…" onCambio={(v) => { setClienteId(v); cond.elegirCliente(v); }} onElegido={() => avanzarDesde("clienteId")} />
               </div>
               <CamposBasicos cond={cond} datos={ventas} />
