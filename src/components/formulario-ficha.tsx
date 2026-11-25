@@ -33,11 +33,11 @@ export function FormularioFicha({
       <Rejilla campos={campos} actuales={actuales} errores={errores} soloLectura={soloLectura} editando={editando} />
       <div className="flex flex-wrap items-center gap-3 border-t border-linea pt-5">
         {soloLectura ? null : (
-          <button type="submit" disabled={pendiente} className={clasesBoton("primario")}>
+          <button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>
             {pendiente ? "Guardando…" : editando ? "Guardar cambios" : "Crear"}
           </button>
         )}
-        <Link href={cancelar} className="text-sm font-medium text-gris-700 hover:text-tinta">
+        <Link data-salir href={cancelar} className="text-sm font-medium text-gris-700 hover:text-tinta">
           {soloLectura ? "Volver" : "Cancelar"}
         </Link>
       </div>

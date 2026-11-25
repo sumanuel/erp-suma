@@ -64,7 +64,7 @@ export function Chequeras({ cuentaId, chequeras, puedeEditar, puedeEliminar }: {
           <div className="flex flex-col gap-1.5"><label htmlFor="chHasta" className="text-[13px] font-medium">Hasta</label><input id="chHasta" inputMode="numeric" value={hasta} onChange={(e) => setHasta(e.target.value)} required className={claseControl} /></div>
           <div className="flex flex-col gap-1.5"><label htmlFor="chUltimo" className="text-[13px] font-medium">Último usado <span className="font-normal text-gris-500">(opcional)</span></label><input id="chUltimo" inputMode="numeric" value={ultimo} onChange={(e) => setUltimo(e.target.value)} className={claseControl} /></div>
           <label className="flex items-center gap-2 pb-2.5 text-sm"><input type="checkbox" checked={activa} onChange={(e) => setActiva(e.target.checked)} className="size-4 accent-marca-fuerte" /> Activa</label>
-          <button type="submit" disabled={pendiente} className={clasesBoton("primario")}>Agregar chequera</button>
+          <button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>Agregar chequera</button>
         </form>
       ) : null}
     </Tarjeta>

@@ -74,7 +74,7 @@ export function FormularioConfiguracion({ puedeEditar, automatica: auto0, concep
           </tbody>
         </table>
       </Tarjeta>
-      {puedeEditar ? <div><button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : "Guardar configuración"}</button></div> : null}
+      {puedeEditar ? <div><button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : "Guardar configuración"}</button></div> : null}
     </form>
   );
 }

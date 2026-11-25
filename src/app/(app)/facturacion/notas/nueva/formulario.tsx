@@ -112,8 +112,8 @@ export function FormularioNotaVenta({ tipo, factura, lineas, almacenes, alicuota
       </Tarjeta>
       <p className="text-[12.5px] text-gris-500">La nota usa la tasa de la factura original. {credito ? "Un crédito no puede superar lo que aún se debe de la factura." : "Un débito aumenta lo que el cliente debe."}</p>
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente || total <= 0} className={clasesBoton("primario")}>{pendiente ? "Emitiendo…" : credito ? "Emitir nota de crédito" : "Emitir nota de débito"}</button>
-        <Link href={`/facturacion/${factura.id}`} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar="propio" type="submit" disabled={pendiente || total <= 0} className={clasesBoton("primario")}>{pendiente ? "Emitiendo…" : credito ? "Emitir nota de crédito" : "Emitir nota de débito"}</button>
+        <Link data-salir href={`/facturacion/${factura.id}`} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );

@@ -61,8 +61,8 @@ export function FormularioMovimiento({ cuentaId, cuenta, tipoInicial, cuentasCon
         </div>
       </Tarjeta>
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar movimiento"}</button>
-        <Link href={`/tesoreria/cuentas/${cuentaId}`} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar movimiento"}</button>
+        <Link data-salir href={`/tesoreria/cuentas/${cuentaId}`} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );

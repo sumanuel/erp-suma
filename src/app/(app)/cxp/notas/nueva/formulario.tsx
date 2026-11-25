@@ -46,8 +46,8 @@ export function FormularioNotaCompra({ tipo, hoy, factura }: { tipo: "CREDITO" |
         <p className="mt-3 text-[12.5px] text-gris-500">La nota usa la tasa de la factura original. {credito ? "Un crédito no puede superar lo que aún se debe de la factura." : "Un débito aumenta lo que se debe al proveedor."} No mueve inventario.</p>
       </Tarjeta>
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente || total <= 0} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : `Registrar nota de ${credito ? "crédito" : "débito"}`}</button>
-        <Link href={`/cxp/facturas/${factura.id}`} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar type="submit" disabled={pendiente || total <= 0} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : `Registrar nota de ${credito ? "crédito" : "débito"}`}</button>
+        <Link data-salir href={`/cxp/facturas/${factura.id}`} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );

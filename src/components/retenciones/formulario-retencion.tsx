@@ -90,8 +90,8 @@ export function FormularioRetencion({ sufrida, hoy, factura, pctInicialIva, volv
         </p>
       </Tarjeta>
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente || monto <= 0} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar retención"}</button>
-        <Link href={volver} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar type="submit" disabled={pendiente || monto <= 0} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar retención"}</button>
+        <Link data-salir href={volver} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );

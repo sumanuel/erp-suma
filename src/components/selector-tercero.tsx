@@ -88,11 +88,12 @@ function DialogoAlta({ config, textoInicial, onCerrar, onCreado }: { config: Con
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onCerrar(); }}>
       <form
-        role="dialog" aria-modal="true" aria-label={`Nuevo ${config.nombre}`} onSubmit={(e) => { e.preventDefault(); void guardar(); }}
+        role="dialog" aria-modal="true" aria-label={`Nuevo ${config.nombre}`} // La ventana está en un portal, pero React sube sus eventos hasta el formulario del documento: se detienen aquí.
+        onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); void guardar(); }}
         onKeyDown={(e) => {
           if (e.key === "Escape") onCerrar();
-          else if (e.key === "F9") { e.preventDefault(); if (!pendiente && confirm(`¿Crear el ${config.nombre}?`)) e.currentTarget.requestSubmit(); }
-          else if (e.key === "F10") { e.preventDefault(); if (confirm(`¿Salir sin crear el ${config.nombre}?`)) onCerrar(); }
+          else if (e.key === "F9") { e.preventDefault(); e.stopPropagation(); if (!pendiente && confirm(`¿Crear el ${config.nombre}?`)) e.currentTarget.requestSubmit(); }
+          else if (e.key === "F10") { e.preventDefault(); e.stopPropagation(); if (confirm(`¿Salir sin crear el ${config.nombre}?`)) onCerrar(); }
         }}
         className="flex w-full max-w-lg flex-col gap-4 rounded-[14px] bg-white p-6 shadow-xl"
       >

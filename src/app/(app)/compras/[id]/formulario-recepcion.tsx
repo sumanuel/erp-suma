@@ -69,7 +69,7 @@ export function FormularioRecepcion({ ordenId, lineas, almacenes }: { ordenId: s
             </tbody>
           </table>
         </div>
-        <div><button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar recepción"}</button></div>
+        <div><button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar recepción"}</button></div>
       </form>
     </Tarjeta>
   );

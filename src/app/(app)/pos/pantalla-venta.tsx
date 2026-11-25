@@ -233,7 +233,7 @@ export function PantallaVenta({ turnoId, tasa, clientes, cuentas }: { turnoId: s
           ) : null}
         </Tarjeta>
 
-        <button type="button" onClick={cobrar} disabled={pendiente || lineas.length === 0 || pagos.length === 0 || falta > 0.005} className={clasesBoton("primario", "w-full !py-3 text-[15px]")}>
+        <button data-guardar type="button" onClick={cobrar} disabled={pendiente || lineas.length === 0 || pagos.length === 0 || falta > 0.005} className={clasesBoton("primario", "w-full !py-3 text-[15px]")}>
           {pendiente ? "Cobrando…" : `Cobrar ${bs(totalBs)} Bs.`}
         </button>
       </div>

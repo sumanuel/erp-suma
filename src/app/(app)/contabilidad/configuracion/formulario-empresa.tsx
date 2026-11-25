@@ -35,7 +35,7 @@ export function FormularioEmpresa({ inicial, puedeEditar }: { inicial: DatosEmpr
           {campo("email", "Correo", "md:col-span-2")}
         </div>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.agenteRetencion} disabled={!puedeEditar} onChange={(e) => set("agenteRetencion", e.target.checked)} className="size-4 accent-marca-fuerte" /> Somos agente de retención (contribuyente especial)</label>
-        {puedeEditar ? <div><button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : "Guardar datos de la empresa"}</button></div> : null}
+        {puedeEditar ? <div><button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : "Guardar datos de la empresa"}</button></div> : null}
       </Tarjeta>
     </form>
   );

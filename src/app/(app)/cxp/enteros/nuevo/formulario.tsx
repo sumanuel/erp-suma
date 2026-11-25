@@ -61,8 +61,8 @@ export function FormularioEntero({ tipo, retenciones, cuentas }: {
         <dl className="ml-auto flex w-full max-w-xs flex-col gap-1 p-4 text-[13.5px]"><div className="flex justify-between border-t border-linea pt-1 text-[15px] font-semibold"><dt>Total a pagar Bs.</dt><dd className="tabular-nums">{fmt(total)}</dd></div></dl>
       </Tarjeta>
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente || elegidas.size === 0} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar pago al fisco"}</button>
-        <Link href="/cxp/enteros" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar="propio" type="submit" disabled={pendiente || elegidas.size === 0} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar pago al fisco"}</button>
+        <Link data-salir href="/cxp/enteros" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );

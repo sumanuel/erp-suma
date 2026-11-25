@@ -74,7 +74,7 @@ export function FormularioImportar({ id, ruta, plural }: { id: string; ruta: str
           ) : buena ? (
             <div className="flex flex-col gap-3">
               <Aviso tono="exito">El archivo está bien: {resultado.validas} {plural} listos para importar.</Aviso>
-              <div><button type="button" onClick={() => confirm(`¿Importar ${resultado.validas} ${plural}?`) && correr(true)} disabled={pendiente} className={clasesBoton("primario")}>Importar {resultado.validas} {plural}</button></div>
+              <div><button data-guardar="propio" type="button" onClick={() => confirm(`¿Importar ${resultado.validas} ${plural}?`) && correr(true)} disabled={pendiente} className={clasesBoton("primario")}>Importar {resultado.validas} {plural}</button></div>
             </div>
           ) : (
             <div className="flex flex-col gap-3">

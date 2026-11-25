@@ -78,7 +78,7 @@ export function AplicarAnticipo({ clienteId, anticipos, facturas, aplicaciones, 
             </tbody>
           </table>
           <div className="flex items-center gap-4">
-            <button type="submit" disabled={pendiente || total <= 0} className={clasesBoton("primario")}>{pendiente ? "Aplicando…" : "Aplicar anticipo"}</button>
+            <button data-guardar type="submit" disabled={pendiente || total <= 0} className={clasesBoton("primario")}>{pendiente ? "Aplicando…" : "Aplicar anticipo"}</button>
             <span className="text-[13.5px] text-gris-600">Total a aplicar: <span className="font-semibold tabular-nums">{fmt(total)}</span> USD</span>
           </div>
         </form>

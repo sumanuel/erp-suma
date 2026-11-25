@@ -64,7 +64,7 @@ export function DatosFiscales({ valores, series, accion }: { valores: FiscalesAc
           <input id={campo} value={nuevos[campo] ?? ""} onChange={(e) => setNuevos((n) => ({ ...n, [campo]: e.target.value }))} maxLength={max} className={`${claseControl} w-48`} />
         </div>
       ))}
-      <button type="submit" disabled={pendiente || !hayAlgo} className={clasesBoton("secundario")}>{pendiente ? "Guardando…" : "Registrar datos fiscales"}</button>
+      <button data-guardar type="submit" disabled={pendiente || !hayAlgo} className={clasesBoton("secundario")}>{pendiente ? "Guardando…" : "Registrar datos fiscales"}</button>
       <p className="basis-full text-[12.5px] text-gris-500">Cada dato se registra una sola vez y no se puede cambiar. Los números salen en el libro de ventas.</p>
     </form>
   );

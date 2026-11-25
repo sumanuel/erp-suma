@@ -28,8 +28,8 @@ export function FormularioUsuario({ id, inicial, perfiles, textoBoton }: {
         <input type="checkbox" name="activo" defaultChecked={inicial.activo} className="size-4 accent-marca-fuerte" /> Usuario activo
       </label>
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : textoBoton}</button>
-        <Link href="/seguridad/usuarios" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : textoBoton}</button>
+        <Link data-salir href="/seguridad/usuarios" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );

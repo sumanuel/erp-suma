@@ -108,8 +108,8 @@ export function FormularioAsiento({ hoy, cuentas, auxiliares }: { hoy: string; c
         </div>
       </Tarjeta>
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente || !cuadra} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar asiento"}</button>
-        <Link href="/contabilidad/asientos" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar type="submit" disabled={pendiente || !cuadra} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar asiento"}</button>
+        <Link data-salir href="/contabilidad/asientos" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );

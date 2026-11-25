@@ -112,7 +112,7 @@ export function CambioPrecios({ categorias, subcategorias, marcas, divisiones, p
           <div className="flex flex-wrap items-center gap-3 p-4">
             <p className="text-sm"><strong>{vista.cambian}</strong> de {vista.total} producto(s) cambian de precio
               {vista.omitidos.sinCambio + vista.omitidos.sinCosto + vista.omitidos.negativos > 0 ? ` · omitidos: ${vista.omitidos.sinCambio} sin cambio, ${vista.omitidos.sinCosto} sin costo, ${vista.omitidos.negativos} con precio negativo` : ""}.</p>
-            <button type="button" onClick={aplicar} disabled={pendiente || vista.cambian === 0} className={`${clasesBoton("primario")} ml-auto`}>Aplicar el cambio</button>
+            <button data-guardar="propio" type="button" onClick={aplicar} disabled={pendiente || vista.cambian === 0} className={`${clasesBoton("primario")} ml-auto`}>Aplicar el cambio</button>
           </div>
           {vista.cambian > vista.filas.length ? <p className="px-4 pb-2 text-[12.5px] text-gris-500">Se muestran los primeros {vista.filas.length}; el cambio se aplica a todos.</p> : null}
           <div className="max-h-[28rem] overflow-auto">

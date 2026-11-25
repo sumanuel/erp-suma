@@ -196,8 +196,8 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa, cuen
       </Tarjeta>
 
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente || (total <= 0 && !(anticipo && pagadoUsd > 0))} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar recibo"}</button>
-        <Link href={`/cxc/cliente/${clienteId}`} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar type="submit" disabled={pendiente || (total <= 0 && !(anticipo && pagadoUsd > 0))} className={clasesBoton("primario")}>{pendiente ? "Registrando…" : "Registrar recibo"}</button>
+        <Link data-salir href={`/cxc/cliente/${clienteId}`} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );

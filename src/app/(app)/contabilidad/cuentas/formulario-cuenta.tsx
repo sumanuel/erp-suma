@@ -64,8 +64,8 @@ export function FormularioCuenta({ id, inicial, padres }: {
         </div>
       </Tarjeta>
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : edicion ? "Guardar cambios" : "Crear cuenta"}</button>
-        <Link href="/contabilidad" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : edicion ? "Guardar cambios" : "Crear cuenta"}</button>
+        <Link data-salir href="/contabilidad" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );

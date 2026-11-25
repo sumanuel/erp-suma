@@ -60,7 +60,7 @@ export function FormularioApertura({ almacenes, cajasVes, cajasUsd, puedeAbrir }
         </div>
         <p className="mt-3 text-[12.5px] text-gris-500">El fondo es el efectivo que ya está en la caja al empezar; sirve de base para el cuadre al cerrar.</p>
       </Tarjeta>
-      <div><button type="submit" disabled={pendiente || !puedeAbrir} className={clasesBoton("primario")}>{pendiente ? "Abriendo…" : "Abrir turno"}</button></div>
+      <div><button data-guardar type="submit" disabled={pendiente || !puedeAbrir} className={clasesBoton("primario")}>{pendiente ? "Abriendo…" : "Abrir turno"}</button></div>
     </form>
   );
 }

@@ -21,8 +21,8 @@ export function BotonesEstado({ id, puedeEmitir, puedeConvertir, puedeRechazar, 
   };
   return (
     <>
-      {puedeEmitir ? <button type="button" disabled={pendiente} onClick={() => correr(() => emitirCotizacionVenta(id), "¿Emitir la cotización? Después ya no se podrá editar y se fijará la tasa del dólar de hoy.")} className={clasesBoton("primario")}>Emitir</button> : null}
-      {puedeConvertir ? <button type="button" disabled={pendiente} onClick={() => correr(async () => (await convertirCotizacionEnPedido(id))?.error, "¿Convertir en pedido? Se crea un pedido en borrador con estos precios y la cotización queda aceptada.")} className={clasesBoton("primario")}>Convertir en pedido</button> : null}
+      {puedeEmitir ? <button data-guardar="propio" type="button" disabled={pendiente} onClick={() => correr(() => emitirCotizacionVenta(id), "¿Emitir la cotización? Después ya no se podrá editar y se fijará la tasa del dólar de hoy.")} className={clasesBoton("primario")}>Emitir</button> : null}
+      {puedeConvertir ? <button data-guardar="propio" type="button" disabled={pendiente} onClick={() => correr(async () => (await convertirCotizacionEnPedido(id))?.error, "¿Convertir en pedido? Se crea un pedido en borrador con estos precios y la cotización queda aceptada.")} className={clasesBoton("primario")}>Convertir en pedido</button> : null}
       {puedeRechazar ? <button type="button" disabled={pendiente} onClick={() => { const m = prompt("Motivo del rechazo (por qué no aceptó el cliente):"); if (m !== null) correr(() => rechazarCotizacionVenta(id, m), null); }} className={clasesBoton("secundario")}>Marcar rechazada</button> : null}
       {puedeAnular ? <button type="button" disabled={pendiente} onClick={() => correr(() => anularCotizacionVenta(id), "¿Anular la cotización? No se puede deshacer.")} className={clasesBoton("peligro")}>Anular</button> : null}
       {error ? <div className="basis-full"><Aviso tono="error">{error}</Aviso></div> : null}

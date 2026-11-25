@@ -138,8 +138,8 @@ export function FormularioCuenta({ id, inicial, cuentasContables, automatica, ba
         {edicion ? <p className="mt-3 text-[12.5px] text-gris-500">La moneda y el saldo no se editan: el saldo solo cambia con movimientos.</p> : null}
       </Tarjeta>
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : edicion ? "Guardar cambios" : "Crear cuenta"}</button>
-        <Link href={id ? `/tesoreria/cuentas/${id}` : "/tesoreria"} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : edicion ? "Guardar cambios" : "Crear cuenta"}</button>
+        <Link data-salir href={id ? `/tesoreria/cuentas/${id}` : "/tesoreria"} className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );

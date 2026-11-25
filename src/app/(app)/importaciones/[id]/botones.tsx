@@ -21,7 +21,7 @@ export function BotonesImportacion({ id, puedeProcesar, puedeAnular, procesada }
   return (
     <>
       {puedeProcesar ? (
-        <button type="button" disabled={pendiente} onClick={() => confirm("¿Procesar la importación? La mercancía entra al almacén con el costo liquidado y cambia el costo promedio de los productos.") && correr(() => procesarImportacionForm(id))} className={clasesBoton("primario")}>Procesar</button>
+        <button data-guardar="propio" type="button" disabled={pendiente} onClick={() => confirm("¿Procesar la importación? La mercancía entra al almacén con el costo liquidado y cambia el costo promedio de los productos.") && correr(() => procesarImportacionForm(id))} className={clasesBoton("primario")}>Procesar</button>
       ) : null}
       {puedeAnular ? (
         <button

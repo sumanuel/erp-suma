@@ -21,7 +21,7 @@ export function BotonesEstado({ id, puedeEmitir, puedeAnular }: { id: string; pu
   };
   return (
     <>
-      {puedeEmitir ? <button type="button" disabled={pendiente} onClick={() => correr(emitirOrdenCompra, "¿Emitir la orden? Después ya no se podrá editar.")} className={clasesBoton("primario")}>Emitir</button> : null}
+      {puedeEmitir ? <button data-guardar="propio" type="button" disabled={pendiente} onClick={() => correr(emitirOrdenCompra, "¿Emitir la orden? Después ya no se podrá editar.")} className={clasesBoton("primario")}>Emitir</button> : null}
       {puedeAnular ? <button type="button" disabled={pendiente} onClick={() => correr(anularOrdenCompra, "¿Anular la orden? No se puede deshacer.")} className={clasesBoton("peligro")}>Anular</button> : null}
       {error ? <div className="basis-full"><Aviso tono="error">{error}</Aviso></div> : null}
     </>

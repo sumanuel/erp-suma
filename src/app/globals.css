@@ -45,3 +45,18 @@
   outline: 2px solid var(--color-marca);
   outline-offset: 2px;
 }
+
+/* La tecla de cada botón principal y de cada «Cancelar» (ver components/atajos-pantalla.tsx). */
+[data-guardar]::after,
+[data-salir]::after {
+  margin-left: 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  padding: 0 0.25rem;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  opacity: 0.7;
+}
+[data-guardar]::after { content: "F9"; }
+[data-salir]::after { content: "F10"; }

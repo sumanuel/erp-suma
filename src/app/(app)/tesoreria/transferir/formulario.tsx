@@ -60,8 +60,8 @@ export function FormularioTransferencia({ cuentas }: { cuentas: { id: string; mo
         <p className="mt-3 text-[12.5px] text-gris-500">Solo entre cuentas de la misma moneda. El cambio de divisas aún no está disponible.</p>
       </Tarjeta>
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Transfiriendo…" : "Transferir"}</button>
-        <Link href="/tesoreria" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Transfiriendo…" : "Transferir"}</button>
+        <Link data-salir href="/tesoreria" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );

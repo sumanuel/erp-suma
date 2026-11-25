@@ -44,7 +44,7 @@ export function FormularioCierre({ turnoId }: { turnoId: string }) {
           <label htmlFor="observaciones" className="text-[13px] font-medium">Observaciones <span className="font-normal text-gris-500">(opcional)</span></label>
           <input id="observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} maxLength={500} className={claseControl} />
         </div>
-        <div className="md:col-span-3"><button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Cerrando…" : "Cerrar caja"}</button></div>
+        <div className="md:col-span-3"><button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Cerrando…" : "Cerrar caja"}</button></div>
       </form>
       <p className="mt-3 text-[12.5px] text-gris-500">Cuenta primero el efectivo; al cerrar se anota la diferencia contra lo que debía haber y el turno ya no admite ventas.</p>
     </Tarjeta>

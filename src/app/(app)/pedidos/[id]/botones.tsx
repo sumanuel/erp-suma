@@ -35,11 +35,11 @@ export function BotonesEstado({ id, puedeConfirmar, puedeAnular, puedeDecidir }:
   };
   return (
     <>
-      {puedeConfirmar ? <button type="button" disabled={pendiente} onClick={() => correr(confirmarPedidoVenta, "¿Confirmar el pedido? Reservará la mercancía y fijará la tasa del dólar de hoy.")} className={clasesBoton("primario")}>Confirmar</button> : null}
+      {puedeConfirmar ? <button data-guardar="propio" type="button" disabled={pendiente} onClick={() => correr(confirmarPedidoVenta, "¿Confirmar el pedido? Reservará la mercancía y fijará la tasa del dólar de hoy.")} className={clasesBoton("primario")}>Confirmar</button> : null}
       {puedeAnular ? <button type="button" disabled={pendiente} onClick={() => correr(anularPedidoVenta, "¿Anular el pedido? Se libera la reserva y no se puede deshacer.")} className={clasesBoton("peligro")}>Anular</button> : null}
       {puedeDecidir ? (
         <>
-          <button type="button" disabled={pendiente} onClick={() => decidir("APROBADO")} className={clasesBoton("primario")}>Aprobar</button>
+          <button data-guardar="propio" type="button" disabled={pendiente} onClick={() => decidir("APROBADO")} className={clasesBoton("primario")}>Aprobar</button>
           <button type="button" disabled={pendiente} onClick={() => decidir("RECHAZADO")} className={clasesBoton("peligro")}>Rechazar</button>
         </>
       ) : null}

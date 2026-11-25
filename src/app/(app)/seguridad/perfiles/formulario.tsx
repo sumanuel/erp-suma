@@ -69,8 +69,8 @@ export function FormularioPerfil({ id, inicial, textoBoton }: {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : textoBoton}</button>
-        <Link href="/seguridad/perfiles" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
+        <button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>{pendiente ? "Guardando…" : textoBoton}</button>
+        <Link data-salir href="/seguridad/perfiles" className="px-2 text-sm text-gris-700 hover:text-tinta">Cancelar</Link>
       </div>
     </form>
   );
