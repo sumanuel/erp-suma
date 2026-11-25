@@ -8,7 +8,8 @@ import { hoyCaracas, tasaVigente } from "@/lib/tasas";
 import { aplicarMovimientoCuenta, TesoreriaRechazada } from "@/lib/tesoreria/movimientos";
 import { contabilizarAplicacionAnticipo, contabilizarCobro, revertirAplicacionAnticipo, revertirCobro } from "@/lib/contabilidad/automatico";
 import { ContaError } from "@/lib/contabilidad/servicio";
-import { FORMAS_PAGO, numeroAplicacionAnticipo, numeroCobro, type FormaPago } from "./estados";
+import { FORMA_SALDO_DEVOLUCION, FORMAS_PAGO, numeroAplicacionAnticipo, numeroCobro, type FormaPago } from "./estados";
+import { numeroNotaVenta } from "@/lib/notas/estados";
 
 // Servicio de cuentas por cobrar. Un cobro baja el saldo de sus facturas con un UPDATE atómico condicionado (nadie puede cobrar más de lo que
 // se debe, ni dos cobros simultáneos pasarse del saldo). Anular un cobro restituye exactamente lo que aplicó.
@@ -126,6 +127,15 @@ export async function registrarCobro(db: Db, actor: Actor, d: DatosCobro): Promi
   });
 }
 
+/**
+ * Si de una factura ya se devolvió dinero (o quedó saldo a favor) por una devolución, quitarle un pago la dejaría debiendo algo que el cliente
+ * ya tiene de vuelta: primero se anula la nota.
+ */
+async function sinDevolucionPagada(tx: Tx, facturaIds: string[]) {
+  const n = await tx.notaVenta.findFirst({ where: { facturaId: { in: facturaIds }, estado: "ACTIVA", excedente: { gt: 0 } }, select: { tipo: true, numero: true, factura: { select: { numero: true } } } });
+  if (n) throw new CobroError(`${numeroFactura(n.factura.numero)} tiene la devolución ${numeroNotaVenta(n.tipo, n.numero)} con dinero reintegrado o saldo a favor: anula primero esa nota.`);
+}
+
 /** Anula un cobro: devuelve a cada factura lo que se le aplicó. */
 export async function anularCobro(db: Db, actor: Actor, id: string, motivo: string): Promise<ResultadoCobro> {
   return ejecutar(async () => {
@@ -135,6 +145,8 @@ export async function anularCobro(db: Db, actor: Actor, id: string, motivo: stri
       const u = await tx.cobro.updateMany({ where: { id, estado: "REGISTRADO" }, data: { estado: "ANULADO", anuladoEn: new Date(), anuladoPorNombre: actor.nombre, motivoAnulacion: m.slice(0, 500) } });
       if (u.count === 0) throw new CobroError("El cobro ya está anulado o no existe. Recarga la página.");
       const c = await tx.cobro.findUniqueOrThrow({ where: { id }, include: { aplicaciones: true } });
+      if (c.formaPago === FORMA_SALDO_DEVOLUCION) throw new CobroError("Este saldo a favor viene de una devolución: se deshace anulando su nota de crédito.");
+      await sinDevolucionPagada(tx, c.aplicaciones.map((a) => a.facturaId));
       // Un anticipo ya aplicado a facturas no se anula: primero se anulan esas aplicaciones.
       if (Number(c.anticipoSaldoUsd) < Number(c.anticipoUsd) - 1e-9) throw new CobroError("El anticipo de este cobro ya se aplicó a facturas: anula primero esas aplicaciones.");
       if (Number(c.anticipoUsd) > 0) await tx.cobro.update({ where: { id }, data: { anticipoSaldoUsd: 0 } });
@@ -301,6 +313,7 @@ export async function anularAplicacionAnticipo(db: Db, actor: Actor, id: string,
       if (u.count === 0) throw new CobroError("La aplicación ya está anulada o no existe. Recarga la página.");
       const a = await tx.anticipoAplicacion.findUniqueOrThrow({ where: { id }, include: { cobro: { select: { estado: true } } } });
       if (a.cobro.estado !== "REGISTRADO") throw new CobroError("El cobro del anticipo está anulado.");
+      await sinDevolucionPagada(tx, [a.facturaId]);
       const f = await tx.factura.findUniqueOrThrow({ where: { id: a.facturaId }, select: { estado: true } });
       if (f.estado === "EMITIDA") await tx.factura.update({ where: { id: a.facturaId }, data: { saldo: { increment: a.montoUsd } } });
       await tx.cobro.update({ where: { id: a.cobroId }, data: { anticipoSaldoUsd: { increment: a.montoUsd } } });

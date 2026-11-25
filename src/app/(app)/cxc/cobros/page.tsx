@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Eye } from "lucide-react";
 import { Etiqueta, Tarjeta, claseControl, clasesBoton } from "@/components/ui";
 import { requerirSesion } from "@/lib/dal";
-import { ESTADOS_COBRO, FORMAS_PAGO, numeroCobro, type EstadoCobro } from "@/lib/cxc/estados";
+import { ESTADOS_COBRO, numeroCobro, type EstadoCobro, nombreFormaCobro } from "@/lib/cxc/estados";
 import { formatoFecha, formatoUsd } from "../formato";
 
 export default async function ListaCobros({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
@@ -52,7 +52,7 @@ export default async function ListaCobros({ searchParams }: { searchParams: Prom
                   <td className="px-4 py-3 font-semibold"><Link href={`/cxc/cobros/${c.id}`} className="hover:underline">{numeroCobro(c.numero)}</Link></td>
                   <td className="px-3 py-3">{formatoFecha(c.fecha)}</td>
                   <td className="px-3 py-3">{c.cliente.razonSocial}</td>
-                  <td className="px-3 py-3">{FORMAS_PAGO[c.formaPago as keyof typeof FORMAS_PAGO] ?? c.formaPago}</td>
+                  <td className="px-3 py-3">{nombreFormaCobro(c.formaPago)}</td>
                   <td className="px-3 py-3">{e ? <Etiqueta tono={e.tono}>{e.etiqueta}</Etiqueta> : c.estado}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{c.moneda === "VES" ? "Bs. " : "$ "}{formatoUsd(Number(c.montoMoneda))}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatoUsd(Number(c.montoUsd))}</td>

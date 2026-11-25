@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Etiqueta, Tarjeta } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { numeroFactura } from "@/lib/facturacion/estados";
+import { nombreFormaCobro } from "@/lib/cxc/estados";
 import { ESTADOS_NOTA, MODOS_NOTA_VENTA, TIPOS_NOTA, numeroNotaVenta, type EstadoNota } from "@/lib/notas/estados";
 import { textoTasa } from "@/lib/tasas";
 import { formatoCantidad, formatoFecha, formatoFechaHora, formatoUsd } from "../../formato";
@@ -17,9 +18,10 @@ export default async function DetalleNotaVenta({ params }: { params: Promise<{ i
   const { id } = await params;
   if (!UUID.test(id)) notFound();
   const ctx = await requerirSesion();
-  const n = await ctx.db.notaVenta.findUnique({ where: { id }, include: { cliente: { select: { razonSocial: true, documento: true } }, factura: { select: { id: true, numero: true, numeroFiscal: true, impresoraSerial: true } }, almacen: { select: { nombre: true } }, lineas: { orderBy: { linea: "asc" } } } });
+  const n = await ctx.db.notaVenta.findUnique({ where: { id }, include: { cliente: { select: { razonSocial: true, documento: true } }, factura: { select: { id: true, numero: true, numeroFiscal: true, impresoraSerial: true } }, almacen: { select: { nombre: true } }, lineas: { orderBy: { linea: "asc" } }, reintegros: true } });
   if (!n) notFound();
   const e = ESTADOS_NOTA[n.estado as EstadoNota];
+  const cuentas = new Map((await ctx.db.cuentaTesoreria.findMany({ where: { id: { in: n.reintegros.map((r) => r.cuentaId) } }, select: { id: true, codigo: true } })).map((c) => [c.id, c.codigo]));
   const credito = n.tipo === "CREDITO";
   return (
     <div className="flex flex-col gap-6">
@@ -63,6 +65,26 @@ export default async function DetalleNotaVenta({ params }: { params: Promise<{ i
               ))}
             </tbody>
           </table>
+        </Tarjeta>
+      ) : null}
+      {Number(n.excedente) > 0 ? (
+        <Tarjeta className="p-6">
+          <h3 className="mb-1 text-base font-semibold">Dinero devuelto al cliente</h3>
+          <p className="mb-3 text-[13px] text-gris-600">{formatoUsd(Number(n.excedente))} USD ya estaban cobrados; el resto de la nota bajó lo que debía.{n.estado === "ANULADA" ? " Al anular la nota, el dinero volvió a las cuentas." : ""}</p>
+          <ul className="flex flex-col gap-2 text-[13.5px]">
+            {n.reintegros.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-linea p-3">
+                <span>{nombreFormaCobro(r.formaPago)} · sale de {cuentas.get(r.cuentaId) ?? "—"}{r.referencia ? ` · ref. ${r.referencia}` : ""}</span>
+                <span className="font-semibold tabular-nums">{formatoUsd(Number(r.monto))} {r.moneda === "VES" ? "Bs." : "USD"}</span>
+              </li>
+            ))}
+            {Number(n.saldoFavor) > 0 ? (
+              <li className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-linea p-3">
+                <span>Saldo a favor del cliente{n.cobroFavorId ? <> · <Link href={`/cxc/cobros/${n.cobroFavorId}`} className="text-marca-texto hover:underline">ver y aplicar</Link></> : null}</span>
+                <span className="font-semibold tabular-nums">{formatoUsd(Number(n.saldoFavor))} USD</span>
+              </li>
+            ) : null}
+          </ul>
         </Tarjeta>
       ) : null}
       <Tarjeta>

@@ -14,6 +14,8 @@ export const TIPOS_MOVIMIENTO_TESORERIA = {
   IMPUESTO_ITF: { etiqueta: "Impuesto a las transacciones financieras", signo: -1, anulacion: false },
   VUELTO_ENTRADA: { etiqueta: "Excedente recibido (vuelto en otra moneda)", signo: 1, anulacion: false },
   VUELTO_SALIDA: { etiqueta: "Vuelto entregado en otra moneda", signo: -1, anulacion: false },
+  REINTEGRO: { etiqueta: "Reintegro por devolución", signo: -1, anulacion: false },
+  ANULACION_REINTEGRO: { etiqueta: "Anulación de reintegro", signo: 1, anulacion: true },
 } as const;
 export type TipoMovimientoTesoreria = keyof typeof TIPOS_MOVIMIENTO_TESORERIA;
 

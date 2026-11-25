@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { Undo2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Aviso, Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
 import { FilasCondiciones } from "@/components/ventas/filas-condiciones";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
-import { ESTADOS_FACTURA, numeroFactura, type EstadoFactura } from "@/lib/facturacion/estados";
+import { ESTADOS_FACTURA, estadoDevolucion, numeroFactura, type EstadoFactura } from "@/lib/facturacion/estados";
 import { numeroPedido } from "@/lib/pedidos/calculos";
 import { textoTasa } from "@/lib/tasas";
 import { formatoCantidad, formatoFecha, formatoFechaHora, formatoUsd } from "../formato";
@@ -26,12 +27,14 @@ export default async function DetalleFactura({ params, searchParams }: { params:
     where: { id },
     include: {
       cliente: { select: { razonSocial: true, documento: true } }, almacen: { select: { nombre: true } },
-      pedido: { select: { id: true, numero: true } }, lineas: { orderBy: { linea: "asc" } }, notas: { orderBy: { numero: "asc" } }, retenciones: { orderBy: { numero: "asc" } },
+      pedido: { select: { id: true, numero: true } }, lineas: { orderBy: { linea: "asc" }, include: { notaLineas: { where: { nota: { estado: "ACTIVA" } }, select: { cantidad: true } } } }, notas: { orderBy: { numero: "asc" } }, retenciones: { orderBy: { numero: "asc" } },
     },
   });
   if (!f) notFound();
   const e = ESTADOS_FACTURA[f.estado as EstadoFactura];
   const puedeAnular = f.estado === "EMITIDA" && tienePermiso(ctx, "facturacion", "eliminar");
+  const devueltas = new Map(f.lineas.map((l) => [l.id, l.notaLineas.reduce((s, x) => s + Number(x.cantidad), 0)]));
+  const devolucion = estadoDevolucion(f.lineas.map((l) => ({ vendida: Number(l.cantidad), devuelta: devueltas.get(l.id) ?? 0 })));
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,13 +53,15 @@ export default async function DetalleFactura({ params, searchParams }: { params:
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-semibold">{numeroFactura(f.numero)}</h2>
               {e ? <Etiqueta tono={e.tono}>{e.etiqueta}</Etiqueta> : null}
+              {devolucion ? <Etiqueta tono="aviso">{devolucion}</Etiqueta> : null}
             </div>
             <p className="text-sm text-gris-600">{f.cliente.razonSocial} ({f.cliente.documento})</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {f.estado === "EMITIDA" && tienePermiso(ctx, "facturacion", "crear") ? (
               <>
-                <Link href={`/facturacion/notas/nueva?factura=${id}&tipo=CREDITO`} className={clasesBoton("secundario")}>Nota de crédito</Link>
+                {devolucion !== "Devuelta" ? <Link href={`/facturacion/notas/nueva?factura=${id}&tipo=CREDITO&modo=DEVOLUCION`} className={clasesBoton("secundario")}><Undo2 className="size-4" aria-hidden />Devolución</Link> : null}
+                <Link href={`/facturacion/notas/nueva?factura=${id}&tipo=CREDITO&modo=AJUSTE`} className={clasesBoton("secundario")}>Nota de crédito</Link>
                 <Link href={`/facturacion/notas/nueva?factura=${id}&tipo=DEBITO`} className={clasesBoton("secundario")}>Nota de débito</Link>
                 {tienePermiso(ctx, "cxc", "crear") ? <Link href={`/cxc/retenciones/nueva?factura=${id}`} className={clasesBoton("secundario")}>Retención sufrida</Link> : null}
               </>
@@ -87,7 +92,7 @@ export default async function DetalleFactura({ params, searchParams }: { params:
           <table className="w-full text-left text-[13.5px]">
             <thead>
               <tr className="border-b border-linea text-[12.5px] text-gris-600">
-                <th className="px-4 py-3 font-medium">Producto</th><th className="px-3 py-3 text-right font-medium">Cantidad</th><th className="px-3 py-3 text-right font-medium">Precio USD</th>
+                <th className="px-4 py-3 font-medium">Producto</th><th className="px-3 py-3 text-right font-medium">Cantidad</th>{devolucion ? <th className="px-3 py-3 text-right font-medium">Devuelta</th> : null}<th className="px-3 py-3 text-right font-medium">Precio USD</th>
                 <th className="px-3 py-3 text-right font-medium">Desc. %</th><th className="px-3 py-3 text-right font-medium">IVA %</th><th className="px-4 py-3 text-right font-medium">Total</th>
               </tr>
             </thead>
@@ -96,6 +101,7 @@ export default async function DetalleFactura({ params, searchParams }: { params:
                 <tr key={l.id} className="border-b border-linea last:border-0">
                   <td className="px-4 py-3"><span className="font-semibold">{l.productoCodigo}</span> · {l.descripcion}{l.presentacionId ? <span className="ml-2 text-[12.5px] text-gris-500">{Number(l.cantidad) / Number(l.factor)} × presentación de {Number(l.factor)} = {Number(l.cantidad)} u.</span> : null}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatoCantidad(Number(l.cantidad))}</td>
+                  {devolucion ? <td className="px-3 py-3 text-right tabular-nums">{devueltas.get(l.id) ? formatoCantidad(devueltas.get(l.id)!) : "—"}</td> : null}
                   <td className="px-3 py-3 text-right tabular-nums">{formatoUsd(Number(l.precioUnitario))}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatoCantidad(Number(l.descuento))}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatoCantidad(Number(l.ivaPorcentaje))}</td>

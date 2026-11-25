@@ -35,7 +35,7 @@ export async function aplicarMovimientoCuenta(
   const cuenta = await tx.cuentaTesoreria.findUnique({ where: { id: m.cuentaId }, select: { codigo: true, activo: true, aceptaDepositos: true, aceptaPagos: true } });
   if (!cuenta) throw new TesoreriaRechazada("La cuenta no existe.");
   if ((m.tipo === "COBRO" || m.tipo === "INGRESO") && !cuenta.aceptaDepositos) throw new TesoreriaRechazada(`La cuenta ${cuenta.codigo} no acepta depósitos.`);
-  if (m.tipo === "PAGO" && !cuenta.aceptaPagos) throw new TesoreriaRechazada(`La cuenta ${cuenta.codigo} no acepta pagos.`);
+  if ((m.tipo === "PAGO" || m.tipo === "REINTEGRO") && !cuenta.aceptaPagos) throw new TesoreriaRechazada(`La cuenta ${cuenta.codigo} no acepta pagos.`);
   // Una cuenta inactiva no recibe operaciones nuevas, pero sí las anulaciones (para poder revertir lo que ya se hizo).
   if (!cuenta.activo && !anulacion && m.tipo !== "SALDO_INICIAL") throw new TesoreriaRechazada(`La cuenta ${cuenta.codigo} está inactiva.`);
 

@@ -14,6 +14,10 @@ export const FORMAS_PAGO = {
 } as const;
 export type FormaPago = keyof typeof FORMAS_PAGO;
 
+/** El «cobro» que guarda el saldo a favor de una devolución: no entra dinero y solo se deshace anulando la nota. No es una forma de pago elegible. */
+export const FORMA_SALDO_DEVOLUCION = "DEVOLUCION";
+export const nombreFormaCobro = (f: string) => (f === FORMA_SALDO_DEVOLUCION ? "Saldo a favor por devolución" : (FORMAS_PAGO[f as keyof typeof FORMAS_PAGO] ?? f));
+
 export const ESTADOS_COBRO = {
   REGISTRADO: { etiqueta: "Registrado", tono: "exito" },
   ANULADO: { etiqueta: "Anulado", tono: "error" },

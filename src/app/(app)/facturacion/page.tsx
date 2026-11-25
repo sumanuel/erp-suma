@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Eye, Plus } from "lucide-react";
 import { Etiqueta, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
-import { ESTADOS_FACTURA, numeroFactura, type EstadoFactura } from "@/lib/facturacion/estados";
+import { ESTADOS_FACTURA, estadoDevolucion, numeroFactura, type EstadoFactura } from "@/lib/facturacion/estados";
 import { formatoFecha, formatoUsd } from "./formato";
 
 export default async function ListaFacturas({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
@@ -17,7 +17,7 @@ export default async function ListaFacturas({ searchParams }: { searchParams: Pr
         ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { cliente: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { cliente: { documento: { contains: texto, mode: "insensitive" as const } } }] }
         : {}),
     },
-    include: { cliente: { select: { razonSocial: true } } },
+    include: { cliente: { select: { razonSocial: true } }, lineas: { select: { cantidad: true, notaLineas: { where: { nota: { estado: "ACTIVA" } }, select: { cantidad: true } } } } },
     orderBy: { numero: "desc" },
     take: 200,
   });
@@ -48,12 +48,13 @@ export default async function ListaFacturas({ searchParams }: { searchParams: Pr
               <tr><td colSpan={7} className="px-4 py-10 text-center text-gris-500">No hay facturas{texto || estado ? " con ese filtro" : " todavía"}.</td></tr>
             ) : facturas.map((f) => {
               const e = ESTADOS_FACTURA[f.estado as EstadoFactura];
+              const devolucion = estadoDevolucion(f.lineas.map((l) => ({ vendida: Number(l.cantidad), devuelta: l.notaLineas.reduce((s, x) => s + Number(x.cantidad), 0) })));
               return (
                 <tr key={f.id} className="border-b border-linea last:border-0">
                   <td className="px-4 py-3 font-semibold"><Link href={`/facturacion/${f.id}`} className="hover:underline">{numeroFactura(f.numero)}</Link></td>
                   <td className="px-3 py-3">{formatoFecha(f.fecha)}</td>
                   <td className="px-3 py-3">{f.cliente.razonSocial}</td>
-                  <td className="px-3 py-3">{e ? <Etiqueta tono={e.tono}>{e.etiqueta}</Etiqueta> : f.estado}</td>
+                  <td className="px-3 py-3">{e ? <Etiqueta tono={e.tono}>{e.etiqueta}</Etiqueta> : f.estado}{devolucion ? <span className="ml-1.5"><Etiqueta tono="aviso">{devolucion}</Etiqueta></span> : null}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatoUsd(Number(f.total))}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatoUsd(Number(f.totalBs))}</td>
                   <td className="px-4 py-3">

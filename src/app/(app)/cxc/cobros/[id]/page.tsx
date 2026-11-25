@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Etiqueta, Tarjeta } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
-import { ESTADOS_COBRO, FORMAS_PAGO, numeroCobro, numeroRecibo, type EstadoCobro } from "@/lib/cxc/estados";
+import { ESTADOS_COBRO, FORMA_SALDO_DEVOLUCION, nombreFormaCobro, numeroCobro, numeroRecibo, type EstadoCobro } from "@/lib/cxc/estados";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { textoTasa } from "@/lib/tasas";
 import { formatoFecha, formatoFechaHora, formatoUsd } from "../../formato";
@@ -25,7 +25,7 @@ export default async function DetalleCobro({ params }: { params: Promise<{ id: s
     c.reciboId ? ctx.db.reciboCobro.findUnique({ where: { id: c.reciboId }, select: { id: true, numero: true } }) : null,
   ]);
   const e = ESTADOS_COBRO[c.estado as EstadoCobro];
-  const puedeAnular = c.estado === "REGISTRADO" && tienePermiso(ctx, "cxc", "eliminar");
+  const puedeAnular = c.estado === "REGISTRADO" && c.formaPago !== FORMA_SALDO_DEVOLUCION && tienePermiso(ctx, "cxc", "eliminar");
   return (
     <div className="flex flex-col gap-6">
       <Tarjeta className="p-6">
@@ -41,7 +41,7 @@ export default async function DetalleCobro({ params }: { params: Promise<{ id: s
         </div>
         <dl className="mt-4 grid gap-3 text-[13.5px] sm:grid-cols-2 xl:grid-cols-4">
           <div><dt className="text-gris-500">Fecha</dt><dd>{formatoFecha(c.fecha)}</dd></div>
-          <div><dt className="text-gris-500">Forma de pago</dt><dd>{FORMAS_PAGO[c.formaPago as keyof typeof FORMAS_PAGO] ?? c.formaPago}</dd></div>
+          <div><dt className="text-gris-500">Forma de pago</dt><dd>{nombreFormaCobro(c.formaPago)}</dd></div>
           <div><dt className="text-gris-500">Pagó</dt><dd>{c.moneda === "VES" ? "Bs. " : "$ "}{formatoUsd(Number(c.montoMoneda))}{c.tasaUsd ? ` (tasa ${textoTasa(Number(c.tasaUsd))})` : ""}</dd></div>
           <div><dt className="text-gris-500">Aplicado USD</dt><dd className="font-semibold">{formatoUsd(Number(c.montoUsd))}</dd></div>
           {Number(c.anticipoUsd) > 0 ? <div><dt className="text-gris-500">Anticipo (saldo a favor)</dt><dd className="font-semibold">{formatoUsd(Number(c.anticipoUsd))} USD · disponible {formatoUsd(Number(c.anticipoSaldoUsd))}</dd></div> : null}

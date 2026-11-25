@@ -88,6 +88,8 @@ export async function emitirFacturaVenta(pedidoId: string | null, datos: unknown
   revalidatePath("/existencias");
   revalidatePath("/cxc", "layout");
   revalidatePath("/tesoreria", "layout");
+  revalidatePath("/existencias", "layout");
+  revalidatePath("/tesoreria", "layout");
   redirect(`/facturacion/${res.id}${cobrada ? `?cobrada=1${vuelto ? `&vuelto=${vuelto.monto}&moneda=${vuelto.moneda}` : ""}` : ""}`);
 }
 
@@ -116,7 +118,7 @@ export async function registrarNumerosFiscalesFactura(id: string, datos: unknown
 }
 
 const NotaVenta = z.discriminatedUnion("modo", [
-  z.object({ modo: z.literal("DEVOLUCION"), tipo: z.literal("CREDITO"), facturaId: z.string().uuid(), motivo: z.string().trim().min(3, "Escribe el motivo de la nota").max(300), almacenId: z.string().uuid("Elige el almacén al que regresa la mercancía"), lineas: z.array(z.object({ facturaLineaId: z.string().uuid(), cantidad: z.number().finite() })).max(500) }),
+  z.object({ modo: z.literal("DEVOLUCION"), tipo: z.literal("CREDITO"), facturaId: z.string().uuid(), motivo: z.string().trim().min(3, "Escribe el motivo de la nota").max(300), almacenId: z.string().uuid("Elige el almacén al que regresa la mercancía"), lineas: z.array(z.object({ facturaLineaId: z.string().uuid(), cantidad: z.number().finite() })).max(500), reintegros: z.array(z.object({ formaPago: z.string().max(30), moneda: z.enum(["USD", "VES"]), monto: z.number().finite(), cuentaId: z.string().uuid("Elige la caja o el banco de cada reintegro"), referencia: z.string().max(60).optional() })).max(10).optional(), saldoAFavor: z.boolean().optional() }),
   z.object({ modo: z.literal("AJUSTE"), tipo: z.literal("CREDITO"), facturaId: z.string().uuid(), motivo: z.string().trim().min(3, "Escribe el motivo de la nota").max(300), base: z.number().finite("Monto inválido"), ivaPorcentaje: z.number().finite("Alícuota inválida") }),
   z.object({ modo: z.literal("CARGO"), tipo: z.literal("DEBITO"), facturaId: z.string().uuid(), motivo: z.string().trim().min(3, "Escribe el motivo de la nota").max(300), base: z.number().finite("Monto inválido"), ivaPorcentaje: z.number().finite("Alícuota inválida") }),
 ]);
@@ -136,7 +138,8 @@ export async function emitirNotaVenta(datos: unknown): Promise<{ error?: string 
   const ctx = await requerirPermisoAccion("facturacion", "crear");
   const r = NotaVenta.safeParse(datos);
   if (!r.success) return { error: r.error.issues[0]?.message ?? "Datos inválidos" };
-  const res = await crearNotaVenta(ctx.db, ctx.usuario, r.data);
+  // Dejar la factura devuelta por completo pide aprobación gerencial; entregar dinero, permiso de cobranza.
+  const res = await crearNotaVenta(ctx.db, ctx.usuario, { ...r.data, sinDevolucionTotal: !tienePermisoEspecial(ctx, "ventas.aprobar"), sinReintegro: !tienePermiso(ctx, "cxc", "crear") });
   if (!res.ok) return { error: res.error };
   revalidatePath("/facturacion", "layout");
   revalidatePath("/cxc", "layout");

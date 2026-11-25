@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Etiqueta, Tarjeta, clasesBoton } from "@/components/ui";
 import { AplicarAnticipo } from "./aplicar-anticipo";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
-import { ESTADOS_COBRO, FORMAS_PAGO, TRAMOS, diasMora, numeroAplicacionAnticipo, numeroCobro, tramoDeMora, type EstadoCobro, type TramoId } from "@/lib/cxc/estados";
+import { ESTADOS_COBRO, TRAMOS, diasMora, numeroAplicacionAnticipo, numeroCobro, tramoDeMora, type EstadoCobro, type TramoId, nombreFormaCobro } from "@/lib/cxc/estados";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { hoyCaracas } from "@/lib/tasas";
 import { formatoFecha, formatoUsd } from "../../formato";
@@ -112,7 +112,7 @@ export default async function EstadoDeCuenta({ params }: { params: Promise<{ id:
                   <tr key={c.id} className="border-b border-linea last:border-0">
                     <td className="px-4 py-3 font-semibold"><Link href={`/cxc/cobros/${c.id}`} className="hover:underline">{numeroCobro(c.numero)}</Link></td>
                     <td className="px-3 py-3">{formatoFecha(c.fecha)}</td>
-                    <td className="px-3 py-3">{FORMAS_PAGO[c.formaPago as keyof typeof FORMAS_PAGO] ?? c.formaPago}</td>
+                    <td className="px-3 py-3">{nombreFormaCobro(c.formaPago)}</td>
                     <td className="px-3 py-3">{e ? <Etiqueta tono={e.tono}>{e.etiqueta}</Etiqueta> : c.estado}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatoUsd(Number(c.montoUsd))}</td>
                   </tr>

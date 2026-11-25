@@ -172,7 +172,7 @@ async function bolivaresDelPago(tx: Tx, moneda: string, monto: number, fecha: Da
 // ---------- Notas de crédito y débito ----------
 /** Venta: el crédito revierte ventas e IVA contra cuentas por cobrar (y, si devuelve mercancía, el costo contra el inventario); el débito suma ventas e IVA a cuentas por cobrar. */
 export async function contabilizarNotaVenta(tx: Tx, actor: Actor, id: string) {
-  const n = await tx.notaVenta.findUniqueOrThrow({ where: { id }, include: { lineas: true, cliente: { select: { razonSocial: true } }, factura: { select: { numero: true } } } });
+  const n = await tx.notaVenta.findUniqueOrThrow({ where: { id }, include: { lineas: true, reintegros: true, cliente: { select: { razonSocial: true } }, factura: { select: { numero: true } } } });
   const tasa = Number(n.tasaUsd);
   const baseBs = bs(Number(n.subtotal), tasa);
   const totalBs = bs(Number(n.total), tasa);
@@ -182,7 +182,20 @@ export async function contabilizarNotaVenta(tx: Tx, actor: Actor, id: string) {
   const descripcion = `${nombre} ${ref} sobre ${numeroFactura(n.factura.numero)} · ${n.cliente.razonSocial}`;
   if (n.tipo === "CREDITO") {
     const costoBs = bs(n.lineas.reduce((s, l) => s + Number(l.cantidad) * Number(l.costoUnitario), 0), tasa);
-    await publicar(tx, actor, { origen: "NOTA_VENTA", referencia: ref, fecha: n.fecha, descripcion, lineas: [{ concepto: "VENTAS", debe: baseBs }, { concepto: "IVA_DEBITO", debe: ivaBs }, { concepto: "CXC", haber: totalBs }, { concepto: "INVENTARIO", debe: costoBs }, { concepto: "COSTO_VENTAS", haber: costoBs }] });
+    const salidas: Linea[] = [];
+    const excedente = Number(n.excedente);
+    if (excedente > 0 && (await configuracion(tx)).automatica) {
+      for (const r of n.reintegros) {
+        const cuenta = await tx.cuentaTesoreria.findUniqueOrThrow({ where: { id: r.cuentaId }, select: { codigo: true, cuentaContableId: true } });
+        if (!cuenta.cuentaContableId) throw new ContaError(`La cuenta de tesorería ${cuenta.codigo} no tiene cuenta contable asignada (Contabilidad → Configuración).`);
+        salidas.push({ cuentaId: cuenta.cuentaContableId, haber: await bolivaresDelPago(tx, r.moneda, Number(r.monto), n.fecha) });
+      }
+      if (Number(n.saldoFavor) > 0) salidas.push({ concepto: "ANTICIPO_CLIENTES", haber: bs(Number(n.saldoFavor), tasa) });
+    }
+    const cxcBs = excedente > 0 ? bs(Number(n.total) - excedente, tasa) : totalBs;
+    // Lo que no cuadre entre la nota (a la tasa de la factura) y el dinero entregado (a la de hoy) es diferencial cambiario.
+    const dif = excedente > 0 ? redondear2(totalBs - cxcBs - salidas.reduce((s, l) => s + (l.haber ?? 0), 0)) : 0;
+    await publicar(tx, actor, { origen: "NOTA_VENTA", referencia: ref, fecha: n.fecha, descripcion, lineas: [{ concepto: "VENTAS", debe: baseBs }, { concepto: "IVA_DEBITO", debe: ivaBs }, { concepto: "CXC", haber: cxcBs }, ...salidas, { concepto: "DIFERENCIAL_CAMBIARIO", haber: dif > 0 ? dif : 0, debe: dif < 0 ? -dif : 0 }, { concepto: "INVENTARIO", debe: costoBs }, { concepto: "COSTO_VENTAS", haber: costoBs }] });
   } else {
     await publicar(tx, actor, { origen: "NOTA_VENTA", referencia: ref, fecha: n.fecha, descripcion, lineas: [{ concepto: "CXC", debe: totalBs }, { concepto: "VENTAS", haber: baseBs }, { concepto: "IVA_DEBITO", haber: ivaBs }] });
   }

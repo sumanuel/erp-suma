@@ -42,12 +42,37 @@ model NotaVenta {
   anuladaPorNombre String?         @map("anulada_por_nombre")
   motivoAnulacion String?          @map("motivo_anulacion")
   lineas          NotaVentaLinea[]
+  /// Devolución de una factura ya cobrada: parte del total que excede la deuda (USD). Se reintegra o queda como saldo a favor.
+  excedente       Decimal          @default(0) @db.Decimal(18, 4)
+  /// Lo del excedente que quedó como saldo a favor del cliente (USD), como anticipo del cobro `cobroFavorId`.
+  saldoFavor      Decimal          @default(0) @map("saldo_favor") @db.Decimal(18, 4)
+  cobroFavorId    String?          @map("cobro_favor_id") @db.Uuid
+  reintegros      NotaVentaReintegro[]
 
   @@unique([tipo, numero])
   @@index([facturaId])
   @@index([clienteId])
   @@index([estado, fecha(sort: Desc)])
   @@map("nota_venta")
+}
+
+/// Dinero que se le devolvió al cliente por una devolución: sale de una caja o banco.
+model NotaVentaReintegro {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  notaId     String    @map("nota_id") @db.Uuid
+  nota       NotaVenta @relation(fields: [notaId], references: [id], onDelete: Cascade)
+  formaPago  String    @map("forma_pago")
+  /// USD o VES
+  moneda     String
+  /// En la moneda en que se entregó.
+  monto      Decimal   @db.Decimal(18, 2)
+  montoUsd   Decimal   @map("monto_usd") @db.Decimal(18, 4)
+  /// Cuenta de tesorería de donde salió (clave foránea en la migración).
+  cuentaId   String    @map("cuenta_id") @db.Uuid
+  referencia String?
+
+  @@index([notaId])
+  @@map("nota_venta_reintegro")
 }
 
 /// Línea de una devolución: qué se devuelve de qué línea de la factura, al mismo precio, descuento e IVA con que se vendió.
