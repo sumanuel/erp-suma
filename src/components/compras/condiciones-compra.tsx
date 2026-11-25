@@ -2,6 +2,7 @@
 
 import { useState, type KeyboardEvent } from "react";
 import { Tecla } from "@/components/atajos";
+import { SelectorBuscable } from "@/components/selector-buscable";
 import { claseControl } from "@/components/ui";
 import { descuentoGlobal } from "@/lib/pedidos/calculos";
 
@@ -92,9 +93,7 @@ export function CamposBasicosCompra({ cond, datos }: { cond: CondicionesCompra; 
     <>
       <div className={campo}>
         <label htmlFor="condicionPagoId" className={etiqueta}>Condición de pago <Tecla>F3</Tecla></label>
-        <select id="condicionPagoId" value={cond.condicionPagoId} onChange={(e) => cond.setCondicionPagoId(e.target.value)} className={`${claseControl} pr-9`}>
-          <option value="">Sin condición</option>{datos.condiciones.map((c) => <option key={c.valor} value={c.valor}>{c.etiqueta}</option>)}
-        </select>
+        <SelectorBuscable id="condicionPagoId" valor={cond.condicionPagoId} vacio={null} opciones={[{ valor: "", etiqueta: "Sin condición" }, ...datos.condiciones]} placeholder="Buscar condición…" onCambio={cond.setCondicionPagoId} onElegido={() => avanzarCompra("condicionPagoId")} />
       </div>
       <div className={campo}>
         <label htmlFor="moneda" className={etiqueta}>Moneda de la orden <Tecla>F8</Tecla></label>

@@ -3,6 +3,7 @@
 import { ChevronDown } from "lucide-react";
 import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { Tecla } from "@/components/atajos";
+import { SelectorBuscable } from "@/components/selector-buscable";
 import { SelectorPersonal } from "@/components/selector-tercero";
 import { claseControl } from "@/components/ui";
 import { descuentoGlobal } from "@/lib/pedidos/calculos";
@@ -138,24 +139,23 @@ export function CamposBasicos({ cond, datos, onCondicion, plazo }: { cond: Condi
       {plazo}
       <div className={campo}>
         <label htmlFor="condicionPagoId" className={etiqueta}>Condición de pago <Tecla>F3</Tecla></label>
-        <select
-          id="condicionPagoId" value={cond.condicionPagoId}
-          onChange={(e) => {
-            const c = datos.condiciones.find((x) => x.valor === e.target.value);
-            cond.setCondicionPagoId(e.target.value); cond.setProntoPago(c?.prontoPago ?? ["0", "0", "0", "0"]); onCondicion?.(c?.dias ?? 0);
+        <SelectorBuscable
+          id="condicionPagoId" valor={cond.condicionPagoId} vacio={null} opciones={[{ valor: "", etiqueta: "Sin condición" }, ...datos.condiciones]} placeholder="Buscar condición…"
+          onCambio={(v) => {
+            // Volver a elegir la misma no pisa el plazo ni el pronto pago que se hayan cambiado a mano.
+            if (v === cond.condicionPagoId) return;
+            const c = datos.condiciones.find((x) => x.valor === v);
+            cond.setCondicionPagoId(v); cond.setProntoPago(c?.prontoPago ?? ["0", "0", "0", "0"]); onCondicion?.(c?.dias ?? 0);
           }}
-          className={`${claseControl} pr-9`}
-        >
-          <option value="">Sin condición</option>
-          {datos.condiciones.map((c) => <option key={c.valor} value={c.valor}>{c.etiqueta}</option>)}
-        </select>
+          onElegido={() => avanzarDesde("condicionPagoId")}
+        />
       </div>
       <div className={campo}>
         <label htmlFor="origenVentaId" className={etiqueta}>Origen de la venta <Tecla>F4</Tecla></label>
-        <select id="origenVentaId" value={cond.origenVentaId} onChange={(e) => cond.setOrigenVentaId(e.target.value)} className={`${claseControl} pr-9`}>
-          <option value="">Sin origen</option>
-          {datos.origenes.map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>)}
-        </select>
+        <SelectorBuscable
+          id="origenVentaId" valor={cond.origenVentaId} vacio={null} opciones={[{ valor: "", etiqueta: "Sin origen" }, ...datos.origenes]} placeholder="Buscar origen…" onCambio={cond.setOrigenVentaId}
+          onElegido={() => requestAnimationFrame(() => document.getElementById("buscar-producto")?.focus())}
+        />
       </div>
     </>
   );

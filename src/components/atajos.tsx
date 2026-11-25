@@ -45,7 +45,7 @@ function elegirEnSelect(el: HTMLSelectElement, valor: string) {
 /**
  * Teclas de un documento: F1 cliente o proveedor, F2 vendedor, F3 condición de pago, F4 origen de la venta, F6 productos, F9 confirmar o
  * guardar y F10 salir. F8 moneda; F7 (modo de pago) y la moneda del cobro las atiende
- * el panel de cobro. Devuelve la ventana de opciones de F3, F4 y F8.
+ * el panel de cobro. Devuelve la ventana de opciones de F8.
  */
 export function useTeclasDocumento({ guardar, salir }: { guardar: () => void; salir: () => void }) {
   const [lista, setLista] = useState<{ id: string; titulo: string; opciones: [string, string][]; valor: string } | null>(null);
@@ -57,8 +57,8 @@ export function useTeclasDocumento({ guardar, salir }: { guardar: () => void; sa
     ...RESERVADAS,
     F1: () => irABuscador(document.getElementById("clienteId") ? "clienteId" : "proveedorId"),
     F2: () => irABuscador("vendedorId"),
-    F3: () => abrirLista("condicionPagoId", "Condición de pago"),
-    F4: () => abrirLista("origenVentaId", "Origen de la venta"),
+    F3: () => irABuscador("condicionPagoId"),
+    F4: () => irABuscador("origenVentaId"),
     F6: () => document.querySelector<HTMLButtonElement>("[data-ver-productos]")?.click(),
     // Moneda del documento (compras e importaciones); en la factura es la del cobro y la atiende ese panel.
     F8: () => {
