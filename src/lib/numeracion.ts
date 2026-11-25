@@ -68,19 +68,22 @@ const control = (n: number) => `00-${String(n).padStart(8, "0")}`;
  * Si la numeración fiscal de las facturas es automática, devuelve el siguiente número de factura y de control (los contadores avanzan en la
  * misma transacción). Se saltan los que ya estén en otra factura (por ejemplo, registrados a mano). Si no es automática, devuelve null.
  */
-export async function siguienteFiscalFactura(tx: Tx): Promise<{ numeroFiscal: string; numeroControl: string } | null> {
+export async function siguienteFiscalFactura(tx: Tx): Promise<{ numeroFiscal: string; numeroControl: string; impresoraSerial: string | null; impresoraModelo: string | null } | null> {
   const t = await tx.$queryRawUnsafe<{ fiscal_automatico: boolean; ultimo_fiscal: number; ultimo_control: number }[]>(`SELECT "fiscal_automatico", "ultimo_fiscal", "ultimo_control" FROM "tipo_documento" WHERE "codigo" = 'FACTURA' FOR UPDATE`);
   if (!t[0]?.fiscal_automatico) return null;
+  const serie = (await tx.tipoDocumento.findUnique({ where: { codigo: "FACTURA" }, select: { serieFiscal: { select: { serial: true, impresora: true } } } }))?.serieFiscal;
+  const impresoraSerial = serie?.serial || null;
+  const impresoraModelo = serie?.impresora || null;
   let nf = t[0].ultimo_fiscal;
   let nc = t[0].ultimo_control;
   for (let i = 0; i < 1000; i++) {
     nf++;
-    if (!(await tx.factura.findFirst({ where: { numeroFiscal: fiscal(nf) }, select: { id: true } }))) break;
+    if (!(await tx.factura.findFirst({ where: { numeroFiscal: fiscal(nf), impresoraSerial }, select: { id: true } }))) break;
   }
   for (let i = 0; i < 1000; i++) {
     nc++;
     if (!(await tx.factura.findFirst({ where: { numeroControl: control(nc) }, select: { id: true } }))) break;
   }
   await tx.$executeRawUnsafe(`UPDATE "tipo_documento" SET "ultimo_fiscal" = $1, "ultimo_control" = $2, "actualizado_en" = now() WHERE "codigo" = 'FACTURA'`, nf, nc);
-  return { numeroFiscal: fiscal(nf), numeroControl: control(nc) };
+  return { numeroFiscal: fiscal(nf), numeroControl: control(nc), impresoraSerial, impresoraModelo };
 }

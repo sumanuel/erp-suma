@@ -1,4 +1,6 @@
 import "server-only";
+import { planearDatosFiscales, type DatosFiscales } from "@/lib/documentos-fiscales";
+import { esViolacionUnica } from "@/lib/formularios";
 import { siguienteNumero } from "@/lib/numeracion";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
@@ -151,6 +153,33 @@ export async function anularNotaVenta(db: Db, actor: Actor, id: string, motivo: 
     });
     await registrarCambio(db, actor, { modulo: "facturacion", entidad: "nota_venta", entidadId: id, descripcion: texto, accion: "otro", despues: { estado: "ANULADA", motivo: m } });
     return { ok: true };
+  });
+}
+
+/** Datos fiscales de una nota de venta (los da la máquina fiscal o la imprenta). Cada uno se registra una sola vez. */
+export async function registrarDatosFiscalesNota(db: Db, actor: Actor, id: string, d: DatosFiscales): Promise<ResultadoNota> {
+  return ejecutar(async () => {
+    try {
+      const r = await db.$transaction(async (tx) => {
+        const n = await tx.notaVenta.findUnique({ where: { id }, select: { numero: true, tipo: true, estado: true, numeroFiscal: true, numeroControl: true, impresoraSerial: true, impresoraModelo: true } });
+        if (!n) throw new NotaError("La nota ya no existe.");
+        if (n.estado !== "ACTIVA") throw new NotaError("La nota está anulada.");
+        const plan = planearDatosFiscales(n, d);
+        if ("error" in plan) throw new NotaError(plan.error);
+        const fiscal = plan.datos.numeroFiscal ?? n.numeroFiscal;
+        const serial = plan.datos.impresoraSerial ?? n.impresoraSerial;
+        if (fiscal && (await tx.notaVenta.findFirst({ where: { tipo: n.tipo, numeroFiscal: fiscal, impresoraSerial: serial, id: { not: id } }, select: { id: true } }))) throw new NotaError(`El número ${fiscal} ya está en otra nota de ese tipo y esa impresora.`);
+        if (plan.datos.numeroControl && (await tx.notaVenta.findFirst({ where: { numeroControl: plan.datos.numeroControl, id: { not: id } }, select: { id: true } }))) throw new NotaError(`El número de control ${plan.datos.numeroControl} ya está en otra nota.`);
+        const u = await tx.notaVenta.updateMany({ where: { id, estado: "ACTIVA", ...plan.vacios }, data: plan.datos });
+        if (u.count === 0) throw new NotaError("La nota cambió mientras la veías. Recarga la página.");
+        return { texto: numeroNotaVenta(n.tipo, n.numero), datos: plan.datos };
+      });
+      await registrarCambio(db, actor, { modulo: "facturacion", entidad: "nota_venta", entidadId: id, descripcion: r.texto, accion: "editar", despues: r.datos });
+      return { ok: true };
+    } catch (e) {
+      if (esViolacionUnica(e)) return { ok: false, error: "Ese número fiscal o de control ya está en otra nota." };
+      throw e;
+    }
   });
 }
 

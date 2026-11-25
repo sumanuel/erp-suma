@@ -1,4 +1,6 @@
 import "server-only";
+import { planearDatosFiscales, type DatosFiscales } from "@/lib/documentos-fiscales";
+import { esViolacionUnica } from "@/lib/formularios";
 import { siguienteFiscalFactura, siguienteNumero } from "@/lib/numeracion";
 import type { Db } from "@/lib/tenant";
 import { registrarCambio } from "@/lib/auditoria";
@@ -150,29 +152,33 @@ export async function anularFactura(db: Db, actor: Actor, id: string, motivo: st
   });
 }
 
-/** Registra el número de factura fiscal y/o el número de control (los da la máquina fiscal o la imprenta). Cada uno se registra una sola vez y no se cambia: quedan en el libro de ventas. */
-export async function registrarNumerosFiscales(db: Db, actor: Actor, id: string, d: { numeroFiscal: string | null; numeroControl: string | null }): Promise<ResultadoFactura> {
+/**
+ * Registra los datos que dejó la máquina fiscal o la imprenta: número fiscal, número de control, serial y modelo de la impresora.
+ * Cada dato se escribe una sola vez y no se cambia; los números salen en el libro de ventas.
+ */
+export async function registrarNumerosFiscales(db: Db, actor: Actor, id: string, d: DatosFiscales): Promise<ResultadoFactura> {
   return ejecutar(async () => {
-    const valido = (s: string | null) => s === null || /^[A-Za-z0-9][A-Za-z0-9\-/.]{0,29}$/.test(s);
-    if (!valido(d.numeroFiscal) || !valido(d.numeroControl)) throw new FacturaError("Los números admiten letras, dígitos, guion, punto y barra (máximo 30 caracteres).");
-    if (!d.numeroFiscal && !d.numeroControl) throw new FacturaError("Indica el número de factura o el de control.");
-    const numero = await db.$transaction(async (tx) => {
-      const f = await tx.factura.findUnique({ where: { id }, select: { numero: true, estado: true, numeroFiscal: true, numeroControl: true } });
-      if (!f) throw new FacturaError("La factura ya no existe.");
-      if (f.estado !== "EMITIDA") throw new FacturaError("La factura está anulada.");
-      if ((d.numeroFiscal && f.numeroFiscal) || (d.numeroControl && f.numeroControl)) throw new FacturaError("Ese número ya estaba registrado y no se puede cambiar.");
-      for (const [campo, valor] of [["numeroFiscal", d.numeroFiscal], ["numeroControl", d.numeroControl]] as const) {
-        if (valor && (await tx.factura.findFirst({ where: { [campo]: valor, id: { not: id } }, select: { numero: true } }))) throw new FacturaError(`El número ${valor} ya está en otra factura.`);
-      }
-      // Condicionado a que sigan vacíos: dos personas no pueden pisarse.
-      const u = await tx.factura.updateMany({
-        where: { id, estado: "EMITIDA", ...(d.numeroFiscal ? { numeroFiscal: null } : {}), ...(d.numeroControl ? { numeroControl: null } : {}) },
-        data: { ...(d.numeroFiscal ? { numeroFiscal: d.numeroFiscal } : {}), ...(d.numeroControl ? { numeroControl: d.numeroControl } : {}) },
+    try {
+      const r = await db.$transaction(async (tx) => {
+        const f = await tx.factura.findUnique({ where: { id }, select: { numero: true, estado: true, numeroFiscal: true, numeroControl: true, impresoraSerial: true, impresoraModelo: true } });
+        if (!f) throw new FacturaError("La factura ya no existe.");
+        if (f.estado !== "EMITIDA") throw new FacturaError("La factura está anulada.");
+        const plan = planearDatosFiscales(f, d);
+        if ("error" in plan) throw new FacturaError(plan.error);
+        const fiscal = plan.datos.numeroFiscal ?? f.numeroFiscal;
+        const serial = plan.datos.impresoraSerial ?? f.impresoraSerial;
+        if (fiscal && (await tx.factura.findFirst({ where: { numeroFiscal: fiscal, impresoraSerial: serial, id: { not: id } }, select: { id: true } }))) throw new FacturaError(`El número ${fiscal} ya está en otra factura de esa impresora.`);
+        if (plan.datos.numeroControl && (await tx.factura.findFirst({ where: { numeroControl: plan.datos.numeroControl, id: { not: id } }, select: { id: true } }))) throw new FacturaError(`El número ${plan.datos.numeroControl} ya está en otra factura.`);
+        // Condicionado a que sigan vacíos: dos personas no pueden pisarse.
+        const u = await tx.factura.updateMany({ where: { id, estado: "EMITIDA", ...plan.vacios }, data: plan.datos });
+        if (u.count === 0) throw new FacturaError("La factura cambió mientras la veías. Recarga la página.");
+        return { numero: f.numero, datos: plan.datos };
       });
-      if (u.count === 0) throw new FacturaError("La factura cambió mientras la veías. Recarga la página.");
-      return f.numero;
-    });
-    await registrarCambio(db, actor, { modulo: "facturacion", entidad: "factura", entidadId: id, descripcion: numeroFactura(numero), accion: "editar", despues: { numeroFiscal: d.numeroFiscal, numeroControl: d.numeroControl } });
-    return { ok: true };
+      await registrarCambio(db, actor, { modulo: "facturacion", entidad: "factura", entidadId: id, descripcion: numeroFactura(r.numero), accion: "editar", despues: r.datos });
+      return { ok: true };
+    } catch (e) {
+      if (esViolacionUnica(e)) return { ok: false, error: "Ese número fiscal o de control ya está en otra factura." };
+      throw e;
+    }
   });
 }

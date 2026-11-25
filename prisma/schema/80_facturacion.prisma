@@ -6,8 +6,11 @@ model Factura {
   id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Número correlativo interno (se muestra como FAC-000123).
   numero           Int            @unique @default(autoincrement())
-  /// Número de factura que asigna el equipo fiscal o la imprenta, si aplica (único). Se registra una sola vez.
-  numeroFiscal     String?        @unique @map("numero_fiscal")
+  /// Número de factura que asigna el equipo fiscal o la imprenta, si aplica (se registra una sola vez). Único por impresora (índice en la migración).
+  numeroFiscal     String?        @map("numero_fiscal")
+  /// Serial y modelo de la impresora fiscal que emitió el documento (original: dcli_impresora, dcli_modfis).
+  impresoraSerial  String?        @map("impresora_serial")
+  impresoraModelo  String?        @map("impresora_modelo")
   /// Número de control de la factura (único). Se registra una sola vez.
   numeroControl    String?        @unique @map("numero_control")
   clienteId        String         @map("cliente_id") @db.Uuid

@@ -29,7 +29,11 @@ model NotaVenta {
   ivaPorcentaje   Decimal?         @map("iva_porcentaje") @db.Decimal(7, 4)
   /// Bolívares por 1 USD: la misma de la factura original.
   tasaUsd         Decimal          @map("tasa_usd") @db.Decimal(18, 8)
-  numeroFiscal    String?          @unique @map("numero_fiscal")
+  /// Único por tipo e impresora (índice en la migración).
+  numeroFiscal    String?          @map("numero_fiscal")
+  /// Serial y modelo de la impresora fiscal que emitió el documento (original: dcli_impresora, dcli_modfis).
+  impresoraSerial  String?        @map("impresora_serial")
+  impresoraModelo  String?        @map("impresora_modelo")
   numeroControl   String?          @unique @map("numero_control")
   creadoPorId     String?          @map("creado_por_id") @db.Uuid
   creadoPorNombre String?          @map("creado_por_nombre")

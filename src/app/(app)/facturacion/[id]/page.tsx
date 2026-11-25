@@ -10,7 +10,9 @@ import { formatoCantidad, formatoFecha, formatoFechaHora, formatoUsd } from "../
 import { ESTADOS_NOTA, TIPOS_NOTA, numeroNotaVenta, type EstadoNota } from "@/lib/notas/estados";
 import { BotonAnular } from "./boton-anular";
 import { numeroRetencion } from "@/lib/retenciones/estados";
-import { NumerosFiscales } from "./numeros-fiscales";
+import { DatosFiscales } from "@/components/ventas/datos-fiscales";
+import { seriesDe } from "@/lib/series-fiscales";
+import { registrarNumerosFiscalesFactura } from "../acciones";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -58,6 +60,7 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
           <div><dt className="text-gris-500">Tasa USD</dt><dd>{textoTasa(Number(f.tasaUsd))}</dd></div>
           <div><dt className="text-gris-500">Nº de factura fiscal</dt><dd>{f.numeroFiscal ?? "—"}</dd></div>
           <div><dt className="text-gris-500">Nº de control</dt><dd>{f.numeroControl ?? "—"}</dd></div>
+          <div><dt className="text-gris-500">Impresora fiscal</dt><dd>{f.impresoraSerial || f.impresoraModelo ? [f.impresoraModelo, f.impresoraSerial].filter(Boolean).join(" · ") : "—"}</dd></div>
           <div><dt className="text-gris-500">Pedido</dt><dd>{f.pedido ? <Link href={`/pedidos/${f.pedido.id}`} className="text-marca-texto hover:underline">{numeroPedido(f.pedido.numero)}</Link> : "—"}</dd></div>
           <div><dt className="text-gris-500">Emitida por</dt><dd>{f.creadoPorNombre ?? "—"} · {formatoFechaHora(f.creadoEn)}</dd></div>
           <FilasCondiciones db={ctx.db} doc={f} />
@@ -65,7 +68,7 @@ export default async function DetalleFactura({ params }: { params: Promise<{ id:
           <div className="sm:col-span-2"><dt className="text-gris-500">Observaciones</dt><dd>{f.observaciones ?? "—"}</dd></div>
           {f.estado === "ANULADA" ? <div className="sm:col-span-2 xl:col-span-4"><dt className="text-gris-500">Anulada</dt><dd>{f.anuladaPorNombre ?? "—"} · {formatoFechaHora(f.anuladaEn)} · {f.motivoAnulacion}</dd></div> : null}
         </dl>
-        {f.estado === "EMITIDA" && tienePermiso(ctx, "facturacion", "editar") ? <div className="mt-4"><NumerosFiscales id={id} fiscal={f.numeroFiscal} control={f.numeroControl} /></div> : null}
+        {f.estado === "EMITIDA" && tienePermiso(ctx, "facturacion", "editar") ? <div className="mt-4"><DatosFiscales valores={{ numeroFiscal: f.numeroFiscal, numeroControl: f.numeroControl, impresoraSerial: f.impresoraSerial, impresoraModelo: f.impresoraModelo }} series={await seriesDe(ctx.db, "FACTURA")} accion={registrarNumerosFiscalesFactura.bind(null, id)} /></div> : null}
       </Tarjeta>
 
       <Tarjeta>

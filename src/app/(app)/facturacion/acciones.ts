@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requerirPermisoAccion, tienePermisoEspecial } from "@/lib/dal";
 import { EncabezadoVentaZ } from "@/lib/ventas/esquemas";
 import { anularFactura, emitirFactura, emitirFacturaDePedido, registrarNumerosFiscales } from "@/lib/facturacion/servicio";
-import { anularNotaVenta, crearNotaVenta } from "@/lib/notas/servicio";
+import { anularNotaVenta, crearNotaVenta, registrarDatosFiscalesNota } from "@/lib/notas/servicio";
 import { buscarProductosVenta, type ProductoVenta } from "@/lib/pedidos/servicio";
 
 export type EstadoFacturaForm = { error?: string };
@@ -68,7 +68,8 @@ export async function anularFacturaVenta(id: string, motivo: string): Promise<st
   return r.ok ? null : r.error;
 }
 
-const Numeros = z.object({ numeroFiscal: z.string().trim().max(40).transform((v) => v || null), numeroControl: z.string().trim().max(40).transform((v) => v || null) });
+const campoFiscal = (max: number) => z.string().trim().max(max).optional().transform((v) => v || null);
+const Numeros = z.object({ numeroFiscal: campoFiscal(40), numeroControl: campoFiscal(40), impresoraSerial: campoFiscal(40), impresoraModelo: campoFiscal(80) });
 
 /** Registra el número de factura fiscal y el de control de una factura emitida (una sola vez). */
 export async function registrarNumerosFiscalesFactura(id: string, datos: unknown): Promise<string | null> {
@@ -86,6 +87,17 @@ const NotaVenta = z.discriminatedUnion("modo", [
   z.object({ modo: z.literal("AJUSTE"), tipo: z.literal("CREDITO"), facturaId: z.string().uuid(), motivo: z.string().trim().min(3, "Escribe el motivo de la nota").max(300), base: z.number().finite("Monto inválido"), ivaPorcentaje: z.number().finite("Alícuota inválida") }),
   z.object({ modo: z.literal("CARGO"), tipo: z.literal("DEBITO"), facturaId: z.string().uuid(), motivo: z.string().trim().min(3, "Escribe el motivo de la nota").max(300), base: z.number().finite("Monto inválido"), ivaPorcentaje: z.number().finite("Alícuota inválida") }),
 ]);
+
+/** Registra los datos fiscales de una nota de venta (una sola vez cada uno). */
+export async function registrarNumerosFiscalesNota(id: string, datos: unknown): Promise<string | null> {
+  const ctx = await requerirPermisoAccion("facturacion", "editar");
+  const r = Numeros.safeParse(datos);
+  if (!r.success) return "Datos inválidos";
+  const res = await registrarDatosFiscalesNota(ctx.db, ctx.usuario, id, r.data);
+  revalidatePath(`/facturacion/notas/${id}`);
+  revalidatePath("/facturacion/notas");
+  return res.ok ? null : res.error;
+}
 
 export async function emitirNotaVenta(datos: unknown): Promise<{ error?: string }> {
   const ctx = await requerirPermisoAccion("facturacion", "crear");
