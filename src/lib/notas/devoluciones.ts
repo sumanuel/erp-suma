@@ -1,7 +1,8 @@
 import "server-only";
 import type { Db } from "@/lib/tenant";
 import { ESTADOS_NOTA } from "./estados";
-import { porFecha, porTexto } from "./filtros";
+import { porFecha } from "@/lib/filtros-fecha";
+import { porTexto } from "./filtros";
 
 // Consulta de devoluciones de venta (notas de crédito por devolución de mercancía). Los totales son de TODO lo que cumple el filtro, no solo
 // de las filas que se muestran, y las anuladas nunca suman.

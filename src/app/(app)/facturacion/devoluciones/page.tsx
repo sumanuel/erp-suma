@@ -5,7 +5,8 @@ import { requerirPermiso } from "@/lib/dal";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { listarDevoluciones } from "@/lib/notas/devoluciones";
 import { ESTADOS_NOTA, numeroNotaVenta, type EstadoNota } from "@/lib/notas/estados";
-import { rangoDeFechas } from "@/lib/notas/filtros";
+import { FiltroFechas, SinResultados, VerTodasLasFechas, enlaceTodasLasFechas } from "@/components/listado/filtro-fechas";
+import { rangoDeFechas } from "@/lib/filtros-fecha";
 import { formatoFecha, formatoUsd } from "../formato";
 
 const monto = (n: number) => n.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -14,9 +15,9 @@ export default async function ListaDevoluciones({ searchParams }: { searchParams
   const { db } = await requerirPermiso("facturacion", "ver");
   const p = await searchParams;
   const { q = "", estado = "" } = p;
-  const { desde, hasta, desdeFecha, hastaFecha } = rangoDeFechas(p);
+  const { desde, hasta, desdeFecha, hastaFecha } = rangoDeFechas(p, "mes");
+  const todas = enlaceTodasLasFechas("/facturacion/devoluciones", { q, estado });
   const { filas, encontradas, totales } = await listarDevoluciones(db, { texto: q, estado, desde: desdeFecha, hasta: hastaFecha });
-  const filtrado = !!(q || estado || desde || hasta);
 
   const dato = (titulo: string, valor: string, detalle?: string) => (
     <div className="rounded-[10px] border border-linea p-3">
@@ -31,12 +32,11 @@ export default async function ListaDevoluciones({ searchParams }: { searchParams
     <div className="flex flex-col gap-4">
       <Tarjeta className="p-4">
         <form className="flex flex-wrap items-end gap-3" role="search">
-          <label className={campo}>Desde<input type="date" name="desde" defaultValue={desde} className={`${claseControl} w-40`} /></label>
-          <label className={campo}>Hasta<input type="date" name="hasta" defaultValue={hasta} className={`${claseControl} w-40`} /></label>
+          <FiltroFechas desde={desde} hasta={hasta} />
           <label className={campo}>Buscar<input name="q" defaultValue={q} placeholder="NC, FAC, cliente o motivo" className={`${claseControl} w-60`} /></label>
           <label className={campo}>Estado<select name="estado" defaultValue={estado} className={`${claseControl} w-36 pr-9`}><option value="">Todas</option>{Object.entries(ESTADOS_NOTA).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}</select></label>
           <button type="submit" className={clasesBoton("secundario")}>Filtrar</button>
-          <Link href="/facturacion/devoluciones?desde=&hasta=" className="flex h-10 items-center px-2 text-sm text-gris-700 hover:text-tinta">Ver todas las fechas</Link>
+          <VerTodasLasFechas href={todas} />
         </form>
         <p className="mt-2 text-[12.5px] text-gris-500">Para hacer una devolución, abre la factura y pulsa «Devolución».</p>
       </Tarjeta>
@@ -60,7 +60,7 @@ export default async function ListaDevoluciones({ searchParams }: { searchParams
             </thead>
             <tbody>
               {filas.length === 0 ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-gris-500">No hay devoluciones{filtrado ? " con ese filtro" : " todavía"}.</td></tr>
+                <SinResultados columnas={11} que="devoluciones" filtrado={!!(q || estado)} conFechas={!!(desde || hasta)} href={todas} />
               ) : filas.map((x) => {
                 const e = ESTADOS_NOTA[x.estado as EstadoNota];
                 const t = numeroNotaVenta("CREDITO", x.numero);

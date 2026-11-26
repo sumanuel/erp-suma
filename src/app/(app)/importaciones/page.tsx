@@ -1,22 +1,31 @@
 import Link from "next/link";
+import { AvisoTope, FiltroFechas, SinResultados, VerTodasLasFechas, enlaceTodasLasFechas } from "@/components/listado/filtro-fechas";
+import { porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
 import { Eye, Plus } from "lucide-react";
 import { Etiqueta, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { ESTADOS_IMPORTACION, numeroImportacion, type EstadoImportacion } from "@/lib/importaciones/calculos";
 import { formatoFecha, formatoUsd } from "../pedidos/formato";
 
-export default async function ListaImportaciones({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
+export default async function ListaImportaciones({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string; desde?: string; hasta?: string }> }) {
   const ctx = await requerirSesion();
-  const { q = "", estado = "" } = await searchParams;
+  const filtros = await searchParams;
+  const { q = "", estado = "" } = filtros;
+  const fechas = rangoDeFechas(filtros, "todas");
+  const conFechas = !!(fechas.desde || fechas.hasta);
+  const todas = enlaceTodasLasFechas("/importaciones", { q, estado });
   const texto = q.trim().slice(0, 60);
   const numero = /^(IMP-?)?0*(\d{1,9})$/i.exec(texto)?.[2];
+  const where = {
+    ...porFecha(fechas.desdeFecha, fechas.hastaFecha),
+    ...(estado in ESTADOS_IMPORTACION ? { estado } : {}),
+    ...(texto
+      ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { documento: { contains: texto, mode: "insensitive" as const } }, { proveedor: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { proveedor: { documento: { contains: texto, mode: "insensitive" as const } } }] }
+      : {}),
+  };
+  const encontrados = await ctx.db.importacion.count({ where });
   const lista = await ctx.db.importacion.findMany({
-    where: {
-      ...(estado in ESTADOS_IMPORTACION ? { estado } : {}),
-      ...(texto
-        ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { documento: { contains: texto, mode: "insensitive" as const } }, { proveedor: { razonSocial: { contains: texto, mode: "insensitive" as const } } }] }
-        : {}),
-    },
+    where,
     include: { proveedor: { select: { razonSocial: true } } },
     orderBy: { numero: "desc" },
     take: 200,
@@ -24,13 +33,17 @@ export default async function ListaImportaciones({ searchParams }: { searchParam
   return (
     <Tarjeta>
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <form className="flex flex-wrap items-center gap-2" role="search">
-          <input name="q" defaultValue={texto} placeholder="Número, documento o proveedor" aria-label="Buscar" className={`${claseControl} w-64`} />
-          <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} w-48 pr-9`}>
-            <option value="">Todos los estados</option>
-            {Object.entries(ESTADOS_IMPORTACION).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
-          </select>
+        <form className="flex flex-wrap items-end gap-2" role="search">
+          <FiltroFechas desde={fechas.desde} hasta={fechas.hasta} />
+          <div className="w-72"><input name="q" defaultValue={texto} placeholder="Número, documento o proveedor (o RIF)" aria-label="Buscar" className={claseControl} /></div>
+          <div className="w-48">
+            <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} pr-9`}>
+              <option value="">Todos los estados</option>
+              {Object.entries(ESTADOS_IMPORTACION).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
+            </select>
+          </div>
           <button type="submit" className={clasesBoton("secundario")}>Filtrar</button>
+          <VerTodasLasFechas href={todas} />
         </form>
         {tienePermiso(ctx, "importaciones", "crear") ? <Link href="/importaciones/nueva" className={clasesBoton("primario")}><Plus className="size-4" aria-hidden />Nueva importación</Link> : null}
       </div>
@@ -44,7 +57,7 @@ export default async function ListaImportaciones({ searchParams }: { searchParam
           </thead>
           <tbody>
             {lista.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-gris-500">No hay importaciones{texto || estado ? " con ese filtro" : " todavía"}.</td></tr>
+              <SinResultados columnas={8} que="importaciones" filtrado={!!(texto || estado)} conFechas={conFechas} href={todas} />
             ) : lista.map((i) => {
               const e = ESTADOS_IMPORTACION[i.estado as EstadoImportacion];
               return (
@@ -67,6 +80,7 @@ export default async function ListaImportaciones({ searchParams }: { searchParam
           </tbody>
         </table>
       </div>
+      <AvisoTope mostrados={lista.length} total={encontrados} />
     </Tarjeta>
   );
 }

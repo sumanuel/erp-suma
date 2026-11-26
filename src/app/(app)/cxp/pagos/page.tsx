@@ -1,22 +1,31 @@
 import Link from "next/link";
+import { AvisoTope, FiltroFechas, SinResultados, VerTodasLasFechas, enlaceTodasLasFechas } from "@/components/listado/filtro-fechas";
+import { porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
 import { Eye } from "lucide-react";
 import { Etiqueta, Tarjeta, claseControl, clasesBoton } from "@/components/ui";
 import { requerirSesion } from "@/lib/dal";
 import { ESTADOS_PAGO, FORMAS_PAGO, numeroPago, type EstadoPago } from "@/lib/cxp/estados";
 import { formatoFecha, formatoUsd } from "../formato";
 
-export default async function ListaPagos({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
+export default async function ListaPagos({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string; desde?: string; hasta?: string }> }) {
   const ctx = await requerirSesion();
-  const { q = "", estado = "" } = await searchParams;
+  const filtros = await searchParams;
+  const { q = "", estado = "" } = filtros;
+  const fechas = rangoDeFechas(filtros, "mes");
+  const conFechas = !!(fechas.desde || fechas.hasta);
+  const todas = enlaceTodasLasFechas("/cxp/pagos", { q, estado });
   const texto = q.trim().slice(0, 60);
   const numero = /^(PAG-?)?0*(\d{1,9})$/i.exec(texto)?.[2];
+  const where = {
+    ...porFecha(fechas.desdeFecha, fechas.hastaFecha),
+    ...(estado in ESTADOS_PAGO ? { estado } : {}),
+    ...(texto
+      ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { proveedor: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { proveedor: { documento: { contains: texto, mode: "insensitive" as const } } }, { referencia: { contains: texto, mode: "insensitive" as const } }] }
+      : {}),
+  };
+  const encontrados = await ctx.db.pagoProveedor.count({ where });
   const pagos = await ctx.db.pagoProveedor.findMany({
-    where: {
-      ...(estado in ESTADOS_PAGO ? { estado } : {}),
-      ...(texto
-        ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { proveedor: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { referencia: { contains: texto, mode: "insensitive" as const } }] }
-        : {}),
-    },
+    where,
     include: { proveedor: { select: { razonSocial: true } } },
     orderBy: { numero: "desc" },
     take: 200,
@@ -24,13 +33,17 @@ export default async function ListaPagos({ searchParams }: { searchParams: Promi
   return (
     <Tarjeta>
       <div className="flex flex-wrap items-center gap-3 p-4">
-        <form className="flex flex-wrap items-center gap-2" role="search">
-          <input name="q" defaultValue={texto} placeholder="Número, proveedor o referencia" aria-label="Buscar" className={`${claseControl} w-64`} />
-          <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} w-48 pr-9`}>
-            <option value="">Todos los estados</option>
-            {Object.entries(ESTADOS_PAGO).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
-          </select>
+        <form className="flex flex-wrap items-end gap-2" role="search">
+          <FiltroFechas desde={fechas.desde} hasta={fechas.hasta} />
+          <div className="w-72"><input name="q" defaultValue={texto} placeholder="Número, proveedor o referencia (o RIF)" aria-label="Buscar" className={claseControl} /></div>
+          <div className="w-48">
+            <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} pr-9`}>
+              <option value="">Todos los estados</option>
+              {Object.entries(ESTADOS_PAGO).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
+            </select>
+          </div>
           <button type="submit" className={clasesBoton("secundario")}>Filtrar</button>
+          <VerTodasLasFechas href={todas} />
         </form>
         <p className="text-[13px] text-gris-500">Los pagos se registran desde el estado de cuenta de cada proveedor.</p>
       </div>
@@ -44,7 +57,7 @@ export default async function ListaPagos({ searchParams }: { searchParams: Promi
           </thead>
           <tbody>
             {pagos.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-gris-500">No hay pagos{texto || estado ? " con ese filtro" : " todavía"}.</td></tr>
+              <SinResultados columnas={8} que="pagos" filtrado={!!(texto || estado)} conFechas={conFechas} href={todas} />
             ) : pagos.map((c) => {
               const e = ESTADOS_PAGO[c.estado as EstadoPago];
               return (
@@ -65,6 +78,7 @@ export default async function ListaPagos({ searchParams }: { searchParams: Promi
           </tbody>
         </table>
       </div>
+      <AvisoTope mostrados={pagos.length} total={encontrados} />
     </Tarjeta>
   );
 }

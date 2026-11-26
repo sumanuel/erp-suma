@@ -1,22 +1,31 @@
 import Link from "next/link";
+import { AvisoTope, FiltroFechas, SinResultados, VerTodasLasFechas, enlaceTodasLasFechas } from "@/components/listado/filtro-fechas";
+import { porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
 import { Eye, Plus } from "lucide-react";
 import { Etiqueta, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { ESTADOS_COTIZACION, numeroCotizacion, type EstadoCotizacion } from "@/lib/cotizaciones/estados";
 import { formatoFecha, formatoUsd } from "./formato";
 
-export default async function ListaCotizaciones({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
+export default async function ListaCotizaciones({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string; desde?: string; hasta?: string }> }) {
   const ctx = await requerirSesion();
-  const { q = "", estado = "" } = await searchParams;
+  const filtros = await searchParams;
+  const { q = "", estado = "" } = filtros;
+  const fechas = rangoDeFechas(filtros, "todas");
+  const conFechas = !!(fechas.desde || fechas.hasta);
+  const todas = enlaceTodasLasFechas("/cotizaciones", { q, estado });
   const texto = q.trim().slice(0, 60);
   const numero = /^(COT-?)?0*(\d{1,9})$/i.exec(texto)?.[2];
+  const where = {
+    ...porFecha(fechas.desdeFecha, fechas.hastaFecha),
+    ...(estado in ESTADOS_COTIZACION ? { estado } : {}),
+    ...(texto
+      ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { cliente: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { cliente: { documento: { contains: texto, mode: "insensitive" as const } } }] }
+      : {}),
+  };
+  const encontrados = await ctx.db.cotizacion.count({ where });
   const cotizaciones = await ctx.db.cotizacion.findMany({
-    where: {
-      ...(estado in ESTADOS_COTIZACION ? { estado } : {}),
-      ...(texto
-        ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { cliente: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { cliente: { documento: { contains: texto, mode: "insensitive" as const } } }] }
-        : {}),
-    },
+    where,
     include: { cliente: { select: { razonSocial: true } } },
     orderBy: { numero: "desc" },
     take: 200,
@@ -25,13 +34,17 @@ export default async function ListaCotizaciones({ searchParams }: { searchParams
   return (
     <Tarjeta>
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <form className="flex flex-wrap items-center gap-2" role="search">
-          <input name="q" defaultValue={texto} placeholder="Número o cliente" aria-label="Buscar" className={`${claseControl} w-60`} />
-          <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} w-48 pr-9`}>
-            <option value="">Todos los estados</option>
-            {Object.entries(ESTADOS_COTIZACION).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
-          </select>
+        <form className="flex flex-wrap items-end gap-2" role="search">
+          <FiltroFechas desde={fechas.desde} hasta={fechas.hasta} />
+          <div className="w-72"><input name="q" defaultValue={texto} placeholder="Número o cliente" aria-label="Buscar" className={claseControl} /></div>
+          <div className="w-48">
+            <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} pr-9`}>
+              <option value="">Todos los estados</option>
+              {Object.entries(ESTADOS_COTIZACION).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
+            </select>
+          </div>
           <button type="submit" className={clasesBoton("secundario")}>Filtrar</button>
+          <VerTodasLasFechas href={todas} />
         </form>
         {puedeCrear ? <Link href="/cotizaciones/nueva" className={clasesBoton("primario")}><Plus className="size-4" aria-hidden />Nueva cotización</Link> : null}
       </div>
@@ -45,7 +58,7 @@ export default async function ListaCotizaciones({ searchParams }: { searchParams
           </thead>
           <tbody>
             {cotizaciones.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-gris-500">No hay cotizaciones{texto || estado ? " con ese filtro" : " todavía"}.</td></tr>
+              <SinResultados columnas={6} que="cotizaciones" filtrado={!!(texto || estado)} conFechas={conFechas} href={todas} />
             ) : cotizaciones.map((p) => {
               const e = ESTADOS_COTIZACION[p.estado as EstadoCotizacion];
               return (
@@ -66,6 +79,7 @@ export default async function ListaCotizaciones({ searchParams }: { searchParams
           </tbody>
         </table>
       </div>
+      <AvisoTope mostrados={cotizaciones.length} total={encontrados} />
     </Tarjeta>
   );
 }

@@ -1,22 +1,31 @@
 import Link from "next/link";
+import { AvisoTope, FiltroFechas, SinResultados, VerTodasLasFechas, enlaceTodasLasFechas } from "@/components/listado/filtro-fechas";
+import { porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
 import { Eye, Plus } from "lucide-react";
 import { Etiqueta, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { ESTADOS_FACTURA, estadoDevolucion, numeroFactura, type EstadoFactura } from "@/lib/facturacion/estados";
 import { formatoFecha, formatoUsd } from "./formato";
 
-export default async function ListaFacturas({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
+export default async function ListaFacturas({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string; desde?: string; hasta?: string }> }) {
   const ctx = await requerirSesion();
-  const { q = "", estado = "" } = await searchParams;
+  const filtros = await searchParams;
+  const { q = "", estado = "" } = filtros;
+  const fechas = rangoDeFechas(filtros, "mes");
+  const conFechas = !!(fechas.desde || fechas.hasta);
+  const todas = enlaceTodasLasFechas("/facturacion", { q, estado });
   const texto = q.trim().slice(0, 60);
   const numero = /^(FAC-?)?0*(\d{1,9})$/i.exec(texto)?.[2];
+  const where = {
+    ...porFecha(fechas.desdeFecha, fechas.hastaFecha),
+    ...(estado in ESTADOS_FACTURA ? { estado } : {}),
+    ...(texto
+      ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { cliente: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { cliente: { documento: { contains: texto, mode: "insensitive" as const } } }] }
+      : {}),
+  };
+  const encontrados = await ctx.db.factura.count({ where });
   const facturas = await ctx.db.factura.findMany({
-    where: {
-      ...(estado in ESTADOS_FACTURA ? { estado } : {}),
-      ...(texto
-        ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { cliente: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { cliente: { documento: { contains: texto, mode: "insensitive" as const } } }] }
-        : {}),
-    },
+    where,
     include: { cliente: { select: { razonSocial: true } }, lineas: { select: { cantidad: true, notaLineas: { where: { nota: { estado: "ACTIVA" } }, select: { cantidad: true } } } } },
     orderBy: { numero: "desc" },
     take: 200,
@@ -25,13 +34,17 @@ export default async function ListaFacturas({ searchParams }: { searchParams: Pr
   return (
     <Tarjeta>
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <form className="flex flex-wrap items-center gap-2" role="search">
-          <input name="q" defaultValue={texto} placeholder="Número o cliente" aria-label="Buscar" className={`${claseControl} w-60`} />
-          <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} w-48 pr-9`}>
-            <option value="">Todos los estados</option>
-            {Object.entries(ESTADOS_FACTURA).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
-          </select>
+        <form className="flex flex-wrap items-end gap-2" role="search">
+          <FiltroFechas desde={fechas.desde} hasta={fechas.hasta} />
+          <div className="w-72"><input name="q" defaultValue={texto} placeholder="Número o cliente" aria-label="Buscar" className={claseControl} /></div>
+          <div className="w-48">
+            <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} pr-9`}>
+              <option value="">Todos los estados</option>
+              {Object.entries(ESTADOS_FACTURA).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
+            </select>
+          </div>
           <button type="submit" className={clasesBoton("secundario")}>Filtrar</button>
+          <VerTodasLasFechas href={todas} />
         </form>
         {puedeCrear ? <Link href="/facturacion/nueva" className={clasesBoton("primario")}><Plus className="size-4" aria-hidden />Nueva factura</Link> : null}
       </div>
@@ -45,7 +58,7 @@ export default async function ListaFacturas({ searchParams }: { searchParams: Pr
           </thead>
           <tbody>
             {facturas.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-gris-500">No hay facturas{texto || estado ? " con ese filtro" : " todavía"}.</td></tr>
+              <SinResultados columnas={7} que="facturas" filtrado={!!(texto || estado)} conFechas={conFechas} href={todas} />
             ) : facturas.map((f) => {
               const e = ESTADOS_FACTURA[f.estado as EstadoFactura];
               const devolucion = estadoDevolucion(f.lineas.map((l) => ({ vendida: Number(l.cantidad), devuelta: l.notaLineas.reduce((s, x) => s + Number(x.cantidad), 0) })));
@@ -68,6 +81,7 @@ export default async function ListaFacturas({ searchParams }: { searchParams: Pr
           </tbody>
         </table>
       </div>
+      <AvisoTope mostrados={facturas.length} total={encontrados} />
     </Tarjeta>
   );
 }

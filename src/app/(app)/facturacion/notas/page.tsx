@@ -4,7 +4,9 @@ import { Etiqueta, Tarjeta, claseControl, clasesBoton } from "@/components/ui";
 import { requerirSesion } from "@/lib/dal";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { ESTADOS_NOTA, MODOS_NOTA_VENTA, numeroNotaVenta, type EstadoNota } from "@/lib/notas/estados";
-import { porFecha, porTexto, rangoDeFechas } from "@/lib/notas/filtros";
+import { porTexto } from "@/lib/notas/filtros";
+import { AvisoTope, FiltroFechas, SinResultados, VerTodasLasFechas, enlaceTodasLasFechas } from "@/components/listado/filtro-fechas";
+import { porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
 import { formatoFecha, formatoUsd } from "../formato";
 
 export default async function ListaNotasVenta({ searchParams }: { searchParams: Promise<{ q?: string; tipo?: string; estado?: string; desde?: string; hasta?: string }> }) {
@@ -12,7 +14,8 @@ export default async function ListaNotasVenta({ searchParams }: { searchParams: 
   const p = await searchParams;
   const { q = "", tipo = "", estado = "" } = p;
   const texto = q.trim().slice(0, 60);
-  const { desde, hasta, desdeFecha, hastaFecha } = rangoDeFechas(p);
+  const { desde, hasta, desdeFecha, hastaFecha } = rangoDeFechas(p, "mes");
+  const todas = enlaceTodasLasFechas("/facturacion/notas", { q, estado, tipo });
   const where = {
     ...(tipo === "CREDITO" || tipo === "DEBITO" ? { tipo } : {}),
     ...(estado in ESTADOS_NOTA ? { estado } : {}),
@@ -28,13 +31,12 @@ export default async function ListaNotasVenta({ searchParams }: { searchParams: 
     <Tarjeta>
       <div className="p-4">
         <form className="flex flex-wrap items-end gap-3" role="search">
-          <label className={campo}>Desde<input type="date" name="desde" defaultValue={desde} className={`${claseControl} w-40`} /></label>
-          <label className={campo}>Hasta<input type="date" name="hasta" defaultValue={hasta} className={`${claseControl} w-40`} /></label>
+          <FiltroFechas desde={desde} hasta={hasta} />
           <label className={campo}>Buscar<input name="q" defaultValue={texto} placeholder="NC, ND, FAC, cliente o motivo" className={`${claseControl} w-64`} /></label>
           <label className={campo}>Tipo<select name="tipo" defaultValue={tipo} className={`${claseControl} w-44 pr-9`}><option value="">Créditos y débitos</option><option value="CREDITO">Notas de crédito</option><option value="DEBITO">Notas de débito</option></select></label>
           <label className={campo}>Estado<select name="estado" defaultValue={estado} className={`${claseControl} w-36 pr-9`}><option value="">Todas</option>{Object.entries(ESTADOS_NOTA).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}</select></label>
           <button type="submit" className={clasesBoton("secundario")}>Filtrar</button>
-          <Link href="/facturacion/notas?desde=&hasta=" className="flex h-10 items-center px-2 text-sm text-gris-700 hover:text-tinta">Ver todas las fechas</Link>
+          <VerTodasLasFechas href={todas} />
         </form>
         <p className="mt-2 text-[12.5px] text-gris-500">Las notas se emiten desde la factura que corrigen.</p>
       </div>
@@ -48,7 +50,7 @@ export default async function ListaNotasVenta({ searchParams }: { searchParams: 
           </thead>
           <tbody>
             {notas.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-gris-500">No hay notas{texto || tipo || estado || desde || hasta ? " con ese filtro" : " todavía"}.</td></tr>
+              <SinResultados columnas={8} que="notas" filtrado={!!(texto || tipo || estado)} conFechas={!!(desde || hasta)} href={todas} />
             ) : notas.map((n) => {
               const e = ESTADOS_NOTA[n.estado as EstadoNota];
               const t = numeroNotaVenta(n.tipo, n.numero);
@@ -68,7 +70,7 @@ export default async function ListaNotasVenta({ searchParams }: { searchParams: 
           </tbody>
         </table>
       </div>
-      {encontradas > notas.length ? <p className="p-3 text-[12.5px] text-gris-500">Se muestran las {notas.length} más recientes de {encontradas}: acota las fechas o la búsqueda para ver las demás.</p> : null}
+      <AvisoTope mostrados={notas.length} total={encontradas} />
     </Tarjeta>
   );
 }

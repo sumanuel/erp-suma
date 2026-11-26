@@ -1,22 +1,31 @@
 import Link from "next/link";
+import { AvisoTope, FiltroFechas, SinResultados, VerTodasLasFechas, enlaceTodasLasFechas } from "@/components/listado/filtro-fechas";
+import { porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
 import { Eye, Plus } from "lucide-react";
 import { Etiqueta, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
 import { ESTADOS_PEDIDO, numeroPedido, type EstadoPedido } from "@/lib/pedidos/calculos";
 import { formatoFecha, formatoUsd } from "./formato";
 
-export default async function ListaPedidos({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
+export default async function ListaPedidos({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string; desde?: string; hasta?: string }> }) {
   const ctx = await requerirSesion();
-  const { q = "", estado = "" } = await searchParams;
+  const filtros = await searchParams;
+  const { q = "", estado = "" } = filtros;
+  const fechas = rangoDeFechas(filtros, "todas");
+  const conFechas = !!(fechas.desde || fechas.hasta);
+  const todas = enlaceTodasLasFechas("/pedidos", { q, estado });
   const texto = q.trim().slice(0, 60);
   const numero = /^(PED-?)?0*(\d{1,9})$/i.exec(texto)?.[2];
+  const where = {
+    ...porFecha(fechas.desdeFecha, fechas.hastaFecha),
+    ...(estado in ESTADOS_PEDIDO ? { estado } : {}),
+    ...(texto
+      ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { cliente: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { cliente: { documento: { contains: texto, mode: "insensitive" as const } } }] }
+      : {}),
+  };
+  const encontrados = await ctx.db.pedidoVenta.count({ where });
   const pedidos = await ctx.db.pedidoVenta.findMany({
-    where: {
-      ...(estado in ESTADOS_PEDIDO ? { estado } : {}),
-      ...(texto
-        ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { cliente: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { cliente: { documento: { contains: texto, mode: "insensitive" as const } } }] }
-        : {}),
-    },
+    where,
     include: { cliente: { select: { razonSocial: true } } },
     orderBy: { numero: "desc" },
     take: 200,
@@ -26,13 +35,17 @@ export default async function ListaPedidos({ searchParams }: { searchParams: Pro
   return (
     <Tarjeta>
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <form className="flex flex-wrap items-center gap-2" role="search">
-          <input name="q" defaultValue={texto} placeholder="Número o cliente" aria-label="Buscar" className={`${claseControl} w-60`} />
-          <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} w-48 pr-9`}>
-            <option value="">Todos los estados</option>
-            {Object.entries(ESTADOS_PEDIDO).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
-          </select>
+        <form className="flex flex-wrap items-end gap-2" role="search">
+          <FiltroFechas desde={fechas.desde} hasta={fechas.hasta} />
+          <div className="w-72"><input name="q" defaultValue={texto} placeholder="Número o cliente" aria-label="Buscar" className={claseControl} /></div>
+          <div className="w-48">
+            <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} pr-9`}>
+              <option value="">Todos los estados</option>
+              {Object.entries(ESTADOS_PEDIDO).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
+            </select>
+          </div>
           <button type="submit" className={clasesBoton("secundario")}>Filtrar</button>
+          <VerTodasLasFechas href={todas} />
         </form>
         {porAprobar > 0 ? <Link href="/pedidos?estado=POR_APROBAR" className={clasesBoton("secundario")}>Por aprobar ({porAprobar})</Link> : null}
         {puedeCrear ? <Link href="/pedidos/nuevo" className={clasesBoton("primario")}><Plus className="size-4" aria-hidden />Nuevo pedido</Link> : null}
@@ -47,7 +60,7 @@ export default async function ListaPedidos({ searchParams }: { searchParams: Pro
           </thead>
           <tbody>
             {pedidos.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-gris-500">No hay pedidos{texto || estado ? " con ese filtro" : " todavía"}.</td></tr>
+              <SinResultados columnas={6} que="pedidos" filtrado={!!(texto || estado)} conFechas={conFechas} href={todas} />
             ) : pedidos.map((p) => {
               const e = ESTADOS_PEDIDO[p.estado as EstadoPedido];
               return (
@@ -68,6 +81,7 @@ export default async function ListaPedidos({ searchParams }: { searchParams: Pro
           </tbody>
         </table>
       </div>
+      <AvisoTope mostrados={pedidos.length} total={encontrados} />
     </Tarjeta>
   );
 }

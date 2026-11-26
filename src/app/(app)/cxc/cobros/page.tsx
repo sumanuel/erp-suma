@@ -1,22 +1,31 @@
 import Link from "next/link";
+import { AvisoTope, FiltroFechas, SinResultados, VerTodasLasFechas, enlaceTodasLasFechas } from "@/components/listado/filtro-fechas";
+import { porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
 import { Eye } from "lucide-react";
 import { Etiqueta, Tarjeta, claseControl, clasesBoton } from "@/components/ui";
 import { requerirSesion } from "@/lib/dal";
 import { ESTADOS_COBRO, numeroCobro, type EstadoCobro, nombreFormaCobro } from "@/lib/cxc/estados";
 import { formatoFecha, formatoUsd } from "../formato";
 
-export default async function ListaCobros({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
+export default async function ListaCobros({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string; desde?: string; hasta?: string }> }) {
   const ctx = await requerirSesion();
-  const { q = "", estado = "" } = await searchParams;
+  const filtros = await searchParams;
+  const { q = "", estado = "" } = filtros;
+  const fechas = rangoDeFechas(filtros, "mes");
+  const conFechas = !!(fechas.desde || fechas.hasta);
+  const todas = enlaceTodasLasFechas("/cxc/cobros", { q, estado });
   const texto = q.trim().slice(0, 60);
   const numero = /^(COB-?)?0*(\d{1,9})$/i.exec(texto)?.[2];
+  const where = {
+    ...porFecha(fechas.desdeFecha, fechas.hastaFecha),
+    ...(estado in ESTADOS_COBRO ? { estado } : {}),
+    ...(texto
+      ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { cliente: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { cliente: { documento: { contains: texto, mode: "insensitive" as const } } }, { referencia: { contains: texto, mode: "insensitive" as const } }] }
+      : {}),
+  };
+  const encontrados = await ctx.db.cobro.count({ where });
   const cobros = await ctx.db.cobro.findMany({
-    where: {
-      ...(estado in ESTADOS_COBRO ? { estado } : {}),
-      ...(texto
-        ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { cliente: { razonSocial: { contains: texto, mode: "insensitive" as const } } }, { referencia: { contains: texto, mode: "insensitive" as const } }] }
-        : {}),
-    },
+    where,
     include: { cliente: { select: { razonSocial: true } } },
     orderBy: { numero: "desc" },
     take: 200,
@@ -24,13 +33,17 @@ export default async function ListaCobros({ searchParams }: { searchParams: Prom
   return (
     <Tarjeta>
       <div className="flex flex-wrap items-center gap-3 p-4">
-        <form className="flex flex-wrap items-center gap-2" role="search">
-          <input name="q" defaultValue={texto} placeholder="Número, cliente o referencia" aria-label="Buscar" className={`${claseControl} w-64`} />
-          <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} w-48 pr-9`}>
-            <option value="">Todos los estados</option>
-            {Object.entries(ESTADOS_COBRO).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
-          </select>
+        <form className="flex flex-wrap items-end gap-2" role="search">
+          <FiltroFechas desde={fechas.desde} hasta={fechas.hasta} />
+          <div className="w-72"><input name="q" defaultValue={texto} placeholder="Número, cliente o referencia (o RIF)" aria-label="Buscar" className={claseControl} /></div>
+          <div className="w-48">
+            <select name="estado" defaultValue={estado} aria-label="Estado" className={`${claseControl} pr-9`}>
+              <option value="">Todos los estados</option>
+              {Object.entries(ESTADOS_COBRO).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
+            </select>
+          </div>
           <button type="submit" className={clasesBoton("secundario")}>Filtrar</button>
+          <VerTodasLasFechas href={todas} />
         </form>
         <p className="text-[13px] text-gris-500">Los cobros se registran desde el estado de cuenta de cada cliente.</p>
       </div>
@@ -44,7 +57,7 @@ export default async function ListaCobros({ searchParams }: { searchParams: Prom
           </thead>
           <tbody>
             {cobros.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-gris-500">No hay cobros{texto || estado ? " con ese filtro" : " todavía"}.</td></tr>
+              <SinResultados columnas={8} que="cobros" filtrado={!!(texto || estado)} conFechas={conFechas} href={todas} />
             ) : cobros.map((c) => {
               const e = ESTADOS_COBRO[c.estado as EstadoCobro];
               return (
@@ -65,6 +78,7 @@ export default async function ListaCobros({ searchParams }: { searchParams: Prom
           </tbody>
         </table>
       </div>
+      <AvisoTope mostrados={cobros.length} total={encontrados} />
     </Tarjeta>
   );
 }
