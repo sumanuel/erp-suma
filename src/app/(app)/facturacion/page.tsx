@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AvisoTope, FiltroFechas, SinResultados, VerTodasLasFechas, enlaceTodasLasFechas } from "@/components/listado/filtro-fechas";
-import { porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
+import { LIMITES_FECHA, porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
 import { Eye, Plus } from "lucide-react";
 import { Etiqueta, Tarjeta, clasesBoton, claseControl } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
@@ -11,8 +11,8 @@ export default async function ListaFacturas({ searchParams }: { searchParams: Pr
   const ctx = await requerirSesion();
   const filtros = await searchParams;
   const { q = "", estado = "" } = filtros;
-  const fechas = rangoDeFechas(filtros, "mes");
-  const conFechas = !!(fechas.desde || fechas.hasta);
+  const fechas = rangoDeFechas(filtros, "mes", await ctx.db.factura.aggregate(LIMITES_FECHA));
+  const conFechas = fechas.restringe;
   const todas = enlaceTodasLasFechas("/facturacion", { q, estado });
   const texto = q.trim().slice(0, 60);
   const numero = /^(FAC-?)?0*(\d{1,9})$/i.exec(texto)?.[2];

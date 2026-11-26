@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LIMITES_FECHA, porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
 import { Eye, Plus } from "lucide-react";
 import { Etiqueta, Tarjeta, claseControl, clasesBoton } from "@/components/ui";
 import { requerirSesion, tienePermiso } from "@/lib/dal";
@@ -8,15 +9,15 @@ import { formatoFecha, formatoUsd } from "../formato";
 
 export default async function ListaAsientos({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string; desde?: string; hasta?: string }> }) {
   const ctx = await requerirSesion();
-  const { q = "", estado = "", desde = "", hasta = "" } = await searchParams;
+  const filtros = await searchParams;
+  const { q = "", estado = "" } = filtros;
+  const { desde, hasta, desdeFecha, hastaFecha } = rangoDeFechas(filtros, "todas", await ctx.db.asiento.aggregate(LIMITES_FECHA));
   const texto = q.trim().slice(0, 60);
   const numero = /^(AS-?)?0*(\d{1,9})$/i.exec(texto)?.[2];
-  const fecha = (s: string) => (/^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(`${s}T00:00:00.000Z`) : undefined);
-  const d = fecha(desde), h = fecha(hasta);
   const asientos = await ctx.db.asiento.findMany({
     where: {
       ...(estado in ESTADOS_ASIENTO ? { estado } : {}),
-      ...(d || h ? { fecha: { ...(d ? { gte: d } : {}), ...(h ? { lte: h } : {}) } } : {}),
+      ...porFecha(desdeFecha, hastaFecha),
       ...(texto ? { OR: [...(numero ? [{ numero: Number(numero) }] : []), { descripcion: { contains: texto, mode: "insensitive" as const } }, { referencia: { contains: texto, mode: "insensitive" as const } }] } : {}),
     },
     include: { lineas: { select: { debe: true } } },

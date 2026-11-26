@@ -11,7 +11,7 @@ export default async function NuevaOrden() {
       id={null}
       proveedores={proveedores}
       compras={compras}
-      inicial={{ proveedorId: "", fecha: hoyCaracas().toISOString().slice(0, 10), fechaEsperada: "", observaciones: "", lineas: [] }}
+      inicial={{ proveedorId: "", fecha: hoyCaracas().toISOString().slice(0, 10), fechaEsperada: hoyCaracas().toISOString().slice(0, 10), observaciones: "", lineas: [] }}
     />
   );
 }

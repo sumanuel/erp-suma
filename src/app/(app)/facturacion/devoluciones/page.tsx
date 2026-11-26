@@ -6,7 +6,7 @@ import { numeroFactura } from "@/lib/facturacion/estados";
 import { listarDevoluciones } from "@/lib/notas/devoluciones";
 import { ESTADOS_NOTA, numeroNotaVenta, type EstadoNota } from "@/lib/notas/estados";
 import { FiltroFechas, SinResultados, VerTodasLasFechas, enlaceTodasLasFechas } from "@/components/listado/filtro-fechas";
-import { rangoDeFechas } from "@/lib/filtros-fecha";
+import { LIMITES_FECHA, rangoDeFechas } from "@/lib/filtros-fecha";
 import { formatoFecha, formatoUsd } from "../formato";
 
 const monto = (n: number) => n.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -15,7 +15,7 @@ export default async function ListaDevoluciones({ searchParams }: { searchParams
   const { db } = await requerirPermiso("facturacion", "ver");
   const p = await searchParams;
   const { q = "", estado = "" } = p;
-  const { desde, hasta, desdeFecha, hastaFecha } = rangoDeFechas(p, "mes");
+  const { desde, hasta, desdeFecha, hastaFecha, restringe } = rangoDeFechas(p, "mes", await db.notaVenta.aggregate({ ...LIMITES_FECHA, where: { modo: "DEVOLUCION" } }));
   const todas = enlaceTodasLasFechas("/facturacion/devoluciones", { q, estado });
   const { filas, encontradas, totales } = await listarDevoluciones(db, { texto: q, estado, desde: desdeFecha, hasta: hastaFecha });
 
@@ -60,7 +60,7 @@ export default async function ListaDevoluciones({ searchParams }: { searchParams
             </thead>
             <tbody>
               {filas.length === 0 ? (
-                <SinResultados columnas={11} que="devoluciones" filtrado={!!(q || estado)} conFechas={!!(desde || hasta)} href={todas} />
+                <SinResultados columnas={11} que="devoluciones" filtrado={!!(q || estado)} conFechas={restringe} href={todas} />
               ) : filas.map((x) => {
                 const e = ESTADOS_NOTA[x.estado as EstadoNota];
                 const t = numeroNotaVenta("CREDITO", x.numero);

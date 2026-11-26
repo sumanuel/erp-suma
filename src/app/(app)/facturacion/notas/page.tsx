@@ -6,7 +6,7 @@ import { numeroFactura } from "@/lib/facturacion/estados";
 import { ESTADOS_NOTA, MODOS_NOTA_VENTA, numeroNotaVenta, type EstadoNota } from "@/lib/notas/estados";
 import { porTexto } from "@/lib/notas/filtros";
 import { AvisoTope, FiltroFechas, SinResultados, VerTodasLasFechas, enlaceTodasLasFechas } from "@/components/listado/filtro-fechas";
-import { porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
+import { LIMITES_FECHA, porFecha, rangoDeFechas } from "@/lib/filtros-fecha";
 import { formatoFecha, formatoUsd } from "../formato";
 
 export default async function ListaNotasVenta({ searchParams }: { searchParams: Promise<{ q?: string; tipo?: string; estado?: string; desde?: string; hasta?: string }> }) {
@@ -14,7 +14,7 @@ export default async function ListaNotasVenta({ searchParams }: { searchParams: 
   const p = await searchParams;
   const { q = "", tipo = "", estado = "" } = p;
   const texto = q.trim().slice(0, 60);
-  const { desde, hasta, desdeFecha, hastaFecha } = rangoDeFechas(p, "mes");
+  const { desde, hasta, desdeFecha, hastaFecha, restringe } = rangoDeFechas(p, "mes", await ctx.db.notaVenta.aggregate(LIMITES_FECHA));
   const todas = enlaceTodasLasFechas("/facturacion/notas", { q, estado, tipo });
   const where = {
     ...(tipo === "CREDITO" || tipo === "DEBITO" ? { tipo } : {}),
@@ -50,7 +50,7 @@ export default async function ListaNotasVenta({ searchParams }: { searchParams: 
           </thead>
           <tbody>
             {notas.length === 0 ? (
-              <SinResultados columnas={8} que="notas" filtrado={!!(texto || tipo || estado)} conFechas={!!(desde || hasta)} href={todas} />
+              <SinResultados columnas={8} que="notas" filtrado={!!(texto || tipo || estado)} conFechas={restringe} href={todas} />
             ) : notas.map((n) => {
               const e = ESTADOS_NOTA[n.estado as EstadoNota];
               const t = numeroNotaVenta(n.tipo, n.numero);

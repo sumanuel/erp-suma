@@ -37,7 +37,7 @@ export function FormularioFacturaProveedor({ hoy, catalogos }: { hoy: string; ca
   const [numeroControl, setNumeroControl] = useState("");
   const [tipoDocumento, setTipoDocumento] = useState("FACTURA");
   const [fecha, setFecha] = useState(hoy);
-  const [fechaRecepcion, setFechaRecepcion] = useState("");
+  const [fechaRecepcion, setFechaRecepcion] = useState(hoy);
   const [fechaLibro, setFechaLibro] = useState("");
   const [diasCredito, setDiasCredito] = useState("0");
   const [condicionPagoId, setCondicionPagoId] = useState("");
@@ -104,7 +104,7 @@ export function FormularioFacturaProveedor({ hoy, catalogos }: { hoy: string; ca
           <div className={campo}><label htmlFor="fechaRecepcion" className={et}>Fecha de recepción{opc}</label><input id="fechaRecepcion" type="date" value={fechaRecepcion} min={fecha} max={hoy} onChange={(e) => setFechaRecepcion(e.target.value)} className={claseControl} /></div>
           <div className={campo}>
             <label htmlFor="fechaLibro" className={et}>Fecha del libro de compras{opc}</label>
-            <input id="fechaLibro" type="date" value={fechaLibro} min={fecha} onChange={(e) => setFechaLibro(e.target.value)} className={claseControl} />
+            <input id="fechaLibro" type="date" value={fechaLibro || fecha} min={fecha} onChange={(e) => setFechaLibro(e.target.value)} className={claseControl} />
             <p className="text-[12.5px] text-gris-500">Define el período fiscal; vacío = la de emisión.</p>
           </div>
           <div className={campo}>

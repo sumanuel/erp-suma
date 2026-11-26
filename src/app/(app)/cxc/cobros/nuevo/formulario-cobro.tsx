@@ -19,7 +19,7 @@ const num = (s: string) => {
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
-const pagoVacio = (): Pago => ({ formaPago: "TRANSFERENCIA", moneda: "USD", monto: "", cuentaId: "", referencia: "", bancoChequeId: "", numeroCheque: "", fechaCheque: "" });
+const pagoVacio = (hoy: string): Pago => ({ formaPago: "TRANSFERENCIA", moneda: "USD", monto: "", cuentaId: "", referencia: "", bancoChequeId: "", numeroCheque: "", fechaCheque: hoy });
 
 /**
  * Recibo de ingreso: reparte lo que paga el cliente entre sus facturas abiertas, con una o varias formas de pago (cada una con su moneda y cuenta).
@@ -29,7 +29,7 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa, cuen
   clienteId: string; clienteNombre: string; facturas: FacturaAbierta[]; tasa: number | null; cuentas: Cuenta[]; cobradores: Opc[]; cobradorInicial: string; bancos: Opc[]; hoy: string;
 }) {
   const [montos, setMontos] = useState<Record<string, string>>({});
-  const [pagos, setPagos] = useState<Pago[]>([pagoVacio()]);
+  const [pagos, setPagos] = useState<Pago[]>([pagoVacio(hoy)]);
   const [fecha, setFecha] = useState(hoy);
   const [cobradorId, setCobradorId] = useState(cobradorInicial);
   const [comprobante, setComprobante] = useState("");
@@ -56,7 +56,7 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa, cuen
     iniciar(async () => {
       const r = await registrarReciboCliente({
         clienteId, fecha, cobradorId, numeroComprobante: comprobante, observaciones, anticipo,
-        pagos: pagos.map((p) => ({ ...p, monto: num(p.monto) })),
+        pagos: pagos.map((p) => ({ ...p, monto: num(p.monto), fechaCheque: p.formaPago === "CHEQUE" ? p.fechaCheque : "" })),
         aplicaciones: facturas.map((f) => ({ facturaId: f.id, montoUsd: num(montos[f.id] ?? "") })).filter((a) => a.montoUsd > 0),
       });
       if (r?.error) setError(r.error);
@@ -91,7 +91,7 @@ export function FormularioCobro({ clienteId, clienteNombre, facturas, tasa, cuen
       <Tarjeta className="p-6">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-base font-semibold">Formas de pago</h3>
-          <button type="button" onClick={() => setPagos((x) => [...x, pagoVacio()])} className={clasesBoton("secundario")}><Plus className="size-4" aria-hidden />Agregar forma de pago</button>
+          <button type="button" onClick={() => setPagos((x) => [...x, pagoVacio(hoy)])} className={clasesBoton("secundario")}><Plus className="size-4" aria-hidden />Agregar forma de pago</button>
         </div>
         <div className="flex flex-col gap-4">
           {pagos.map((p, i) => (

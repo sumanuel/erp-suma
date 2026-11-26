@@ -1,4 +1,5 @@
 import type { CampoForm } from "@/lib/formularios";
+import { hoyCaracas } from "@/lib/tasas";
 import type { Db } from "@/lib/tenant";
 import type { Delegado, Fila, Maestro } from "./tipos";
 import { conErrores, etiquetaActivo, filtroActivo, noNegativos, rangoPorcentaje } from "./comunes";
@@ -358,7 +359,12 @@ export const promociones: Maestro = {
     { nombre: "observaciones", etiqueta: "Observaciones", tipo: "textoLargo", max: 500, ancho: 3 },
     { nombre: "activo", etiqueta: "Activa", tipo: "booleano" },
   ],
-  valoresIniciales: { activo: true, cantidadRequerida: "0", cantidadOtorgada: "0", multiplo: "0" },
+  // Getter: las fechas se calculan al abrir el formulario. Se proponen desde hoy hasta fin de mes.
+  get valoresIniciales() {
+    const hoy = hoyCaracas();
+    const finDeMes = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, 0));
+    return { activo: true, cantidadRequerida: "0", cantidadOtorgada: "0", multiplo: "0", desde: hoy.toISOString().slice(0, 10), hasta: finDeMes.toISOString().slice(0, 10) };
+  },
   columnas: [
     { id: "producto", titulo: "Producto", valor: (f) => `${f.productoCodigo} · ${rel(f, "producto", "descripcion") ?? ""}`, fija: true },
     { id: "lista", titulo: "Lista", valor: (f) => (f.lista ? String(f.lista) : "Todas") },
