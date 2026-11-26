@@ -34,4 +34,13 @@ export function rangoDeFechas(p: { desde?: string; hasta?: string }, alEntrar: "
   };
 }
 
+// Para columnas con hora (movimientos): el día es el de Caracas, que va 4 horas detrás de UTC todo el año.
+/** El día de Caracas de un momento, a medianoche UTC (como se manejan los días en los filtros). */
+export const diaDeCaracas = (momento: Date) => new Date(`${new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas" }).format(momento)}T00:00:00.000Z`);
+/** Condición para una columna con hora: desde el comienzo del primer día hasta el final del último, en hora de Caracas. */
+export function entreDiasCaracas(desde?: Date, hasta?: Date) {
+  const inicio = (d: Date, mas = 0) => new Date(d.getTime() + (mas * 24 + 4) * 3_600_000);
+  return { ...(desde ? { gte: inicio(desde) } : {}), ...(hasta ? { lt: inicio(hasta, 1) } : {}) };
+}
+
 export const porFecha = (desde?: Date, hasta?: Date) => (desde || hasta ? { fecha: { ...(desde ? { gte: desde } : {}), ...(hasta ? { lte: hasta } : {}) } } : {});

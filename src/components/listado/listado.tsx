@@ -20,6 +20,7 @@ import {
 } from "@/lib/listados";
 import { AccionesFila, type EliminarFila } from "./acciones-fila";
 import { ElegirColumnas, FormularioListado, SelectFiltro } from "./controles";
+import { FiltroFechas } from "./filtro-fechas";
 
 const numero = new Intl.NumberFormat("es-VE");
 
@@ -58,7 +59,10 @@ export async function Listado<F, O>({
     />
   ));
 
+  const dia = (iso: string) => iso.split("-").reverse().join("/");
   const activos = [
+    ...(consulta.desde ? [{ clave: "desde", texto: `Desde ${dia(consulta.desde)}`, quitar: hrefListado(d, consulta, { desde: undefined, pagina: 1 }) }] : []),
+    ...(consulta.hasta ? [{ clave: "hasta", texto: `Hasta ${dia(consulta.hasta)}`, quitar: hrefListado(d, consulta, { hasta: undefined, pagina: 1 }) }] : []),
     ...(consulta.texto ? [{ clave: "q", texto: `Búsqueda: «${consulta.texto}»`, quitar: hrefListado(d, consulta, { texto: "", pagina: 1 }) }] : []),
     ...filtros
       .filter((f) => consulta.filtros[f.id])
@@ -75,7 +79,8 @@ export async function Listado<F, O>({
     <Tarjeta recortar={false}>
       {/* La clave rehace el formulario al cambiar la URL: sus campos no controlados quedarían con lo escrito antes. */}
       <FormularioListado key={claveConsulta} ruta={d.ruta} className="flex flex-col gap-3 border-b border-linea px-4 py-3.5">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          {d.rango ? <FiltroFechas desde={d.rango.desde} hasta={d.rango.hasta} /> : null}
           {d.busqueda ? (
             <div className="relative min-w-[220px] max-w-[420px] flex-1">
               <label htmlFor={`buscar-${d.id}`} className="sr-only">
@@ -91,10 +96,9 @@ export async function Listado<F, O>({
                 className="h-10 w-full rounded-[10px] border border-borde-campo bg-white pr-3 pl-[38px] text-sm placeholder:text-gris-500"
               />
             </div>
-          ) : (
-            selects
-          )}
-          {d.busqueda || filtros.length > 0 ? (
+          ) : null}
+          {selects}
+          {d.busqueda || d.rango || filtros.length > 0 ? (
             <button type="submit" className={clasesBoton("secundario")}>
               Buscar
             </button>
@@ -108,7 +112,6 @@ export async function Listado<F, O>({
             {acciones}
           </div>
         </div>
-        {d.busqueda && filtros.length > 0 ? <div className="flex flex-wrap items-center gap-2">{selects}</div> : null}
         {consulta.orden.columna !== d.orden.columna || consulta.orden.dir !== d.orden.dir ? (
           <>
             <input type="hidden" name="orden" value={consulta.orden.columna} />
@@ -130,7 +133,7 @@ export async function Listado<F, O>({
               <X className="size-3.5" strokeWidth={2.2} aria-hidden />
             </Link>
           ))}
-          <Link href={hrefListado(d, consulta, { texto: "", filtros: {}, pagina: 1 })} className="px-1 text-[13px] font-medium text-gris-600 hover:text-tinta hover:underline">
+          <Link href={hrefListado(d, consulta, { texto: "", filtros: {}, desde: undefined, hasta: undefined, pagina: 1 })} className="px-1 text-[13px] font-medium text-gris-600 hover:text-tinta hover:underline">
             Limpiar filtros
           </Link>
         </div>

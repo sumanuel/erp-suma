@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { rangoDeFechas } from "../src/lib/filtros-fecha";
+import { entreDiasCaracas, diaDeCaracas, rangoDeFechas } from "../src/lib/filtros-fecha";
 
 const f = (s: string) => new Date(`${s}T00:00:00.000Z`);
 const ahora = f("2026-11-25");
@@ -15,6 +15,12 @@ describe("Rango de fechas de los filtros", () => {
     assert.deepEqual(ver(rangoDeFechas({}, "todas", limites("2026-11-01", "2026-12-24"), ahora)), ["2026-11-01", "2026-12-24", false]);
     assert.deepEqual(ver(rangoDeFechas({ desde: "", hasta: "" }, "mes", limites("2025-03-10", "2026-11-20"), ahora)), ["2025-03-10", "2026-11-25", false]);
     assert.deepEqual(ver(rangoDeFechas({ desde: "no-es", hasta: "2026-02-31" }, "todas", limites("2025-03-10", null), ahora)), ["2025-03-10", "2026-11-25", false]);
+  });
+
+  it("con hora, el día es el de Caracas: las 9 de la noche siguen siendo del mismo día", () => {
+    assert.equal(diaDeCaracas(new Date("2026-11-26T01:00:00.000Z")).toISOString().slice(0, 10), "2026-11-25");
+    const r = entreDiasCaracas(f("2026-11-25"), f("2026-11-25"));
+    assert.deepEqual([r.gte?.toISOString(), r.lt?.toISOString()], ["2026-11-25T04:00:00.000Z", "2026-11-26T04:00:00.000Z"]);
   });
 
   it("el mes en curso solo filtra si hay algo anterior; lo pedido se respeta", () => {

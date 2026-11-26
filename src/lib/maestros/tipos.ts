@@ -71,6 +71,10 @@ export type Maestro = {
   columnas: ColumnaMaestro[];
   busqueda: { texto: string; campos: string[] };
   filtros?: FiltroMaestro[];
+  /// Filtros cuyas opciones salen de la base de datos (almacenes, categorías…); van después de los fijos.
+  filtrosDe?: (db: Db) => Promise<FiltroMaestro[]>;
+  /// Añade «Desde» y «Hasta» sobre esta columna con hora (el día es el de Caracas).
+  fechas?: { campo: string };
   orden: { columna: string; dir: "asc" | "desc" };
   titulo: (f: Fila) => string;
   descripcion?: (f: Fila) => string;

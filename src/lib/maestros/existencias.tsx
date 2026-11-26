@@ -1,6 +1,7 @@
 import { ResumenExistencias } from "@/components/existencias/resumen-existencias";
 import { registrarMovimiento, TIPOS_MOVIMIENTO, trasladar, type TipoMovimiento } from "@/lib/inventario/movimientos";
-import type { Delegado, Fila, Maestro } from "./tipos";
+import type { Db } from "@/lib/tenant";
+import type { Delegado, Fila, FiltroMaestro, Maestro } from "./tipos";
 import { conErrores, etiquetaActivo, filtroActivo } from "./comunes";
 
 const rel = (f: Fila, r: string, campo: string) => (f[r] as Record<string, unknown> | null | undefined)?.[campo];
@@ -57,6 +58,47 @@ export const almacenes: Maestro = {
   mensajeDependientes: "No se puede eliminar: tiene existencias o movimientos. Márcalo como inactivo en su lugar.",
 };
 
+// Opciones de los filtros que dependen de lo registrado.
+async function filtroAlmacen(db: Db): Promise<FiltroMaestro> {
+  const lista = await db.almacen.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } });
+  return { id: "almacen", etiqueta: "Almacén", todos: "Todos los almacenes", opciones: lista.map((a) => ({ valor: a.id, etiqueta: a.nombre, donde: { almacenId: a.id } })) };
+}
+
+async function filtrosExistencias(db: Db): Promise<FiltroMaestro[]> {
+  const [almacen, categorias, marcas, bajoMinimo] = await Promise.all([
+    filtroAlmacen(db),
+    db.categoria.findMany({ where: { productos: { some: {} } }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
+    db.marca.findMany({ where: { productos: { some: {} } }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
+    // «Bajo mínimo» compara cada saldo con el mínimo de su producto (como la columna Estado); Prisma no compara columnas de dos tablas.
+    db.$queryRaw<{ almacenId: string; productoCodigo: string }[]>`
+      SELECT e.almacen_id AS "almacenId", e.producto_codigo AS "productoCodigo"
+      FROM existencia e JOIN producto p ON p.codigo = e.producto_codigo
+      WHERE e.cantidad > 0 AND e.cantidad < p.existencia_minima`,
+  ]);
+  return [
+    {
+      id: "saldo", etiqueta: "Saldo", todos: "Con y sin existencia",
+      opciones: [
+        { valor: "con", etiqueta: "Con existencia", donde: { cantidad: { gt: 0 } } },
+        { valor: "sin", etiqueta: "Sin existencia", donde: { cantidad: { lte: 0 } } },
+        // Sin ninguno bajo mínimo no debe salir nada: una condición «o» vacía no filtra, por eso se usa una lista vacía.
+        { valor: "bajo", etiqueta: "Bajo mínimo", donde: bajoMinimo.length ? { OR: bajoMinimo.map((x) => ({ almacenId: x.almacenId, productoCodigo: x.productoCodigo })) } : { productoCodigo: { in: [] } } },
+      ],
+    },
+    almacen,
+    { id: "categoria", etiqueta: "Categoría", todos: "Todas las categorías", opciones: categorias.map((c) => ({ valor: c.id, etiqueta: c.nombre, donde: { producto: { categoriaId: c.id } } })) },
+    { id: "marca", etiqueta: "Marca", todos: "Todas las marcas", opciones: marcas.map((c) => ({ valor: c.id, etiqueta: c.nombre, donde: { producto: { marcaId: c.id } } })) },
+  ];
+}
+
+async function filtrosMovimientos(db: Db): Promise<FiltroMaestro[]> {
+  const [almacen, usuarios] = await Promise.all([
+    filtroAlmacen(db),
+    db.movimientoInventario.findMany({ where: { usuarioNombre: { not: null } }, distinct: ["usuarioNombre"], orderBy: { usuarioNombre: "asc" }, select: { usuarioNombre: true } }),
+  ]);
+  return [almacen, { id: "usuario", etiqueta: "Usuario", todos: "Todos los usuarios", opciones: usuarios.map((u) => ({ valor: u.usuarioNombre!, etiqueta: u.usuarioNombre!, donde: { usuarioNombre: u.usuarioNombre } })) }];
+}
+
 export const existencias: Maestro = {
   id: "existencias",
   modulo: "existencias",
@@ -85,15 +127,7 @@ export const existencias: Maestro = {
     },
   ],
   busqueda: { texto: "Buscar por código o descripción del producto", campos: ["productoCodigo", "producto.descripcion"] },
-  filtros: [
-    {
-      id: "saldo", etiqueta: "Saldo", todos: "Con y sin existencia",
-      opciones: [
-        { valor: "con", etiqueta: "Con existencia", donde: { cantidad: { gt: 0 } } },
-        { valor: "sin", etiqueta: "Sin existencia", donde: { cantidad: 0 } },
-      ],
-    },
-  ],
+  filtrosDe: filtrosExistencias,
   orden: { columna: "codigo", dir: "asc" },
   titulo: (f) => String(f.productoCodigo ?? ""),
 };
@@ -166,6 +200,8 @@ export const movimientos: Maestro = {
       ],
     },
   ],
+  filtrosDe: filtrosMovimientos,
+  fechas: { campo: "fecha" },
   orden: { columna: "fecha", dir: "desc" },
   titulo: (f) => `${f.productoCodigo}`,
   preparar: (d) => ({ ...d, productoCodigo: typeof d.productoCodigo === "string" ? d.productoCodigo.toUpperCase() : d.productoCodigo }),

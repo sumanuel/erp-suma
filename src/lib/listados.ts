@@ -48,6 +48,8 @@ export type Definicion<F, O> = {
   elemento: { singular: string; plural: string };
   busqueda?: string;
   filtros?: Filtro[];
+  /// Rango de fechas: lo que muestran los calendarios y, en `activo`, los extremos que de verdad filtran.
+  rango?: { desde: string; hasta: string; activo: { desde?: string; hasta?: string } };
   columnas: Columna<F, O>[];
   orden: { columna: string; dir: Direccion };
   porPagina?: number;
@@ -61,6 +63,8 @@ export type Definicion<F, O> = {
 
 export type Consulta = {
   texto: string;
+  desde?: string;
+  hasta?: string;
   filtros: Record<string, string>;
   orden: { columna: string; dir: Direccion };
   pagina: number;
@@ -97,6 +101,8 @@ export function leerConsulta<F, O>(d: Definicion<F, O>, busqueda: Busqueda, filt
   return {
     texto: d.busqueda ? primero(busqueda.q).slice(0, 100) : "",
     filtros: filtrosValidos,
+    desde: d.rango?.activo.desde,
+    hasta: d.rango?.activo.hasta,
     orden: columna ? { columna: columna.id, dir: dir === "desc" ? "desc" : "asc" } : d.orden,
     pagina: Number.isSafeInteger(pagina) && pagina > 1 ? pagina : 1,
   };
@@ -115,7 +121,7 @@ export function armarPedido<F, O>(d: Definicion<F, O>, consulta: Consulta, salto
 }
 
 export function hayFiltros(consulta: Consulta) {
-  return consulta.texto !== "" || Object.keys(consulta.filtros).length > 0;
+  return consulta.texto !== "" || Object.keys(consulta.filtros).length > 0 || !!consulta.desde || !!consulta.hasta;
 }
 
 // Solo escribe lo que difiere de lo predeterminado, para que la URL compartida quede corta.
@@ -123,6 +129,8 @@ export function parametrosListado<F, O>(d: Definicion<F, O>, consulta: Consulta,
   const c = { ...consulta, ...cambios };
   const params = new URLSearchParams();
   if (c.texto) params.set("q", c.texto);
+  if (c.desde) params.set("desde", c.desde);
+  if (c.hasta) params.set("hasta", c.hasta);
   for (const [id, valor] of Object.entries(c.filtros)) params.set(id, valor);
   if (c.orden.columna !== d.orden.columna || c.orden.dir !== d.orden.dir) {
     params.set("orden", c.orden.columna);
