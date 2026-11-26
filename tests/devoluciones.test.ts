@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { estadoDeCuenta } from "../src/lib/cxc/estado-cuenta";
 import { anularAplicacionAnticipo, anularCobro, aplicarAnticipo, registrarCobro } from "../src/lib/cxc/servicio";
+import { listarDevoluciones } from "../src/lib/notas/devoluciones";
 import { facturarYCobrar } from "../src/lib/facturacion/contado";
 import { emitirFactura } from "../src/lib/facturacion/servicio";
 import { anularNotaVenta, crearNotaVenta, type DatosNotaVenta } from "../src/lib/notas/servicio";
@@ -117,6 +118,29 @@ describe("Devolución de facturas con reintegro", () => {
     assert.ok((await anularNotaVenta(e.db, e.actor, b.id, "Se revierte")).ok);
     assert.deepEqual([await factura(x.id), await saldoCuenta(x.usd.id)], [[-20, 5], 125]);
     assert.equal(await descuadreContable(e.db), 0);
+  });
+
+  it("la consulta de devoluciones suma lo vigente por moneda; las anuladas se ven pero no suman", async () => {
+    const x = await venta();
+    const a = await x.devolver(2, { reintegros: [reintegro("VES", 800, x.ves.id)] });
+    const b = await x.devolver(1, { reintegros: [reintegro("USD", 4, x.usd.id)], saldoAFavor: true });
+    const c = await x.devolver(1, { reintegros: [reintegro("USD", 10, x.usd.id)] });
+    assert.ok(a.ok && b.ok && c.ok);
+    assert.ok((await anularNotaVenta(e.db, e.actor, c.id, "No era")).ok);
+    const r = await listarDevoluciones(e.db, { clienteId: x.cli.id });
+    assert.deepEqual(r.totales, { cantidad: 2, anuladas: 1, total: 30, totalBs: 1200, reintegradoBs: 800, reintegradoUsd: 4, saldoFavor: 6, deDeuda: 0 });
+    assert.deepEqual([r.encontradas, r.filas.map((f) => f.completa)], [3, [false, false, false]]);
+    // Los totales incluyen lo que no cabe en la lista; el filtro por estado y por número funciona.
+    const corta = await listarDevoluciones(e.db, { clienteId: x.cli.id }, 1);
+    assert.deepEqual([corta.filas.length, corta.totales.cantidad], [1, 2]);
+    assert.equal((await listarDevoluciones(e.db, { clienteId: x.cli.id, estado: "ANULADA" })).encontradas, 1);
+    const numeroFac = (await e.db.factura.findUniqueOrThrow({ where: { id: x.id } })).numero;
+    assert.equal((await listarDevoluciones(e.db, { clienteId: x.cli.id, texto: `FAC-${numeroFac}` })).encontradas, 3);
+    assert.equal((await listarDevoluciones(e.db, { clienteId: x.cli.id, hasta: new Date("2000-01-01T00:00:00.000Z") })).encontradas, 0);
+
+    const y = await venta();
+    assert.ok((await y.devolver(5, { reintegros: [reintegro("USD", 50, y.usd.id)] })).ok);
+    assert.equal((await listarDevoluciones(e.db, { clienteId: y.cli.id })).filas[0].completa, true);
   });
 
   it("a «Consumidor final» no se le deja saldo a favor", async () => {
