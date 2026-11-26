@@ -1,6 +1,7 @@
 import "server-only";
 import type { Db } from "@/lib/tenant";
 import { ESTADOS_NOTA } from "./estados";
+import { porFecha, porTexto } from "./filtros";
 
 // Consulta de devoluciones de venta (notas de crédito por devolución de mercancía). Los totales son de TODO lo que cumple el filtro, no solo
 // de las filas que se muestran, y las anuladas nunca suman.
@@ -11,20 +12,13 @@ const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const r4 = (n: number) => Math.round((n + Number.EPSILON) * 10000) / 10000;
 
 export async function listarDevoluciones(db: Db, f: FiltroDevoluciones, limite = 200) {
-  const texto = f.texto?.trim().slice(0, 60) ?? "";
-  // «NC-5» busca la devolución; «FAC-5», las de esa factura; un número solo, cualquiera de las dos.
-  const n = /^(NC|FAC)?-?0*(\d{1,9})$/i.exec(texto);
-  const prefijo = n?.[1]?.toUpperCase();
-  const porNumero = n ? [...(prefijo !== "FAC" ? [{ numero: Number(n[2]) }] : []), ...(prefijo !== "NC" ? [{ factura: { numero: Number(n[2]) } }] : [])] : [];
-  const contiene = { contains: texto, mode: "insensitive" as const };
-
   const notas = await db.notaVenta.findMany({
     where: {
       tipo: "CREDITO", modo: "DEVOLUCION",
       ...(f.estado && f.estado in ESTADOS_NOTA ? { estado: f.estado } : {}),
       ...(f.clienteId ? { clienteId: f.clienteId } : {}),
-      ...(f.desde || f.hasta ? { fecha: { ...(f.desde ? { gte: f.desde } : {}), ...(f.hasta ? { lte: f.hasta } : {}) } } : {}),
-      ...(texto ? { OR: [...porNumero, { cliente: { razonSocial: contiene } }, { cliente: { documento: contiene } }, { motivo: contiene }] } : {}),
+      ...porFecha(f.desde, f.hasta),
+      ...porTexto(f.texto ?? ""),
     },
     include: {
       cliente: { select: { razonSocial: true } },

@@ -5,25 +5,17 @@ import { requerirPermiso } from "@/lib/dal";
 import { numeroFactura } from "@/lib/facturacion/estados";
 import { listarDevoluciones } from "@/lib/notas/devoluciones";
 import { ESTADOS_NOTA, numeroNotaVenta, type EstadoNota } from "@/lib/notas/estados";
-import { hoyCaracas } from "@/lib/tasas";
+import { rangoDeFechas } from "@/lib/notas/filtros";
 import { formatoFecha, formatoUsd } from "../formato";
 
-const dia = (s: string) => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined;
-  const d = new Date(`${s}T00:00:00.000Z`);
-  return Number.isNaN(d.getTime()) ? undefined : d;
-};
 const monto = (n: number) => n.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default async function ListaDevoluciones({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string; desde?: string; hasta?: string }> }) {
   const { db } = await requerirPermiso("facturacion", "ver");
   const p = await searchParams;
   const { q = "", estado = "" } = p;
-  // Al entrar se muestra el mes en curso; borrando las fechas salen todas.
-  const hoy = hoyCaracas().toISOString().slice(0, 10);
-  const desde = p.desde ?? `${hoy.slice(0, 8)}01`;
-  const hasta = p.hasta ?? hoy;
-  const { filas, encontradas, totales } = await listarDevoluciones(db, { texto: q, estado, desde: dia(desde), hasta: dia(hasta) });
+  const { desde, hasta, desdeFecha, hastaFecha } = rangoDeFechas(p);
+  const { filas, encontradas, totales } = await listarDevoluciones(db, { texto: q, estado, desde: desdeFecha, hasta: hastaFecha });
   const filtrado = !!(q || estado || desde || hasta);
 
   const dato = (titulo: string, valor: string, detalle?: string) => (
