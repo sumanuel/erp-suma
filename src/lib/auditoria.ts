@@ -32,12 +32,25 @@ export async function registrarCambio(db: Db, actor: Actor, c: Cambio) {
   });
 }
 
+type Decimal = { equals(otro: unknown): boolean; toNumber(): number };
+const esDecimal = (v: unknown): v is Decimal => typeof v === "object" && v !== null && typeof (v as Decimal).equals === "function" && typeof (v as Decimal).toNumber === "function";
+
+/**
+ * ¿Es el mismo valor? La base entrega los decimales como un objeto que se escribe como texto («0») y el formulario manda un número (0):
+ * esos se comparan por su valor (con toda su precisión). Lo demás, tal como se guardaría.
+ */
+function igual(a: unknown, b: unknown): boolean {
+  const [decimal, otro] = esDecimal(a) ? [a, b] : esDecimal(b) ? [b, a] : [null, null];
+  if (decimal && (esDecimal(otro) || typeof otro === "number" || (typeof otro === "string" && otro.trim() !== "" && Number.isFinite(Number(otro))))) return decimal.equals(otro);
+  return JSON.stringify(limpio(a)) === JSON.stringify(limpio(b));
+}
+
 /** De dos fotos de un registro, devuelve solo los campos que cambiaron (para que la auditoría muestre lo que importa). */
 export function soloCambios(antes: Record<string, unknown>, despues: Record<string, unknown>) {
   const a: Record<string, unknown> = {};
   const d: Record<string, unknown> = {};
   for (const k of new Set([...Object.keys(antes), ...Object.keys(despues)])) {
-    if (JSON.stringify(limpio(antes[k])) !== JSON.stringify(limpio(despues[k]))) {
+    if (!igual(antes[k], despues[k])) {
       a[k] = antes[k];
       d[k] = despues[k];
     }
