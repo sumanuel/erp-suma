@@ -1,9 +1,11 @@
 "use client";
 
-import { Fragment, useActionState, useState } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { Aviso, claseControl, claseSoloLectura, clasesBoton } from "@/components/ui";
 import type { CampoForm, EstadoForm, Valores } from "@/lib/formularios";
+import { bloquesDe, resumenBloque, type Bloque } from "@/lib/secciones-ficha";
 
 const columnas = { 1: "", 2: "sm:col-span-2", 3: "sm:col-span-2 xl:col-span-3" } as const;
 
@@ -25,12 +27,15 @@ export function FormularioFicha({
   const [estado, enviar, pendiente] = useActionState(accion, {});
   const actuales = estado.valores ?? valores;
   const errores = estado.errores ?? {};
+  const intento = estado.intento ?? 0;
+  // Lo que se abrió o cerró se guarda fuera del formulario: este se rehace tras cada intento de guardar.
+  const [plegado, setPlegado] = useState<Plegado>({});
 
   return (
     // La clave rehace los campos no controlados con lo último que se envió (React los vacía al terminar la acción).
-    <form action={enviar} key={estado.intento ?? 0} className="flex flex-col gap-5" noValidate>
+    <form action={enviar} key={intento} className="flex flex-col gap-5" noValidate>
       {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
-      <Rejilla campos={campos} actuales={actuales} errores={errores} soloLectura={soloLectura} editando={editando} />
+      <Rejilla campos={campos} actuales={actuales} errores={errores} soloLectura={soloLectura} editando={editando} plegado={plegado} onPlegar={(titulo, abierta) => setPlegado((x) => ({ ...x, [titulo]: { abierta, intento } }))} intento={intento} />
       <div className="flex flex-wrap items-center gap-3 border-t border-linea pt-5">
         {soloLectura ? null : (
           <button data-guardar type="submit" disabled={pendiente} className={clasesBoton("primario")}>
@@ -44,6 +49,8 @@ export function FormularioFicha({
     </form>
   );
 }
+
+type Plegado = Record<string, { abierta: boolean; intento: number }>;
 
 /** Anota lo elegido y vacía, en cadena, los selectores que dependían de él. */
 function cambiarElegido(campos: CampoForm[], antes: Record<string, string>, nombre: string, valor: string) {
@@ -64,31 +71,21 @@ function cambiarElegido(campos: CampoForm[], antes: Record<string, string>, nomb
 }
 
 /**
- * Los campos del formulario. Un campo con `seccion` abre un título nuevo cuando cambia de sección. Un selector con `dependeDe` solo muestra
- * las opciones cuyo `padre` es lo elegido en el otro (país → estado → municipio → parroquia); al cambiar el de arriba se vacía el de abajo.
+ * Los campos del formulario, por secciones: la primera está siempre a la vista y las demás arrancan cerradas (sus campos se envían igual).
+ * Un selector con `dependeDe` solo muestra las opciones cuyo `padre` es lo elegido en el otro (país → estado → municipio → parroquia);
+ * al cambiar el de arriba se vacía el de abajo.
  */
-function Rejilla({ campos, actuales, errores, soloLectura, editando }: { campos: CampoForm[]; actuales: Valores; errores: Record<string, string>; soloLectura: boolean; editando: boolean }) {
+function Rejilla({ campos, actuales, errores, soloLectura, editando, plegado, onPlegar, intento }: { campos: CampoForm[]; actuales: Valores; errores: Record<string, string>; soloLectura: boolean; editando: boolean; plegado: Plegado; onPlegar: (titulo: string, abierta: boolean) => void; intento: number }) {
   const [elegido, setElegido] = useState<Record<string, string>>(() =>
     Object.fromEntries(campos.filter((c) => c.tipo === "seleccion").map((c) => [c.nombre, String(actuales[c.nombre] ?? "")])),
   );
   const [inicial] = useState(elegido);
   const esPadre = new Set(campos.map((c) => c.dependeDe).filter(Boolean));
-  // Título que abre cada campo (solo cuando la sección cambia respecto del campo anterior que tenía una).
-  const titulos = campos.map((c, i) => (c.seccion && c.seccion !== campos.slice(0, i).reverse().find((x) => x.seccion)?.seccion ? c.seccion : null));
-
-  return (
-    <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
-      {campos.map((c, indice) => {
+  const dibujar = (c: CampoForm) => {
         const id = `campo-${c.nombre}`;
         const error = errores[c.nombre];
         const bloqueado = soloLectura || (c.soloCrear && editando);
         const detalle = error || c.ayuda ? `${id}-detalle` : undefined;
-        const titulo = titulos[indice];
-        const encabezado = titulo ? (
-          <h3 key={`seccion-${titulo}`} className="col-span-full mt-2 border-b border-linea pb-1.5 text-[13px] font-semibold uppercase tracking-wide text-gris-600">
-            {titulo}
-          </h3>
-        ) : null;
         const etiqueta = (
           <label htmlFor={id} className="text-[13px] font-medium">
             {c.etiqueta}
@@ -107,9 +104,7 @@ function Rejilla({ campos, actuales, errores, soloLectura, editando }: { campos:
 
         if (c.tipo === "booleano") {
           return (
-            <Fragment key={c.nombre}>
-            {encabezado}
-            <div className={`flex items-start gap-2.5 pt-1 ${columnas[c.ancho ?? 1]}`}>
+            <div key={c.nombre} className={`flex items-start gap-2.5 pt-1 ${columnas[c.ancho ?? 1]}`}>
               <input
                 id={id}
                 name={c.nombre}
@@ -126,7 +121,6 @@ function Rejilla({ campos, actuales, errores, soloLectura, editando }: { campos:
                 {pie}
               </div>
             </div>
-            </Fragment>
           );
         }
 
@@ -150,14 +144,12 @@ function Rejilla({ campos, actuales, errores, soloLectura, editando }: { campos:
         }
 
         return (
-          <Fragment key={c.nombre}>
-          {encabezado}
-          <div className={`flex flex-col gap-1.5 ${columnas[c.ancho ?? 1]}`}>
+          <div key={c.nombre} className={`flex flex-col gap-1.5 ${columnas[c.ancho ?? 1]}`}>
             {etiqueta}
             {c.tipo === "seleccion" ? (
               <select
-                {...comun}
                 key={claveSelect}
+                {...comun}
                 defaultValue={valorInicial}
                 onChange={esPadre.has(c.nombre) ? (e) => setElegido((x) => cambiarElegido(campos, x, c.nombre, e.target.value)) : undefined}
                 className={`${claseControl} pr-9`}
@@ -183,9 +175,73 @@ function Rejilla({ campos, actuales, errores, soloLectura, editando }: { campos:
             )}
             {pie}
           </div>
-          </Fragment>
         );
-      })}
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {bloquesDe(campos).map((bloque, n) => (
+        <Seccion
+          key={bloque.titulo ?? "basicos"} bloque={bloque} fija={n === 0} valores={actuales} editando={editando}
+          errores={bloque.campos.filter((c) => errores[c.nombre]).length}
+          pedido={bloque.titulo ? plegado[bloque.titulo] : undefined} intento={intento}
+          onPlegar={(abierta) => bloque.titulo && onPlegar(bloque.titulo, abierta)}
+        >
+          {bloque.campos.map(dibujar)}
+        </Seccion>
+      ))}
     </div>
+  );
+}
+
+function Seccion({ bloque, fija, valores, editando, errores, pedido, intento, onPlegar, children }: {
+  bloque: Bloque; fija: boolean; valores: Valores; editando: boolean; errores: number;
+  pedido?: { abierta: boolean; intento: number }; intento: number; onPlegar: (abierta: boolean) => void; children: ReactNode;
+}) {
+  const [resumen, setResumen] = useState(() => resumenBloque(bloque.campos, valores));
+  const rejilla = "grid gap-x-5 gap-y-4 sm:grid-cols-2 xl:grid-cols-3";
+  const rotulo = "text-[13px] font-semibold uppercase tracking-wide text-gris-600";
+  if (fija) {
+    return (
+      <section className="flex flex-col gap-4">
+        {bloque.titulo ? <h3 className={`border-b border-linea pb-1.5 ${rotulo}`}>{bloque.titulo}</h3> : null}
+        <div className={rejilla}>{children}</div>
+      </section>
+    );
+  }
+  // Con errores se abre sola; si después se cierra, se respeta hasta el siguiente intento de guardar.
+  const abierta = errores > 0 ? (pedido && pedido.intento === intento ? pedido.abierta : true) : (pedido?.abierta ?? false);
+  const idCampos = `seccion-${(bloque.titulo ?? "").replace(/\W+/g, "-")}`;
+
+  /** Al cerrar se cuenta lo que quedó escrito, para que el rótulo no mienta. */
+  function alternar(contenedor: HTMLElement | null) {
+    if (abierta && contenedor) {
+      const ahora: Valores = {};
+      for (const c of bloque.campos) {
+        const el = contenedor.querySelector<HTMLInputElement>(`[name="${c.nombre}"]`);
+        ahora[c.nombre] = el ? (el.type === "checkbox" ? el.checked : el.value) : (valores[c.nombre] ?? "");
+      }
+      setResumen(resumenBloque(bloque.campos, ahora));
+    }
+    onPlegar(!abierta);
+  }
+
+  const marca = "rounded-full px-2.5 py-0.5 text-[12px] font-medium normal-case tracking-normal";
+  return (
+    <section className="rounded-[10px] border border-linea">
+      <h3>
+        <button type="button" aria-expanded={abierta} aria-controls={idCampos} onClick={(e) => alternar(e.currentTarget.closest("section"))} className="flex w-full flex-wrap items-center gap-2 px-3.5 py-3 text-left hover:bg-hover">
+          <ChevronDown className={`size-4 text-gris-500 transition-transform ${abierta ? "" : "-rotate-90"}`} aria-hidden />
+          <span className={rotulo}>{bloque.titulo}</span>
+          {errores > 0 ? <span className={`${marca} bg-error-suave text-error`}>{errores === 1 ? "1 dato por corregir" : `${errores} datos por corregir`}</span> : null}
+          {!abierta && errores === 0 && resumen.faltan > 0 ? <span className={`${marca} bg-aviso-suave text-tinta`}>Tiene datos obligatorios</span> : null}
+          {!abierta && errores === 0 && editando && resumen.conDatos > 0 ? <span className={`${marca} bg-neutro-suave text-gris-700`}>{resumen.conDatos === 1 ? "1 con datos" : `${resumen.conDatos} con datos`}</span> : null}
+        </button>
+      </h3>
+      {/* Oculta, no desmontada: lo que hay dentro se envía igual al guardar. */}
+      <div id={idCampos} hidden={!abierta} className="border-t border-linea p-3.5">
+        <div className={rejilla}>{children}</div>
+      </div>
+    </section>
   );
 }
